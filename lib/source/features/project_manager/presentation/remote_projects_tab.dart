@@ -13,7 +13,7 @@ class RemoteProjectsTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(firebaseAuthStreamProvider);
-
+//TODO add search functionality and maybe think about how to sort the projects (show projects first that you are collaborator or owner of)
     return authState.when(
       data: (user) {
         if (user == null) {

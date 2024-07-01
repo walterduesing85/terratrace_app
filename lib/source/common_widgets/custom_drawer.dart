@@ -4,20 +4,17 @@ import 'package:go_router/go_router.dart';
 
 
 
-
-import 'package:hive/hive.dart';
-
-
 import 'package:rflutter_alert/rflutter_alert.dart';
 
 import 'package:terra_trace/source/common_widgets/signin_register_popup.dart';
 import 'package:terra_trace/source/constants/constants.dart';
 import 'package:terra_trace/source/constants/text_styles.dart';
 import 'package:terra_trace/source/features/authentication/authentication_managment.dart';
+import 'package:terra_trace/source/features/data/data/data_export.dart';
 import 'package:terra_trace/source/features/data/data/data_management.dart';
 import 'package:terra_trace/source/routing/app_router.dart';
 
-import 'async_value_widget.dart';
+
 
 //This drawer is the main menu that changes appearance when remote = true is selected
 class CustomDrawer extends StatelessWidget {
@@ -109,34 +106,38 @@ class CustomDrawer extends StatelessWidget {
                     context.pushNamed(AppRoute.dataListScreen.name);
                   }),
 
-              // ListTile(
-              //   title: Text(
-              //     'Save data points',
-              //     style: kDrawerTextStyle,
-              //   ),
-              //   trailing: Icon(
-              //     Icons.save,
-              //     color: kGreenFluxColor,
-              //     size: 28,
-              //   ),
-              //   onTap: () async {
-              //     FluxStorage fluxStorage = FluxStorage(box: widget.box);
+              Consumer(builder: (context, WidgetRef ref, _) {
+                return ListTile(
+                  title: Text(
+                    'Save data points',
+                    style: kDrawerTextStyle,
+                  ),
+                  trailing: Icon(
+                    Icons.save,
+                    color: kGreenFluxColor,
+                    size: 28,
+                  ),
+                  onTap: () async {
+                    DataExport fluxStorage =
+                        DataExport(ref.read(projectNameProvider));
 
-              //     await fluxStorage.getPermission();
-              //     fluxStorage.saveData();
-              //     Alert(
-              //         context: context,
-              //         title: 'data saved on local storage',
-              //         buttons: [
-              //           DialogButton(
-              //             onPressed: () {
-              //               Navigator.pop(context);
-              //             },
-              //             child: Text('ok'),
-              //           )
-              //         ]).show();
-              //   },
-              // ),
+                    await fluxStorage.getPermission();
+                    fluxStorage
+                        .saveData(ref.read(fluxDataListProvider).asData.value);
+                    Alert(
+                        context: context,
+                        title: 'data saved on local storage',
+                        buttons: [
+                          DialogButton(
+                            onPressed: () {
+                              Navigator.pop(context);
+                            },
+                            child: Text('ok'),
+                          )
+                        ]).show();
+                  },
+                );
+              }),
               // ListTile(
               //   title: Text(
               //     'Show histogram',

@@ -38,19 +38,15 @@ class DataPointWatcher {
 
   Future<void> handleFile(String filePath) async {
     print('new event detected lets rock and roll12');
-    final isRemote = ref.read(isRemoteProvider);
+
     final project = ref.read(projectNameProvider);
     print('Project: $project');
     final sandBox = ref.read(sandBoxProvider);
 
     // Fetch hive box asynchronously
-    final box = await ref.read(hiveDataBoxProvider.future);
-    print('Hive box loaded successfully');
 
     if (project.isNotEmpty) {
-      await sandBox.makeSingleDataPoint(filePath, project, isRemote, box);
-      final fluxDataList = box.values.toList();
-      ref.read(fluxDataNotifierProvider.notifier).setFluxData(fluxDataList);
+      await sandBox.makeSingleDataPoint(filePath, project);
     } else {
       print('Project name is empty, cannot proceed');
     }

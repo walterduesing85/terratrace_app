@@ -31,10 +31,10 @@ Future<void> main() async {
     await Permission.location.request();
 
     if (storageStatus == PermissionStatus.granted) {
-      var dir = await getApplicationDocumentsDirectory();
-      Hive.init(dir.path);
-      await Hive.registerAdapter(FluxDataAdapter());
-      await Hive.registerAdapter(ProjectDataAdapter());
+      // var dir = await getApplicationDocumentsDirectory();
+      // Hive.init(dir.path);
+      // await Hive.registerAdapter(FluxDataAdapter());
+      // await Hive.registerAdapter(ProjectDataAdapter());
 
       // Start watching the folder for changes as soon as the app launches
       // Initialize DataPointWatcher

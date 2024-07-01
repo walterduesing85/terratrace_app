@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:terra_trace/source/features/data/data/data_management.dart';
 import 'package:terra_trace/source/features/data/domain/flux_data.dart';
 
-import 'package:hive/hive.dart';
 import 'package:terra_trace/source/features/project_manager/data/project_managment.dart';
 
 class EditDataScreen extends ConsumerStatefulWidget {
@@ -45,11 +44,9 @@ class _EditFluxDataScreenState extends ConsumerState<EditDataScreen> {
                   if (_formKey.currentState.validate()) {
                     final projectManagement =
                         ref.read(projectManagementProvider);
-                    final box = Hive.box<FluxData>(ref.read(
-                        projectNameProvider)); // Ensure the correct box is opened
 
                     await projectManagement.updateFluxData(widget.projectName,
-                        widget.fluxData.dataKey, _updatedFields, box);
+                        widget.fluxData.dataKey, _updatedFields);
                     Navigator.pop(context);
                   }
                 },

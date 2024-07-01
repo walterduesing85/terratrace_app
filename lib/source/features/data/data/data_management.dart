@@ -3,7 +3,7 @@ import 'dart:math';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_maps_flutter_heatmap/google_maps_flutter_heatmap.dart';
-import 'package:hive/hive.dart';
+//import 'package:hive/hive.dart';
 
 import 'package:terra_trace/source/constants/constants.dart';
 
@@ -13,48 +13,48 @@ import 'package:terra_trace/source/features/data/domain/flux_data.dart';
 import 'package:terra_trace/source/features/project_manager/data/project_managment.dart';
 import 'package:terra_trace/source/features/project_manager/domain/project_data.dart';
 
-class DataManagement {
-  Box projectBox;
-  Box dataBox;
+// class DataManagement {
+//   Box projectBox;
+//   Box dataBox;
 
-  Future<void> openProjectBox() async {
-    await Hive.openBox<ProjectData>('projects');
-  }
+//   Future<void> openProjectBox() async {
+//     await Hive.openBox<ProjectData>('projects');
+//   }
 
-  Future<void> createNewProject(
-      String project, bool isRemote, bool browseFiles) async {
-    projectBox = await Hive.openBox<ProjectData>('projects');
-    final projectData = ProjectData(
-        projectName: project,
-        isRemote: isRemote,
-        browseFiles: browseFiles,
-        defaultTemperature: defaultTemperature,
-        defaultPressure: defaultPressure,
-        chamberVolume: chamberVolume,
-        surfaceArea: chamberArea);
-    await projectBox.put(project, projectData);
-  }
+//   Future<void> createNewProject(
+//       String project, bool isRemote, bool browseFiles) async {
+//     projectBox = await Hive.openBox<ProjectData>('projects');
+//     final projectData = ProjectData(
+//         projectName: project,
+//         isRemote: isRemote,
+//         browseFiles: browseFiles,
+//         defaultTemperature: defaultTemperature,
+//         defaultPressure: defaultPressure,
+//         chamberVolume: chamberVolume,
+//         surfaceArea: chamberArea);
+//     await projectBox.put(project, projectData);
+//   }
 
-  Future<void> deleteProject(String project) async {
-    projectBox = await Hive.openBox<ProjectData>('projects');
-    await projectBox.delete(project);
-  }
-}
+//   Future<void> deleteProject(String project) async {
+//     projectBox = await Hive.openBox<ProjectData>('projects');
+//     await projectBox.delete(project);
+//   }
+// }
 
-final dataManagementProvider = Provider<DataManagement>((ref) {
-  return DataManagement();
-});
+// final dataManagementProvider = Provider<DataManagement>((ref) {
+//   return DataManagement();
+// });
 
 // Provider to manage Hive box state
-final hiveDataBoxProvider = FutureProvider<Box<FluxData>>((ref) async {
-  // Wait until projectName is available
-  final projectName = ref.watch(projectNameProvider);
-  await projectName.isNotEmpty;
-  // if (projectName.isEmpty) {
-  //   throw Exception('Project name is empty, Bro!');
-  // }
-  return Hive.openBox<FluxData>(projectName);
-});
+// final hiveDataBoxProvider = FutureProvider<Box<FluxData>>((ref) async {
+//   // Wait until projectName is available
+//   final projectName = ref.watch(projectNameProvider);
+//   await projectName.isNotEmpty;
+//   // if (projectName.isEmpty) {
+//   //   throw Exception('Project name is empty, Bro!');
+//   // }
+//   return Hive.openBox<FluxData>(projectName);
+// });
 
 final projectNameProvider =
     StateNotifierProvider<ProjectNameValueNotifier, String>(
@@ -109,58 +109,21 @@ class SortData {
   SortData({this.counter, this.values, this.dates});
 }
 
-
-
 final fluxDataListProvider = StreamProvider<List<FluxData>>((ref) async* {
   final projectManager = ref.watch(projectManagementProvider);
   final project = ref.watch(projectNameProvider);
   final searchValue = ref.watch(searchValueProvider);
-  final isRemote = ref.watch(isRemoteProvider);
-  final hiveBoxState = ref.watch(hiveDataBoxProvider);
 
   if (project.isNotEmpty) {
-    if (isRemote) {
-      yield* hiveBoxState.when(
-        data: (box) async* {
-          await for (final dataList in projectManager.fluxDataListStream) {
-            print('DataList length: ${dataList.length}');
-            for (final data in dataList) {
-              box.put(data.dataKey, data);
-            }
-            yield box.values
-                .where((fluxDataEl) =>
-                    fluxDataEl.dataSite
-                        .toLowerCase()
-                        .contains(searchValue.toLowerCase()) ||
-                    searchValue.isEmpty)
-                .toList();
-          }
-        },
-        loading: () async* {
-          yield [];
-        },
-        error: (error, stack) async* {
-          yield [];
-        },
-      );
-    } else {
-      yield* hiveBoxState.when(
-        data: (box) async* {
-          yield box.values
-              .where((fluxDataEl) =>
-                  fluxDataEl.dataSite
-                      .toLowerCase()
-                      .contains(searchValue.toLowerCase()) ||
-                  searchValue.isEmpty)
-              .toList();
-        },
-        loading: () async* {
-          yield [];
-        },
-        error: (error, stack) async* {
-          yield [];
-        },
-      );
+    await for (final dataList in projectManager.fluxDataListStream) {
+      print('DataList length: ${dataList.length}');
+      yield dataList
+          .where((fluxDataEl) =>
+              fluxDataEl.dataSite
+                  .toLowerCase()
+                  .contains(searchValue.toLowerCase()) ||
+              searchValue.isEmpty)
+          .toList();
     }
   } else {
     yield [];
@@ -181,12 +144,10 @@ class FluxDataNotifier extends StateNotifier<List<FluxData>> {
   }
 }
 
-final fluxDataNotifierProvider = StateNotifierProvider<FluxDataNotifier, List<FluxData>>((ref) {
+final fluxDataNotifierProvider =
+    StateNotifierProvider<FluxDataNotifier, List<FluxData>>((ref) {
   return FluxDataNotifier();
 });
-
-
-
 
 final listLengthProvider = Provider.autoDispose<int>((ref) {
   final dataListAsyncValue = ref.watch(fluxDataListProvider);

@@ -59,14 +59,13 @@ class SandBox {
     return fluxInGrams;
   }
 
-  void _pushNotification(Box box, String boxKey) {
-    _notifications = Notifications(box: box, boxKey: boxKey);
+  void _pushNotification(String boxKey) {
+    _notifications = Notifications(boxKey: boxKey);
     this._notifications.initNotifications();
     this._notifications.pushNotification(); // display notification
   }
 
-  Future<void> makeSingleDataPoint(
-      String dataFile, String projectName, bool isRemote, Box box) async {
+  Future<void> makeSingleDataPoint(String dataFile, String projectName) async {
     print('hello from makeSingleDataPoint');
 
     try {
@@ -75,7 +74,6 @@ class SandBox {
       File file = File(dataFile);
 
       final pathLoad = file;
-
       data = await pathLoad.readAsString();
 
       String dataInstrument =
@@ -84,51 +82,51 @@ class SandBox {
       String boxKey = '$dataDate$dataInstrument';
 
       FluxData allData = FluxData(
-          dataSite: findDataPointValue(data, fluxRegExp.expSite),
-          dataLat: findDataPointValue(data, fluxRegExp.expLat),
-          dataLong: findDataPointValue(data, fluxRegExp.expLong),
-          dataPress: findDataPointValue(data, fluxRegExp.expPress),
-          dataTemp: findDataPointValue(data, fluxRegExp.expTemp),
-          dataCflux: getCo2Data(data),
-          dataDate: findDataPointValue(data, fluxRegExp.expDate),
-          dataNote: findDataPointValue(data, fluxRegExp.expNote),
-          dataInstrument: findDataPointValue(data, fluxRegExp.expInstrument),
-          dataKey: boxKey);
+        dataSite: findDataPointValue(data, fluxRegExp.expSite),
+        dataLat: findDataPointValue(data, fluxRegExp.expLat),
+        dataLong: findDataPointValue(data, fluxRegExp.expLong),
+        dataPress: findDataPointValue(data, fluxRegExp.expPress),
+        dataTemp: findDataPointValue(data, fluxRegExp.expTemp),
+        dataCflux: getCo2Data(data),
+        dataDate: findDataPointValue(data, fluxRegExp.expDate),
+        dataNote: findDataPointValue(data, fluxRegExp.expNote),
+        dataInstrument: findDataPointValue(data, fluxRegExp.expInstrument),
+        dataKey: boxKey,
+      );
 
       allData.dataCfluxGram = calculateFlux(allData).toStringAsFixed(2);
       allData.dataOrigin = dataOrigin;
 
-      if (isRemote) {
-        await _firestore
-            .collection('projects')
-            .doc(box.name)
-            .collection('data')
-            .doc(boxKey)
-            .set({
-          'dataCflux': allData.dataCflux,
-          'dataDate': allData.dataDate,
-          'dataInstrument': allData.dataInstrument,
-          'dataKey': allData.dataKey,
-          'dataLat': allData.dataLat,
-          'dataLong': allData.dataLong,
-          'dataNote': allData.dataNote,
-          'dataPress': allData.dataPress,
-          'dataSite': allData.dataSite,
-          'dataSoilTemp': allData.dataSoilTemp,
-          'dataTemp': allData.dataTemp,
-          'dataCfluxGram': allData.dataCfluxGram,
-          'dataOrigin': allData.dataOrigin,
-        });
-        _pushNotification(box, boxKey);
-      } else {
-        print('hello from makeSingleDataPoint remote not true');
-        await box.put(allData.dataKey, allData);
-        _pushNotification(box, boxKey);
-      }
+      // Update Firebase Firestore
+      await FirebaseFirestore.instance
+          .collection('projects')
+          .doc(projectName)
+          .collection('data')
+          .doc(boxKey)
+          .set({
+        'dataCflux': allData.dataCflux,
+        'dataDate': allData.dataDate,
+        'dataInstrument': allData.dataInstrument,
+        'dataKey': allData.dataKey,
+        'dataLat': allData.dataLat,
+        'dataLong': allData.dataLong,
+        'dataNote': allData.dataNote,
+        'dataPress': allData.dataPress,
+        'dataSite': allData.dataSite,
+        'dataSoilTemp': allData.dataSoilTemp,
+        'dataTemp': allData.dataTemp,
+        'dataCfluxGram': allData.dataCfluxGram,
+        'dataOrigin': allData.dataOrigin,
+      });
+      _pushNotification(allData
+          .dataKey); // Adjust this function to handle notifications without the box parameter if needed
+
     } catch (e) {
       print('Error in makeSingleDataPoint: $e');
     }
   }
+
+// Ensure to update the _pushNotification method to match the changes
 
 //Method that takes extracts the data from Fluxmanager file
   String getCo2Data(data) {
@@ -198,14 +196,15 @@ class SandBox {
     fileList = Directory("storage/emulated/0/fluxmanager/data/").listSync();
   }
 
-  Future<void> browseAllFiles(
-      bool isRemote, String projectName, Box box) async {
+  Future<void> browseAllFiles(String projectName) async {
     String data;
     FluxRegExp fluxRegExp = FluxRegExp();
     await getFileList();
+    FirebaseFirestore firestore = FirebaseFirestore.instance;
+    String dataOrigin = 'not defined'; // Define your data origin
 
     for (var k = 0; k < fileList.length; k++) {
-      pathLoad = fileList[k];
+      File pathLoad = fileList[k];
 
       data = await pathLoad.readAsString();
 
@@ -213,7 +212,16 @@ class SandBox {
           findDataPointValue(data, fluxRegExp.expInstrument);
       String dataDate = findDataPointValue(data, fluxRegExp.expDate);
       String boxKey = '$dataDate$dataInstrument';
-      if (box.get(boxKey) == null) {
+
+      // Check if the document already exists in Firestore
+      DocumentSnapshot doc = await firestore
+          .collection('projects')
+          .doc(projectName)
+          .collection('data')
+          .doc(boxKey)
+          .get();
+
+      if (!doc.exists) {
         FluxData allData = FluxData(
             dataSite: findDataPointValue(data, fluxRegExp.expSite),
             dataLong: findDataPointValue(data, fluxRegExp.expLong),
@@ -228,30 +236,26 @@ class SandBox {
         allData.dataCfluxGram = calculateFlux(allData).toStringAsFixed(2);
         allData.dataOrigin = dataOrigin;
 
-        if (isRemote == true) {
-          _firestore
-              .collection('projects')
-              .doc(box.name)
-              .collection('data')
-              .doc(boxKey)
-              .set({
-            'dataCflux': allData.dataCflux,
-            'dataDate': allData.dataDate,
-            'dataInstrument': allData.dataInstrument,
-            'dataKey': allData.dataKey,
-            'dataLat': allData.dataLat,
-            'dataLong': allData.dataLong,
-            'dataNote': allData.dataNote,
-            'dataPress': allData.dataPress,
-            'dataSite': allData.dataSite,
-            'dataSoilTemp': allData.dataSoilTemp,
-            'dataCfluxGram': allData.dataCfluxGram,
-            'dataOrigin': allData.dataOrigin,
-            'dataTemp': allData.dataTemp
-          });
-        }
-
-        box.put(boxKey, allData);
+        await firestore
+            .collection('projects')
+            .doc(projectName)
+            .collection('data')
+            .doc(boxKey)
+            .set({
+          'dataCflux': allData.dataCflux,
+          'dataDate': allData.dataDate,
+          'dataInstrument': allData.dataInstrument,
+          'dataKey': allData.dataKey,
+          'dataLat': allData.dataLat,
+          'dataLong': allData.dataLong,
+          'dataNote': allData.dataNote,
+          'dataPress': allData.dataPress,
+          'dataSite': allData.dataSite,
+          'dataSoilTemp': allData.dataSoilTemp,
+          'dataCfluxGram': allData.dataCfluxGram,
+          'dataOrigin': allData.dataOrigin,
+          'dataTemp': allData.dataTemp
+        });
       }
     }
   }
@@ -262,8 +266,8 @@ final sandBoxProvider = Provider<SandBox>((ref) {
 });
 
 class Notifications {
-  Notifications({this.box, this.boxKey});
-  Box box;
+  Notifications({this.boxKey});
+
   String boxKey;
   FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
       FlutterLocalNotificationsPlugin();
@@ -308,7 +312,7 @@ class Notifications {
   }
 
   Future selectNotification(String payload) async {
-    //TODO go to EditDataScreen
+    // TODO go to EditDataScreen
 
     // some action...
   }

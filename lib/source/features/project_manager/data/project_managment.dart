@@ -1,19 +1,13 @@
 import 'dart:async';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:hive/hive.dart';
 import 'package:rflutter_alert/rflutter_alert.dart';
 import 'package:terra_trace/source/features/authentication/authentication_managment.dart';
 import 'package:terra_trace/source/features/data/data/data_management.dart';
-
 import 'package:terra_trace/source/features/data/domain/flux_data.dart';
 import 'package:terra_trace/source/features/project_manager/domain/project.dart';
-import 'package:terra_trace/source/features/project_manager/domain/project_data.dart';
 import 'package:terra_trace/source/features/project_manager/presentation/remote_project_card.dart';
-
 import '../../user/domain/user_managment.dart';
 
 //This class manages all the remote project (projects that are stored on firebase) related methods
@@ -41,6 +35,17 @@ class ProjectManagement {
     }
   }
 
+  Future<void> createFireStoreProject(String projectName) async {
+    try {
+      await FirebaseFirestore.instance
+          .collection('projects')
+          .doc(projectName)
+          .set({});
+    } catch (e) {
+      print('Error creating project: $e');
+    }
+  }
+
   final _projectListStreamController =
       StreamController<List<Project>>.broadcast();
 
@@ -53,7 +58,8 @@ class ProjectManagement {
   Stream<List<FluxData>> get fluxDataListStream =>
       _fluxDataListStreamController.stream;
 
-  void startStreamingRemoteData(String project, Box<FluxData> box) async {
+  void startStreamingRemoteData(String project) async {
+    print('Hello from startStreamingRemoteData-_-_-_-_-_-_-_-_');
     projectCollection
         .doc(project)
         .collection('data')
@@ -80,16 +86,11 @@ class ProjectManagement {
 
       // Add data to stream controller
       _fluxDataListStreamController.add(allData);
-
-      // Store data locally in Hive
-      for (final data in allData) {
-        box.put(data.dataKey, data);
-      }
     });
   }
 
   Future<void> updateFluxData(String projectName, String dataKey,
-      Map<String, dynamic> updatedFields, Box<FluxData> box) async {
+      Map<String, dynamic> updatedFields) async {
     try {
       // Update Firebase
       await projectCollection
@@ -99,50 +100,7 @@ class ProjectManagement {
           .update(updatedFields);
 
       // Update Hive
-      final fluxData = box.get(dataKey);
-      if (fluxData != null) {
-        updatedFields.forEach((key, value) {
-          switch (key) {
-            case 'dataSite':
-              fluxData.dataSite = value;
-              break;
-            case 'dataLong':
-              fluxData.dataLong = value;
-              break;
-            case 'dataLat':
-              fluxData.dataLat = value;
-              break;
-            case 'dataPress':
-              fluxData.dataPress = value;
-              break;
-            case 'dataTemp':
-              fluxData.dataTemp = value;
-              break;
-            case 'dataDate':
-              fluxData.dataDate = value;
-              break;
-            case 'dataNote':
-              fluxData.dataNote = value;
-              break;
-            case 'dataInstrument':
-              fluxData.dataInstrument = value;
-              break;
-            case 'dataCflux':
-              fluxData.dataCflux = value;
-              break;
-            case 'dataSoilTemp':
-              fluxData.dataSoilTemp = value;
-              break;
-            case 'dataCfluxGram':
-              fluxData.dataCfluxGram = value;
-              break;
-            case 'dataOrigin':
-              fluxData.dataOrigin = value;
-              break;
-          }
-        });
-        box.put(dataKey, fluxData);
-      }
+
     } catch (e) {
       // Handle errors
       print('Error updating FluxData: $e');
@@ -194,32 +152,17 @@ class ProjectManagement {
 final remoteStreamingProvider = FutureProvider<void>((ref) async {
   final projectManagement = ref.read(projectManagementProvider);
   final currentUser = await ref.watch(currentUserStateProvider.future);
-  final isRemote = ref.watch(isRemoteProvider);
   final project = ref.watch(projectNameProvider);
-  final boxAsyncValue = ref.watch(hiveDataBoxProvider);
 
-  await boxAsyncValue.when(
-    data: (box) async {
-      if (project.isNotEmpty && isRemote && currentUser != null) {
-        await projectManagement.startStreamingRemoteData(project, box);
-        await projectManagement.startStreamingRemoteProjects();
-        await projectManagement.startStreamingFirebaseUsers();
-      } else {
-        await projectManagement.startStreamingRemoteProjects();
-        await projectManagement.startStreamingFirebaseUsers();
-        print('Project is empty or not remote, or current user is null');
-      }
-    },
-    loading: () {
-      CircularProgressIndicator();
-      // Handle loading state if necessary
-      print('Loading Hive box...');
-    },
-    error: (error, stack) {
-      // Handle error state if necessary
-      print('Error loading Hive box: $error');
-    },
-  );
+  if (project.isNotEmpty && currentUser != null) {
+    await projectManagement.startStreamingRemoteData(project);
+    await projectManagement.startStreamingRemoteProjects();
+    await projectManagement.startStreamingFirebaseUsers();
+  } else {
+    await projectManagement.startStreamingRemoteProjects();
+    await projectManagement.startStreamingFirebaseUsers();
+    print('Project is empty or current user is null');
+  }
 });
 
 final projectManagementProvider = Provider<ProjectManagement>((ref) {
@@ -240,30 +183,6 @@ final remoteProjectStreamProvider = StreamProvider<List<Project>>((ref) {
   final projectMangement = ref.watch(projectManagementProvider);
 
   return projectMangement._remoteProjectStreamController.stream;
-});
-
-class ProjectBoxStateNotifier extends StateNotifier<Box<ProjectData>> {
-  final DataManagement dataManagement;
-
-  ProjectBoxStateNotifier(this.dataManagement) : super(null) {
-    _init();
-  }
-
-  Future<void> _init() async {
-    await dataManagement.openProjectBox();
-    state = Hive.box<ProjectData>('projects');
-  }
-
-  Future<void> deleteProject(String projectName) async {
-    await dataManagement.deleteProject(projectName);
-    state = Hive.box<ProjectData>('projects');
-  }
-}
-
-final projectBoxProvider =
-    StateNotifierProvider<ProjectBoxStateNotifier, Box<ProjectData>>((ref) {
-  final dataManager = ref.watch(dataManagementProvider);
-  return ProjectBoxStateNotifier(dataManager);
 });
 
 final remoteProjectsCardStreamProvider2 =
