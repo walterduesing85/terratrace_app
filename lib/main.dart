@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:hive/hive.dart';
@@ -24,6 +25,7 @@ Future<void> main() async {
     WidgetsFlutterBinding.ensureInitialized();
 
     WidgetsFlutterBinding.ensureInitialized();
+
 
     final storageStatus = await Permission.storage.request();
     await Permission.location.request();

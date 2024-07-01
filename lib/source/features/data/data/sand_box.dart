@@ -270,7 +270,7 @@ class Notifications {
 
   void initNotifications() async {
     final AndroidInitializationSettings initializationSettingsAndroid =
-        AndroidInitializationSettings('app_icon');
+        AndroidInitializationSettings('ic_launcher');
     final IOSInitializationSettings initializationSettingsIOS =
         IOSInitializationSettings(onDidReceiveLocalNotification: null);
     final MacOSInitializationSettings initializationSettingsMacOS =
