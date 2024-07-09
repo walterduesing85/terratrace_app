@@ -15,7 +15,7 @@ import 'package:terra_trace/source/routing/app_router.dart';
 final currentQuestionProvider = StateProvider<int>((ref) => 0);
 
 class CreateNewProjectScreen extends ConsumerWidget {
-  const CreateNewProjectScreen({Key key}) : super(key: key);
+  const CreateNewProjectScreen({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -35,8 +35,8 @@ class CreateNewProjectScreen extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.center,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const ProjectSummary(),
-              const ProjectQuestions(),
+              ProjectSummary(),
+              ProjectQuestions(),
             ],
           ),
         ),
@@ -46,7 +46,7 @@ class CreateNewProjectScreen extends ConsumerWidget {
 }
 
 class ProjectQuestions extends ConsumerWidget {
-  const ProjectQuestions({Key key}) : super(key: key);
+  const ProjectQuestions({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -71,7 +71,7 @@ class ProjectQuestions extends ConsumerWidget {
                     .watch(createNewRemoteProjectProvider)
                     .createNewEmptyProject(
                         projectName,
-                        ref.read(contextProvider),
+                        ref.read(contextProvider as ProviderBase<BuildContext>),
                         ref.read(currentUserProvider));
                 await ref
                     .watch(projectManagementProvider)
@@ -172,7 +172,7 @@ class BrowseFilesQuestion extends ConsumerWidget {
 }
 
 class ProjectSummary extends ConsumerWidget {
-  const ProjectSummary({Key key}) : super(key: key);
+  const ProjectSummary({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -229,7 +229,7 @@ class ProjectSummary extends ConsumerWidget {
   }
 }
 
-class ContextNotifier extends StateNotifier<BuildContext> {
+class ContextNotifier extends StateNotifier<BuildContext?> {
   ContextNotifier() : super(null);
 
   void setContext(BuildContext context) {
@@ -237,6 +237,6 @@ class ContextNotifier extends StateNotifier<BuildContext> {
   }
 }
 
-final contextProvider = StateNotifierProvider<ContextNotifier, BuildContext>(
+final contextProvider = StateNotifierProvider<ContextNotifier, BuildContext?>(
   (ref) => ContextNotifier(),
 );

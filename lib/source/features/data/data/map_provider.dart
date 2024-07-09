@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:google_maps_flutter_heatmap/google_maps_flutter_heatmap.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -11,16 +10,16 @@ final cameraPositionProvider = StateProvider<CameraPosition>((ref) {
 });
 
 final mapControllerProvider =
-    StateNotifierProvider<MapController, GoogleMapController>((ref) {
+    StateNotifierProvider<MapController, GoogleMapController?>((ref) {
   return MapController();
 });
 
 final mapControllerProvider2 =
-    StateNotifierProvider<MapController, GoogleMapController>((ref) {
+    StateNotifierProvider<MapController, GoogleMapController?>((ref) {
   return MapController();
 });
 
-class MapController extends StateNotifier<GoogleMapController> {
+class MapController extends StateNotifier<GoogleMapController?> {
   MapController() : super(null);
 
   void setController(GoogleMapController controller) {
@@ -29,9 +28,7 @@ class MapController extends StateNotifier<GoogleMapController> {
 
   Future<void> moveCamera(LatLng target) async {
     if (state != null) {
-      await state.animateCamera(CameraUpdate.newLatLng(target));
+      await state?.animateCamera(CameraUpdate.newLatLng(target));
     }
   }
 }
-
-

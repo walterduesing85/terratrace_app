@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 
 class DataCard extends StatelessWidget {
   const DataCard({
-    @required this.site,
-    @required this.date,
+    required this.site,
+    required this.date,
   });
   final String site;
   final String date;

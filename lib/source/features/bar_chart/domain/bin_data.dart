@@ -2,7 +2,6 @@ import 'package:charts_flutter/flutter.dart' as charts;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-
 import 'dart:math';
 
 import 'package:terra_trace/source/features/bar_chart/domain/bin_edges.dart';
@@ -20,11 +19,11 @@ class BinData {
   });
 
   final binColor;
-  final int binCounts;
-  final double binValue;
+  final int? binCounts;
+  final double? binValue;
 
-  final double maxValue;
-  final double minValue;
+  final double? maxValue;
+  final double? minValue;
 
   List<charts.Series<BinData, String>> createBins(
       List<FluxData> fluxDataList, MinMaxValues rangeValues) {
@@ -37,10 +36,9 @@ class BinData {
     List<double> binEdges;
 
     for (int i = 0; i < num; i++) {
-      cO2.add(double.parse(fluxDataList[i].dataCfluxGram));
+      cO2.add(double.parse(fluxDataList[i].dataCfluxGram!));
 
       // Add more colors as needed
-
     }
 
     final double minData = cO2.reduce(min);
@@ -91,7 +89,7 @@ class BinData {
       binData = binEdges.makeBinData();
 
       for (int i = 0; i < 15; i++) {
-        if (binData[i].binValue < rangeValues.minV) {
+        if ((binData[i].binValue ?? 0.0) < rangeValues.minV) {
           binColors.add(charts.ColorUtil.fromDartColor(Colors.red));
         } else {
           binColors.add(charts.ColorUtil.fromDartColor(Colors.yellow));
@@ -102,7 +100,8 @@ class BinData {
     return [
       charts.Series<BinData, String>(
         id: 'Data',
-        domainFn: (BinData binData, _) => binData.binValue.round().toString(),
+        domainFn: (BinData binData, _) =>
+            binData.binValue?.round().toString() ?? '',
         measureFn: (BinData binData, _) => binData.binCounts,
         colorFn: (BinData binData, _) => binData.binColor,
         // Get the color for this bin based on its index
@@ -147,11 +146,12 @@ class BinData {
 // });
 
 final chartsSeriesListProvider =
-    FutureProvider.autoDispose<List<charts.Series<BinData, String>>>((ref) async {
+    FutureProvider.autoDispose<List<charts.Series<BinData, String>>>(
+        (ref) async {
   final rangeSliderValues = ref.watch(rangeSliderNotifierProvider);
   final fluxDataListAsyncValue = ref.watch(fluxDataListProvider);
 
-  final fluxDataList = await fluxDataListAsyncValue.when(
+  final List<FluxData> fluxDataList = await fluxDataListAsyncValue.when(
     data: (dataList) => dataList,
     loading: () => [],
     error: (error, stackTrace) => [],
@@ -163,7 +163,8 @@ final chartsSeriesListProvider =
   return seriesList;
 });
 
-class ChartDataNotifier extends StateNotifier<List<charts.Series<BinData, String>>> {
+class ChartDataNotifier
+    extends StateNotifier<List<charts.Series<BinData, String>>> {
   ChartDataNotifier() : super([]);
 
   void updateData(List<charts.Series<BinData, String>> newData) {
@@ -171,9 +172,7 @@ class ChartDataNotifier extends StateNotifier<List<charts.Series<BinData, String
   }
 }
 
-final chartDataProvider = StateNotifierProvider<ChartDataNotifier, List<charts.Series<BinData, String>>>((ref) {
+final chartDataProvider = StateNotifierProvider<ChartDataNotifier,
+    List<charts.Series<BinData, String>>>((ref) {
   return ChartDataNotifier();
 });
-
-
-

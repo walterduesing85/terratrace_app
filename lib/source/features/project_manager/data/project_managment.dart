@@ -24,7 +24,7 @@ class ProjectManagement {
     try {
       await projectCollection.doc(projectName).delete();
     } catch (e) {
-      await Alert(title: e.message, context: context, buttons: [
+      await Alert(title: e.toString(), context: context, buttons: [
         DialogButton(
           onPressed: () {
             Navigator.pop(context);
@@ -58,7 +58,7 @@ class ProjectManagement {
   Stream<List<FluxData>> get fluxDataListStream =>
       _fluxDataListStreamController.stream;
 
-  void startStreamingRemoteData(String project) async {
+  startStreamingRemoteData(String project) async {
     print('Hello from startStreamingRemoteData-_-_-_-_-_-_-_-_');
     projectCollection
         .doc(project)
@@ -100,7 +100,6 @@ class ProjectManagement {
           .update(updatedFields);
 
       // Update Hive
-
     } catch (e) {
       // Handle errors
       print('Error updating FluxData: $e');
@@ -114,7 +113,7 @@ class ProjectManagement {
 
   Stream<List<User>> get usersStream => _firebaseUserStreamController.stream;
 
-  void startStreamingFirebaseUsers() {
+  startStreamingFirebaseUsers() {
     userCollection.snapshots().listen((snapshot) {
       final documents = snapshot.docs;
       final users = documents.map((doc) {
@@ -133,7 +132,7 @@ class ProjectManagement {
   Stream<List<Project>> get projectsStream =>
       _remoteProjectStreamController.stream;
 
-  void startStreamingRemoteProjects() {
+  startStreamingRemoteProjects() {
     projectCollection.snapshots().listen((snapshot) {
       final documents = snapshot.docs;
       final projects = documents.map((doc) {
@@ -195,7 +194,7 @@ final remoteProjectsCardStreamProvider2 =
       return projectStream.projectsStream.map((projects) {
         return projects.map((project) {
           // Handle null user or membership directly in the stream
-          var userMembership = user == null ? null : project.members[user.uid];
+          var userMembership = user == null ? null : project.members![user.uid];
 
           Icon membershipStatus;
           if (userMembership == 'owner') {
@@ -208,7 +207,7 @@ final remoteProjectsCardStreamProvider2 =
           }
 
           return RemoteProjectCard(
-            project: project.name,
+            project: project.name!,
             membershipStatus: membershipStatus,
           );
         }).toList();
@@ -225,7 +224,7 @@ final remoteProjectsCardStreamProvider2 =
         return projects.map((project) {
           // Return default icon when user data is still loading
           return RemoteProjectCard(
-            project: project.name,
+            project: project.name!,
             membershipStatus: const Icon(Icons.person, color: Colors.grey),
           );
         }).toList();
@@ -239,7 +238,7 @@ final remoteProjectsCardStreamProvider2 =
         return projects.map((project) {
           // Return default icon when there is an error in user data
           return RemoteProjectCard(
-            project: project.name,
+            project: project.name!,
             membershipStatus: const Icon(Icons.person, color: Colors.grey),
           );
         }).toList();

@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-
-
 import 'package:rflutter_alert/rflutter_alert.dart';
 
 import 'package:terra_trace/source/common_widgets/signin_register_popup.dart';
@@ -13,8 +11,6 @@ import 'package:terra_trace/source/features/authentication/authentication_managm
 import 'package:terra_trace/source/features/data/data/data_export.dart';
 import 'package:terra_trace/source/features/data/data/data_management.dart';
 import 'package:terra_trace/source/routing/app_router.dart';
-
-
 
 //This drawer is the main menu that changes appearance when remote = true is selected
 class CustomDrawer extends StatelessWidget {
@@ -48,7 +44,7 @@ class CustomDrawer extends StatelessWidget {
                     final projectName = ref.watch(projectNameProvider);
                     return GestureDetector(
                         child: Text(
-                          user.email,
+                          user.email ?? '',
                           style: TextStyle(
                               color: Colors.white,
                               fontSize: 15,
@@ -123,7 +119,7 @@ class CustomDrawer extends StatelessWidget {
 
                     await fluxStorage.getPermission();
                     fluxStorage
-                        .saveData(ref.read(fluxDataListProvider).asData.value);
+                        .saveData(ref.read(fluxDataListProvider).asData!.value);
                     Alert(
                         context: context,
                         title: 'data saved on local storage',

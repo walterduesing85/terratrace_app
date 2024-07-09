@@ -3,7 +3,7 @@ import 'package:rflutter_alert/rflutter_alert.dart';
 import 'package:terra_trace/source/features/authentication/authentication_managment.dart';
 
 class SigninRegisterPopup {
-  SigninRegisterPopup({@required this.projectName});
+  SigninRegisterPopup({required this.projectName});
   final String projectName;
 
   Future<void> openPopup(BuildContext context) async {
@@ -105,7 +105,6 @@ class SigninRegisterPopup {
               style: TextStyle(color: Colors.white, fontSize: 20),
             ),
           ),
-
         ],
       ],
     ).show();

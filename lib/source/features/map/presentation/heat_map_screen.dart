@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_maps_flutter_heatmap/google_maps_flutter_heatmap.dart';
-import 'package:sliding_up_panel/sliding_up_panel.dart';
+import 'package:sliding_up_panel2/sliding_up_panel2.dart';
 import 'package:terra_trace/source/common_widgets/custom_appbar.dart';
 import 'package:terra_trace/source/common_widgets/custom_drawer.dart';
 import 'package:terra_trace/source/constants/text_styles.dart';
@@ -19,7 +19,7 @@ class HeatMapScreen extends ConsumerStatefulWidget {
 }
 
 class _HeatMapScreenState extends ConsumerState<HeatMapScreen> {
-  PanelController _panelController;
+  late PanelController _panelController;
 
   @override
   void initState() {
@@ -83,156 +83,158 @@ class _HeatMapScreenState extends ConsumerState<HeatMapScreen> {
         controller: _panelController,
         minHeight: 60,
         color: Color.fromRGBO(255, 255, 255, 0.3),
-        panel: DefaultTabController(
-          length: 3,
-          child: Column(
-            children: [
-              TabBar(
-                labelStyle: tabLabels,
-                tabs: [
-                  Tab(
-                    text: 'Map Settings',
-                  ),
-                  Tab(text: 'Data'),
-                  Tab(text: 'User'),
-                ],
-              ),
-              Expanded(
-                child: TabBarView(
-                  children: [
-                    SafeArea(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          SizedBox(height: 10),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Column(
-                                  children: [
-                                    Text(
-                                      'Point Radius: $radius',
-                                      style: TextStyle(
-                                          fontSize: 18,
-                                          fontWeight: FontWeight.bold),
-                                    ),
-                                    Slider(
-                                      min: 10,
-                                      max: 50,
-                                      value: radius.toDouble(),
-                                      onChanged: (newValue) {
-                                        ref
-                                            .read(mapProvider.notifier)
-                                            .setRadius(newValue.toInt());
-                                      },
-                                      onChangeEnd: (newValue) {
-                                        ref
-                                            .read(mapProvider.notifier)
-                                            .setRadius(newValue.toInt());
-                                      },
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              Expanded(
-                                child: Column(
-                                  children: [
-                                    Text(
-                                      'Map Opacity: $opacity',
-                                      style: TextStyle(
-                                          fontSize: 18,
-                                          fontWeight: FontWeight.bold),
-                                    ),
-                                    Slider(
-                                      divisions: 20,
-                                      min: 0,
-                                      max: 1,
-                                      value: opacity,
-                                      onChanged: (newValue) {
-                                        ref
-                                            .read(mapProvider.notifier)
-                                            .setLayerOpacity(newValue);
-                                      },
-                                      onChangeEnd: (newValue) {
-                                        ref
-                                            .read(mapProvider.notifier)
-                                            .setLayerOpacity(newValue);
-                                      },
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                          Expanded(
-                            child: Row(
+        panelBuilder: () {
+          return DefaultTabController(
+            length: 3,
+            child: Column(
+              children: [
+                TabBar(
+                  labelStyle: tabLabels,
+                  tabs: [
+                    Tab(
+                      text: 'Map Settings',
+                    ),
+                    Tab(text: 'Data'),
+                    Tab(text: 'User'),
+                  ],
+                ),
+                Expanded(
+                  child: TabBarView(
+                    children: [
+                      SafeArea(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            SizedBox(height: 10),
+                            Row(
                               children: [
-                                SizedBox(width: 20),
-                                RotatedBox(
-                                  quarterTurns: 1,
-                                  child: RangeSlider(
-                                    values: RangeValues(
-                                        rangeSliderValuesChanged.minV,
-                                        rangeSliderValuesChanged.maxV),
-                                    min: rangeSliderValuesInitial.minV,
-                                    max: rangeSliderValuesInitial.maxV,
-                                    onChanged: (values) {
-                                      ref
-                                          .read(rangeSliderNotifierProvider
-                                              .notifier)
-                                          .updateMinMaxValues(
-                                              values.start, values.end);
-                                    },
+                                Expanded(
+                                  child: Column(
+                                    children: [
+                                      Text(
+                                        'Point Radius: $radius',
+                                        style: TextStyle(
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.bold),
+                                      ),
+                                      Slider(
+                                        min: 10,
+                                        max: 50,
+                                        value: radius.toDouble(),
+                                        onChanged: (newValue) {
+                                          ref
+                                              .read(mapProvider.notifier)
+                                              .setRadius(newValue.toInt());
+                                        },
+                                        onChangeEnd: (newValue) {
+                                          ref
+                                              .read(mapProvider.notifier)
+                                              .setRadius(newValue.toInt());
+                                        },
+                                      ),
+                                    ],
                                   ),
                                 ),
                                 Expanded(
-                                  child: Container(
-                                    padding: EdgeInsets.all(20.0),
-                                    child: BarChartContainer(),
+                                  child: Column(
+                                    children: [
+                                      Text(
+                                        'Map Opacity: $opacity',
+                                        style: TextStyle(
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.bold),
+                                      ),
+                                      Slider(
+                                        divisions: 20,
+                                        min: 0,
+                                        max: 1,
+                                        value: opacity,
+                                        onChanged: (newValue) {
+                                          ref
+                                              .read(mapProvider.notifier)
+                                              .setLayerOpacity(newValue);
+                                        },
+                                        onChangeEnd: (newValue) {
+                                          ref
+                                              .read(mapProvider.notifier)
+                                              .setLayerOpacity(newValue);
+                                        },
+                                      ),
+                                    ],
                                   ),
                                 ),
                               ],
                             ),
-                          ),
-                          Row(
-                            children: [
-                              SizedBox(width: 10),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                            Expanded(
+                              child: Row(
                                 children: [
-                                  Container(
-                                    child: Text(
-                                      'min: $minValue flux [g/m2/d]',
-                                      style: TextStyle(
-                                          color: Colors.black,
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 18.0),
+                                  SizedBox(width: 20),
+                                  RotatedBox(
+                                    quarterTurns: 1,
+                                    child: RangeSlider(
+                                      values: RangeValues(
+                                          rangeSliderValuesChanged.minV,
+                                          rangeSliderValuesChanged.maxV),
+                                      min: rangeSliderValuesInitial.minV,
+                                      max: rangeSliderValuesInitial.maxV,
+                                      onChanged: (values) {
+                                        ref
+                                            .read(rangeSliderNotifierProvider
+                                                .notifier)
+                                            .updateMinMaxValues(
+                                                values.start, values.end);
+                                      },
                                     ),
                                   ),
-                                  Container(
-                                    child: Text(
-                                      'max: $maxValue flux [g/m2/d]',
-                                      style: TextStyle(
-                                          color: Colors.black,
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 18.0),
+                                  Expanded(
+                                    child: Container(
+                                      padding: EdgeInsets.all(20.0),
+                                      child: BarChartContainer(),
                                     ),
                                   ),
                                 ],
                               ),
-                            ],
-                          ),
-                        ],
+                            ),
+                            Row(
+                              children: [
+                                SizedBox(width: 10),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Container(
+                                      child: Text(
+                                        'min: $minValue flux [g/m2/d]',
+                                        style: TextStyle(
+                                            color: Colors.black,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 18.0),
+                                      ),
+                                    ),
+                                    Container(
+                                      child: Text(
+                                        'max: $maxValue flux [g/m2/d]',
+                                        style: TextStyle(
+                                            color: Colors.black,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 18.0),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                    SafeArea(child: TabData()),
-                    SafeArea(child: TabUser()),
-                  ],
+                      SafeArea(child: TabData()),
+                      SafeArea(child: TabUser()),
+                    ],
+                  ),
                 ),
-              ),
-            ],
-          ),
-        ),
+              ],
+            ),
+          );
+        },
         body: GoogleMap(
           myLocationEnabled: true,
           mapType: MapType.satellite,

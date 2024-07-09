@@ -3,6 +3,6 @@ class Project {
     this.name,
     this.members,
   });
-  final String name;
-  final Map members;
+  final String? name;
+  final Map? members;
 }

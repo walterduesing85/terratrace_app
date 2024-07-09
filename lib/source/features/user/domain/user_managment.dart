@@ -3,10 +3,10 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:terra_trace/source/features/project_manager/data/project_managment.dart';
 
 class User {
-  final String userName;
-  final String userMail;
-  final String userID;
-  final Map<String, String> projects;
+  final String? userName;
+  final String? userMail;
+  final String? userID;
+  final Map<String, String>? projects;
 
   User({this.userName, this.userMail, this.userID, this.projects});
 
@@ -19,7 +19,6 @@ class User {
     );
   }
 }
-
 
 // Define the StreamProvider for fetching users as User objects
 final firebaseUsersProvider = StreamProvider<List<User>>((ref) {

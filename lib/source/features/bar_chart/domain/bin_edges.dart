@@ -3,15 +3,14 @@ import 'package:terra_trace/source/features/bar_chart/domain/bin_data.dart';
 import 'package:charts_flutter/flutter.dart' as charts;
 
 import '../../map/data/map_data.dart';
-import 'bin_data.dart';
 
 class BinEdges {
   BinEdges(
-      {this.numEdges,
-      this.minValue,
-      this.maxValue,
-      this.cO2,
-      this.rangeValues});
+      {this.numEdges = 0,
+      this.minValue = 0.0,
+      this.maxValue = 0.0,
+      this.cO2 = const [],
+      this.rangeValues = const MinMaxValues(maxV: 0.0, minV: 0.0)});
 
   final int numEdges;
   final double minValue;

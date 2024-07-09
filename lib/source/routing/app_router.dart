@@ -1,4 +1,3 @@
-
 import 'package:go_router/go_router.dart';
 
 import 'package:terra_trace/source/features/data/domain/flux_data.dart';
@@ -54,11 +53,11 @@ final goRouter = GoRouter(
                   name: AppRoute.editDataScreen.name,
                   path: 'edit-data-screen/:projectName',
                   builder: (context, state) {
-                    final projectName = state.params['projectName'];
+                    final projectName = state.pathParameters['projectName'];
                     final fluxData = state.extra as FluxData;
 
                     return EditDataScreen(
-                      projectName: projectName,
+                      projectName: projectName!,
                       fluxData: fluxData,
                     );
                   },
@@ -70,5 +69,5 @@ final goRouter = GoRouter(
       ],
     ),
   ],
-  errorBuilder: (context, state) => const NotFoundScreen(),
+  errorBuilder: (context, state) => NotFoundScreen(),
 );

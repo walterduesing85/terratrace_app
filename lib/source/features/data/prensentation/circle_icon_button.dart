@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 
 class CircleIconButton extends StatelessWidget {
   final double size;
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
   final IconData icon;
   const CircleIconButton(
-      { this.size = 30.0, this.icon = Icons.clear, this.onPressed});
+      {this.size = 30.0, this.icon = Icons.clear, this.onPressed});
 
   @override
   Widget build(BuildContext context) {

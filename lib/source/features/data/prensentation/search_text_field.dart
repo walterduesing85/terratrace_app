@@ -5,7 +5,7 @@ import 'circle_icon_button.dart';
 import 'package:terra_trace/source/features/data/data/data_management.dart';
 
 class SearchTextField extends ConsumerStatefulWidget {
-  const SearchTextField({Key key}) : super(key: key);
+  const SearchTextField({Key? key}) : super(key: key);
 
   @override
   _SearchTextFieldState createState() => _SearchTextFieldState();
@@ -44,7 +44,7 @@ class _SearchTextFieldState extends ConsumerState<SearchTextField> {
               FocusScopeNode currentFocus = FocusScope.of(context);
               if (!currentFocus.hasPrimaryFocus &&
                   currentFocus.focusedChild != null) {
-                currentFocus.focusedChild.unfocus();
+                currentFocus.focusedChild?.unfocus();
               }
             },
           ),

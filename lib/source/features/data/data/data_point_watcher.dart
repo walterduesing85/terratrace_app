@@ -16,8 +16,8 @@ class DataPointWatcher {
 
   DataPointWatcher._internal();
 
-  WidgetRef ref;
-  StreamSubscription<WatchEvent> _subscription;
+  late WidgetRef ref;
+  StreamSubscription<WatchEvent>? _subscription;
 
   void watchForFiles() async {
     print('hello from watchForFiles -__-_-_-_-_-_-_-_-_');

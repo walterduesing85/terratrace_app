@@ -27,12 +27,16 @@ class TabData extends ConsumerWidget {
                     color: Colors.white70,
                   ),
                   onChanged: (value) {
-                    ref.read(searchValueTabProvider.notifier).setSearchValue(value);
+                    ref
+                        .read(searchValueTabProvider.notifier)
+                        .setSearchValue(value);
                   },
                   decoration: kInputTextField.copyWith(
                     suffixIcon: CircleIconButton(
                       onPressed: () {
-                        ref.read(searchValueTabProvider.notifier).setSearchValue('');
+                        ref
+                            .read(searchValueTabProvider.notifier)
+                            .setSearchValue('');
                         FocusScope.of(context).unfocus();
                         _controller.clear();
                       },
@@ -83,21 +87,23 @@ class TabData extends ConsumerWidget {
         Expanded(
           child: fluxDataListAsync.when(
             data: (fluxDataList) {
-              final searchValue = ref.watch(searchValueTabProvider).toLowerCase();
+              final searchValue =
+                  ref.watch(searchValueTabProvider).toLowerCase();
               final sortPreference = ref.watch(sortPreferenceProvider);
 
               List<FluxData> filteredList = List<FluxData>.from(fluxDataList);
 
               filteredList = filteredList.where((fluxData) {
-                final siteLower = fluxData.dataSite.toLowerCase();
+                final siteLower = fluxData.dataSite?.toLowerCase();
                 final searchLower = searchValue.toLowerCase();
-                return siteLower.contains(searchLower) || searchLower.isEmpty;
+                return siteLower!.contains(searchLower) || searchLower.isEmpty;
               }).toList();
 
               if (sortPreference == 'latest') {
-                filteredList.sort((a, b) => b.dataDate.compareTo(a.dataDate));
+                filteredList.sort((a, b) => b.dataDate!.compareTo(a.dataDate!));
               } else if (sortPreference == 'highest') {
-                filteredList.sort((a, b) => b.dataCfluxGram.compareTo(a.dataCfluxGram));
+                filteredList.sort(
+                    (a, b) => b.dataCfluxGram!.compareTo(a.dataCfluxGram!));
               }
 
               return ListView.builder(

@@ -6,7 +6,7 @@ import 'package:terra_trace/source/constants/app_sizes.dart';
 
 /// Placeholder widget showing a message and CTA to go back to the home screen.
 class EmptyPlaceholderWidget extends StatelessWidget {
-  const EmptyPlaceholderWidget({@required this.message});
+  const EmptyPlaceholderWidget({required this.message});
   final String message;
 
   @override

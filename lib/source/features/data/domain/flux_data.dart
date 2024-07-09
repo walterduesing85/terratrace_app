@@ -5,31 +5,31 @@ part 'flux_data.g.dart';
 @HiveType(typeId: 4)
 class FluxData {
   @HiveField(0)
-  String dataSite;
+  String? dataSite;
   @HiveField(1)
-  String dataLong;
+  String? dataLong;
   @HiveField(2)
-  String dataLat;
+  String? dataLat;
   @HiveField(3)
-  String dataTemp;
+  String? dataTemp;
   @HiveField(4)
-  String dataPress;
+  String? dataPress;
   @HiveField(5)
-  String dataCflux;
+  String? dataCflux;
   @HiveField(6)
-  String dataDate;
+  String? dataDate;
   @HiveField(7)
-  String dataKey;
+  String? dataKey;
   @HiveField(8)
-  String dataNote;
+  String? dataNote;
   @HiveField(9)
-  String dataSoilTemp;
+  String? dataSoilTemp;
   @HiveField(10)
-  String dataInstrument;
+  String? dataInstrument;
   @HiveField(11)
-  String dataCfluxGram;
+  String? dataCfluxGram;
   @HiveField(12)
-  String dataOrigin;
+  String? dataOrigin;
 
   FluxData(
       {this.dataSite,

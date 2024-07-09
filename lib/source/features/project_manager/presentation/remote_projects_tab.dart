@@ -8,7 +8,7 @@ import 'package:terra_trace/source/features/project_manager/presentation/remote_
 import 'sign_in_form.dart'; // Import the SignInForm widget
 
 class RemoteProjectsTab extends ConsumerWidget {
-  const RemoteProjectsTab({Key key}) : super(key: key);
+  const RemoteProjectsTab({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -17,11 +17,10 @@ class RemoteProjectsTab extends ConsumerWidget {
     return authState.when(
       data: (user) {
         if (user == null) {
-          return const SignInForm(); // Show the SignInForm when not signed in
+          return SignInForm(); // Show the SignInForm when not signed in
         } else {
           return AsyncValueWidget<List<RemoteProjectCard>>(
             value: ref.watch(remoteProjectsCardStreamProvider2),
-   
             data: (remoteProjectCards) => ListView.builder(
               itemCount: remoteProjectCards.length,
               itemBuilder: (context, index) {

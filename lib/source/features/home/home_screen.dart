@@ -6,7 +6,7 @@ import 'package:terra_trace/source/features/data/data/data_management.dart';
 import 'package:terra_trace/source/routing/app_router.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({Key key}) : super(key: key);
+  const HomeScreen({Key? key}) : super(key: key);
 
   @override
   State<HomeScreen> createState() => _HomeScrenState();

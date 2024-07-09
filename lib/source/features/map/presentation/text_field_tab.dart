@@ -8,8 +8,8 @@ class TextFieldTab extends ConsumerWidget {
   final TextEditingController controller;
 
   const TextFieldTab({
-    Key key,
-    @required this.controller,
+    Key? key,
+    required this.controller,
   }) : super(key: key);
 
   @override

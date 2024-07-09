@@ -4,7 +4,7 @@ import 'package:riverpod/riverpod.dart';
 import 'package:terra_trace/source/common_widgets/error_message_widget.dart';
 
 class AsyncValueWidget<T> extends StatelessWidget {
-  const AsyncValueWidget({ @required this.value, @required this.data});
+  const AsyncValueWidget({required this.value, required this.data});
   final AsyncValue<T> value;
   final Widget Function(T) data;
 

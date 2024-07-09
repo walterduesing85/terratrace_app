@@ -63,7 +63,7 @@ final projectNameProvider =
 class ProjectNameValueNotifier extends StateNotifier<String> {
   ProjectNameValueNotifier() : super('');
 
-  void setProjectName(String value) {
+  setProjectName(String value) {
     state = value;
   }
 
@@ -106,7 +106,7 @@ class SortData {
   double values;
   String dates;
 
-  SortData({this.counter, this.values, this.dates});
+  SortData({this.counter = 0, this.values = 0.0, this.dates = ''});
 }
 
 final fluxDataListProvider = StreamProvider<List<FluxData>>((ref) async* {
@@ -119,7 +119,7 @@ final fluxDataListProvider = StreamProvider<List<FluxData>>((ref) async* {
       print('DataList length: ${dataList.length}');
       yield dataList
           .where((fluxDataEl) =>
-              fluxDataEl.dataSite
+              fluxDataEl.dataSite!
                   .toLowerCase()
                   .contains(searchValue.toLowerCase()) ||
               searchValue.isEmpty)
@@ -185,9 +185,9 @@ final markersProvider = Provider<Set<Marker>>((ref) {
   final selectedData = ref.watch(selectedFluxDataProvider);
   return selectedData
       .map((data) => Marker(
-            markerId: MarkerId(data.dataKey),
-            position:
-                LatLng(double.parse(data.dataLat), double.parse(data.dataLong)),
+            markerId: MarkerId(data.dataKey!),
+            position: LatLng(
+                double.parse(data.dataLat!), double.parse(data.dataLong!)),
             infoWindow:
                 InfoWindow(title: data.dataSite, snippet: data.dataCfluxGram),
           ))
@@ -198,9 +198,9 @@ final markersProvider2 = Provider<Set<Marker>>((ref) {
   final selectedData = ref.watch(selectedFluxDataProvider);
   return selectedData
       .map((data) => Marker(
-            markerId: MarkerId(data.dataKey),
-            position:
-                LatLng(double.parse(data.dataLat), double.parse(data.dataLong)),
+            markerId: MarkerId(data.dataKey!),
+            position: LatLng(
+                double.parse(data.dataLat!), double.parse(data.dataLong!)),
             infoWindow:
                 InfoWindow(title: data.dataSite, snippet: data.dataCfluxGram),
           ))

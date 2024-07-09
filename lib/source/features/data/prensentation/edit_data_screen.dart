@@ -9,7 +9,7 @@ class EditDataScreen extends ConsumerStatefulWidget {
   final String projectName;
   final FluxData fluxData;
 
-  EditDataScreen({@required this.projectName, @required this.fluxData});
+  EditDataScreen({required this.projectName, required this.fluxData});
 
   @override
   _EditFluxDataScreenState createState() => _EditFluxDataScreenState();
@@ -41,12 +41,12 @@ class _EditFluxDataScreenState extends ConsumerState<EditDataScreen> {
               // Add other fields similarly...
               ElevatedButton(
                 onPressed: () async {
-                  if (_formKey.currentState.validate()) {
+                  if (_formKey.currentState!.validate()) {
                     final projectManagement =
                         ref.read(projectManagementProvider);
 
                     await projectManagement.updateFluxData(widget.projectName,
-                        widget.fluxData.dataKey, _updatedFields);
+                        widget.fluxData.dataKey!, _updatedFields);
                     Navigator.pop(context);
                   }
                 },

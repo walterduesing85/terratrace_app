@@ -10,7 +10,7 @@ class CreateProjects {
   final _auth = FirebaseAuth.instance;
 
   Future<void> createNewProject(projectName, context) async {
-    User user = _auth.currentUser;
+    User? user = _auth.currentUser;
 
     if (projectName != null) {
       if (_auth.currentUser != null) {
@@ -21,28 +21,28 @@ class CreateProjects {
           db.collection('projects').doc(projectName).set(
             {
               'name': projectName,
-              'members': {user.uid: 'owner'},
+              'members': {user?.uid: 'owner'},
             },
           );
 
-          Map projectMember;
+          Map? projectMember;
           FirebaseFirestore.instance
               .collection('users')
-              .doc(user.uid)
+              .doc(user?.uid)
               .get()
               .then((DocumentSnapshot documentSnapshot) {
             projectMember = documentSnapshot.get('projects');
             if (projectMember != null) {
-              projectMember[projectName] = 'owner';
+              projectMember![projectName] = 'owner';
               db
                   .collection('users')
-                  .doc(user.uid)
+                  .doc(user?.uid)
                   .update({'projects': projectMember});
             } else {
-              projectMember[projectName] = 'owner';
+              projectMember![projectName] = 'owner';
               db
                   .collection('users')
-                  .doc(user.uid)
+                  .doc(user?.uid)
                   .set({'projects': projectMember});
             }
           });
@@ -55,9 +55,9 @@ class CreateProjects {
           ).show();
         }
       } else {
-        String email;
-        String password;
-        String userName;
+        String email = '';
+        String password = '';
+        String userName = '';
         Alert(
             context: context,
             title: "User not logged in",
@@ -115,19 +115,17 @@ class CreateProjects {
                     final newUser = await _auth.createUserWithEmailAndPassword(
                         email: email.trim(), password: password);
 
-                    if (newUser != null) {
-                      FirebaseFirestore.instance
-                          .collection('users')
-                          .doc(newUser.user.uid)
-                          .set({
-                        'UserName': userName,
-                        'UserID': newUser.user.uid,
-                        'UserEmail': newUser.user.email,
-                        'projects': {projectName: 'owner'}
-                      });
-                      context.pushNamed(AppRoute.projectmanager.name);
-                      ;
-                    }
+                    FirebaseFirestore.instance
+                        .collection('users')
+                        .doc(newUser.user?.uid)
+                        .set({
+                      'UserName': userName,
+                      'UserID': newUser.user?.uid,
+                      'UserEmail': newUser.user?.email,
+                      'projects': {projectName: 'owner'}
+                    });
+                    context.pushNamed(AppRoute.projectmanager.name);
+                    ;
                   } catch (e) {
                     print(e);
                     context.pushNamed(AppRoute.projectmanager.name);
@@ -193,9 +191,9 @@ class CreateProjects {
           ).show();
         }
       } else {
-        String email;
-        String password;
-        String userName;
+        String email = '';
+        String password = '';
+        String userName = '';
         Alert(
           context: context,
           title: "User not logged in",
@@ -253,19 +251,17 @@ class CreateProjects {
                   final newUser = await _auth.createUserWithEmailAndPassword(
                       email: email.trim(), password: password);
 
-                  if (newUser != null) {
-                    FirebaseFirestore.instance
-                        .collection('users')
-                        .doc(newUser.user.uid)
-                        .set({
-                      'UserName': userName,
-                      'UserID': newUser.user.uid,
-                      'UserEmail': newUser.user.email,
-                      'projects': {projectName: 'owner'}
-                    });
+                  FirebaseFirestore.instance
+                      .collection('users')
+                      .doc(newUser.user?.uid)
+                      .set({
+                    'UserName': userName,
+                    'UserID': newUser.user?.uid,
+                    'UserEmail': newUser.user?.email,
+                    'projects': {projectName: 'owner'}
+                  });
 
-                    Navigator.pushNamed(context, AppRoute.projectmanager.name);
-                  }
+                  Navigator.pushNamed(context, AppRoute.projectmanager.name);
                 } catch (e) {
                   print(e);
                   Navigator.pushNamed(context, AppRoute.projectmanager.name);

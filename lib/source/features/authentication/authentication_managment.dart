@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 
 import 'package:rflutter_alert/rflutter_alert.dart';
 import 'package:riverpod/riverpod.dart';
-import 'package:terra_trace/source/features/data/data/data_management.dart';
 
 class AuthenticationManager {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -40,12 +39,12 @@ class AuthenticationManager {
           email: email.trim(), password: password);
 
       final userDocRef =
-          FirebaseFirestore.instance.collection('users').doc(newUser.user.uid);
+          FirebaseFirestore.instance.collection('users').doc(newUser.user?.uid);
 
       final userData = {
         'UserName': userName,
-        'UserID': newUser.user.uid,
-        'UserEmail': newUser.user.email,
+        'UserID': newUser.user?.uid,
+        'UserEmail': newUser.user?.email,
         'projects': {projectName: 'owner'}
         // Modify the logic as needed
       };
@@ -75,7 +74,7 @@ class AuthenticationManager {
 class AuthenticationService {
   final FirebaseAuth _firebaseAuth = FirebaseAuth.instance;
 
-  Stream<User> get authStateChanges => _firebaseAuth.authStateChanges();
+  Stream<User?> get authStateChanges => _firebaseAuth.authStateChanges();
 }
 
 final authenticationServiceProvider = Provider<AuthenticationService>((ref) {
@@ -87,15 +86,15 @@ final authenticationManagerProvider = Provider<AuthenticationManager>((ref) {
 });
 
 final currentUserProvider = Provider<User>((ref) {
-  return ref.watch(authenticationManagerProvider).user;
+  return ref.watch(authenticationManagerProvider).user!;
 });
 
-final currentUserStateProvider = StreamProvider<User>((ref) {
+final currentUserStateProvider = StreamProvider<User?>((ref) {
   final authService = ref.watch(authenticationServiceProvider);
   return authService.authStateChanges;
 });
 
-final firebaseAuthStreamProvider = StreamProvider.autoDispose<User>((ref) {
+final firebaseAuthStreamProvider = StreamProvider.autoDispose<User?>((ref) {
   // Access the FirebaseAuth instance
   final auth = FirebaseAuth.instance;
   // Return a stream that listens to the authentication state changes

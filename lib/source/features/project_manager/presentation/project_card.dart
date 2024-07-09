@@ -10,7 +10,7 @@
 // class ProjectCard extends StatelessWidget {
 //   const ProjectCard({
 //     Key key,
-//     @required this.project,
+//     required this.project,
 //   });
 
 //   final ProjectData project;

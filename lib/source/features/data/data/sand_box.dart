@@ -13,9 +13,9 @@ import 'package:terra_trace/source/features/data/domain/flux_data.dart';
 class SandBox {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  String dataOrigin;
-  File pathLoad;
-  List<FileSystemEntity> fileList;
+  String? dataOrigin;
+  File? pathLoad;
+  List<FileSystemEntity> fileList = [];
   double findPressureValues(FluxData allData) {
     double pressure;
 
@@ -23,7 +23,7 @@ class SandBox {
       pressure = defaultPressure;
       dataOrigin = 'default value';
     } else {
-      pressure = double.parse(allData.dataPress);
+      pressure = double.parse(allData.dataPress!);
       dataOrigin = 'true value';
     }
 
@@ -37,32 +37,32 @@ class SandBox {
       temperature = defaultTemperature;
       dataOrigin = 'default value';
     } else {
-      temperature = double.parse(data.dataTemp);
+      temperature = double.parse(data.dataTemp!);
       dataOrigin = 'true value';
     }
 
     return temperature + 273.15; //adding 273.15 to convert to Kelvin
   }
 
-  String findDataPointValue(data, RegExp exp) {
+  String? findDataPointValue(data, RegExp exp) {
     return exp.firstMatch(data) == null
         ? 'No Data Found'
-        : exp.firstMatch(data).group(1);
+        : exp.firstMatch(data)?.group(1);
   }
 
-  Notifications _notifications;
+  Notifications? _notifications;
 
   double calculateFlux(FluxData allData) {
     double k = (86400 * findPressureValues(allData) * chamberVolume) /
         (1000000 * gasConstant * findTemperatureValues(allData) * chamberArea);
-    double fluxInGrams = double.parse(allData.dataCflux) * k * molarMassCO2;
+    double fluxInGrams = double.parse(allData.dataCflux!) * k * molarMassCO2;
     return fluxInGrams;
   }
 
   void _pushNotification(String boxKey) {
     _notifications = Notifications(boxKey: boxKey);
-    this._notifications.initNotifications();
-    this._notifications.pushNotification(); // display notification
+    this._notifications?.initNotifications();
+    this._notifications?.pushNotification(); // display notification
   }
 
   Future<void> makeSingleDataPoint(String dataFile, String projectName) async {
@@ -76,9 +76,9 @@ class SandBox {
       final pathLoad = file;
       data = await pathLoad.readAsString();
 
-      String dataInstrument =
+      String? dataInstrument =
           findDataPointValue(data, fluxRegExp.expInstrument);
-      String dataDate = findDataPointValue(data, fluxRegExp.expDate);
+      String? dataDate = findDataPointValue(data, fluxRegExp.expDate);
       String boxKey = '$dataDate$dataInstrument';
 
       FluxData allData = FluxData(
@@ -119,8 +119,7 @@ class SandBox {
         'dataOrigin': allData.dataOrigin,
       });
       _pushNotification(allData
-          .dataKey); // Adjust this function to handle notifications without the box parameter if needed
-
+          .dataKey!); // Adjust this function to handle notifications without the box parameter if needed
     } catch (e) {
       print('Error in makeSingleDataPoint: $e');
     }
@@ -138,51 +137,51 @@ class SandBox {
     for (var i = 0, j = _lines.length; i < j; i++) {
       RegExp exp7 = new RegExp(r"CO2", multiLine: true);
       double flux;
-      double finalFlux;
+      double finalFlux = 0.0;
 
       if (exp7.hasMatch(_lines[i]) == true && i < kMaxLineToFindCo2) {
         RegExp exp8 = new RegExp(r"[0-9.]{3,12}", multiLine: true);
         RegExp exp9 = new RegExp(r"E\s*(.*)$", multiLine: true);
         // RegExp exp8 = new RegExp(r"NOTE:\s*(.*)$", multiLine: true);
 
-        if (exp9.firstMatch(_lines[i + 12]).group(0).toString() == 'E-01') {
-          flux = double.parse(exp8.firstMatch(_lines[i + 12]).group(0));
+        if (exp9.firstMatch(_lines[i + 12])!.group(0).toString() == 'E-01') {
+          flux = double.parse(exp8.firstMatch(_lines[i + 12])!.group(0)!);
           finalFlux = flux / 10;
         }
-        if (exp9.firstMatch(_lines[i + 12]).group(0).toString() == 'E-02') {
-          flux = double.parse(exp8.firstMatch(_lines[i + 12]).group(0));
+        if (exp9.firstMatch(_lines[i + 12])!.group(0).toString() == 'E-02') {
+          flux = double.parse(exp8.firstMatch(_lines[i + 12])!.group(0)!);
           finalFlux = flux / 100;
         }
-        if (exp9.firstMatch(_lines[i + 12]).group(0).toString() == 'E-03') {
-          flux = double.parse(exp8.firstMatch(_lines[i + 12]).group(0));
+        if (exp9.firstMatch(_lines[i + 12])!.group(0).toString() == 'E-03') {
+          flux = double.parse(exp8.firstMatch(_lines[i + 12])!.group(0)!);
           finalFlux = flux / 1000;
         }
-        if (exp9.firstMatch(_lines[i + 12]).group(0).toString() == 'E-04') {
-          flux = double.parse(exp8.firstMatch(_lines[i + 12]).group(0));
+        if (exp9.firstMatch(_lines[i + 12])!.group(0).toString() == 'E-04') {
+          flux = double.parse(exp8.firstMatch(_lines[i + 12])!.group(0)!);
           finalFlux = flux / 10000;
         }
-        if (exp9.firstMatch(_lines[i + 12]).group(0).toString() == 'E-05') {
-          flux = double.parse(exp8.firstMatch(_lines[i + 12]).group(0));
+        if (exp9.firstMatch(_lines[i + 12])!.group(0).toString() == 'E-05') {
+          flux = double.parse(exp8.firstMatch(_lines[i + 12])!.group(0)!);
           finalFlux = flux / 100000;
         }
-        if (exp9.firstMatch(_lines[i + 12]).group(0).toString() == 'E00') {
-          finalFlux = double.parse(exp8.firstMatch(_lines[i + 12]).group(0));
+        if (exp9.firstMatch(_lines[i + 12])!.group(0).toString() == 'E00') {
+          finalFlux = double.parse(exp8.firstMatch(_lines[i + 12])!.group(0)!);
         }
 
-        if (exp9.firstMatch(_lines[i + 12]).group(0).toString() == 'E01') {
-          flux = double.parse(exp8.firstMatch(_lines[i + 12]).group(0));
+        if (exp9.firstMatch(_lines[i + 12])!.group(0).toString() == 'E01') {
+          flux = double.parse(exp8.firstMatch(_lines[i + 12])!.group(0)!);
           finalFlux = flux * 10;
         }
-        if (exp9.firstMatch(_lines[i + 12]).group(0).toString() == 'E02') {
-          flux = double.parse(exp8.firstMatch(_lines[i + 12]).group(0));
+        if (exp9.firstMatch(_lines[i + 12])!.group(0).toString() == 'E02') {
+          flux = double.parse(exp8.firstMatch(_lines[i + 12])!.group(0)!);
           finalFlux = flux * 100;
         }
-        if (exp9.firstMatch(_lines[i + 12]).group(0).toString() == 'E03') {
-          flux = double.parse(exp8.firstMatch(_lines[i + 12]).group(0));
+        if (exp9.firstMatch(_lines[i + 12])!.group(0).toString() == 'E03') {
+          flux = double.parse(exp8.firstMatch(_lines[i + 12])!.group(0)!);
           finalFlux = flux * 1000;
         }
-        if (exp9.firstMatch(_lines[i + 12]).group(0).toString() == 'E04') {
-          flux = double.parse(exp8.firstMatch(_lines[i + 12]).group(0));
+        if (exp9.firstMatch(_lines[i + 12])!.group(0).toString() == 'E04') {
+          flux = double.parse(exp8.firstMatch(_lines[i + 12])!.group(0)!);
           finalFlux = flux * 10000;
         }
         return finalFlux.toStringAsFixed(3);
@@ -204,13 +203,13 @@ class SandBox {
     String dataOrigin = 'not defined'; // Define your data origin
 
     for (var k = 0; k < fileList.length; k++) {
-      File pathLoad = fileList[k];
+      File pathLoad = fileList[k] as File;
 
       data = await pathLoad.readAsString();
 
-      String dataInstrument =
+      String? dataInstrument =
           findDataPointValue(data, fluxRegExp.expInstrument);
-      String dataDate = findDataPointValue(data, fluxRegExp.expDate);
+      String? dataDate = findDataPointValue(data, fluxRegExp.expDate);
       String boxKey = '$dataDate$dataInstrument';
 
       // Check if the document already exists in Firestore
@@ -266,26 +265,33 @@ final sandBoxProvider = Provider<SandBox>((ref) {
 });
 
 class Notifications {
-  Notifications({this.boxKey});
+  Notifications({required this.boxKey});
 
   String boxKey;
   FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
       FlutterLocalNotificationsPlugin();
 
   void initNotifications() async {
+    final DarwinInitializationSettings initializationSettingsDarwin =
+        DarwinInitializationSettings(
+      requestAlertPermission: true,
+      requestBadgePermission: true,
+      requestSoundPermission: true,
+      onDidReceiveLocalNotification:
+          (int id, String? title, String? body, String? payload) async {},
+    );
+
     final AndroidInitializationSettings initializationSettingsAndroid =
         AndroidInitializationSettings('ic_launcher');
-    final IOSInitializationSettings initializationSettingsIOS =
-        IOSInitializationSettings(onDidReceiveLocalNotification: null);
-    final MacOSInitializationSettings initializationSettingsMacOS =
-        MacOSInitializationSettings();
-    final InitializationSettings initializationSettings =
-        InitializationSettings(
-            android: initializationSettingsAndroid,
-            iOS: initializationSettingsIOS,
-            macOS: initializationSettingsMacOS);
-    await flutterLocalNotificationsPlugin.initialize(initializationSettings,
-        onSelectNotification: selectNotification);
+
+    InitializationSettings initializationSettings = InitializationSettings(
+      android: initializationSettingsAndroid,
+      iOS: initializationSettingsDarwin,
+    );
+
+    await flutterLocalNotificationsPlugin.initialize(
+      initializationSettings,
+    );
   }
 
   Future<void> pushNotification() async {
@@ -293,7 +299,6 @@ class Notifications {
         AndroidNotificationDetails(
       'push_messages: 0',
       'push_messages: push_messages',
-      'push_messages: A new Flutter project',
       importance: Importance.max,
       priority: Priority.high,
       showWhen: true,

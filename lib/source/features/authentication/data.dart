@@ -3,7 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:internet_connection_checker/internet_connection_checker.dart';
 import 'package:riverpod/riverpod.dart';
 
-final firebaseAuthStreamProvider = StreamProvider.autoDispose<User>((ref) {
+final firebaseAuthStreamProvider = StreamProvider.autoDispose<User?>((ref) {
   // Access the FirebaseAuth instance
   final auth = FirebaseAuth.instance;
   // Return a stream that listens to the authentication state changes
@@ -13,13 +13,12 @@ final firebaseAuthStreamProvider = StreamProvider.autoDispose<User>((ref) {
 
 final appBarTitleProvider = FutureProvider.autoDispose<String>((ref) async {
   final userAsyncValue = ref.watch(firebaseAuthStreamProvider);
-  final isConnectedAsyncValue = ref.watch(internetConnectionProvider);
 
   if (userAsyncValue is AsyncData && userAsyncValue.value != null) {
     // If user is signed in, return the user's email
-    return userAsyncValue.value.email ?? 'No email available';
-  } else if (isConnectedAsyncValue is AsyncData &&
-      !isConnectedAsyncValue.value) {
+    return userAsyncValue.value?.email ?? 'No email available';
+  } else if (ref.watch(internetConnectionProvider) is AsyncData &&
+      ref.watch(internetConnectionProvider).value == false) {
     // If not connected to the internet, return 'No Internet Connection'
     return 'No Internet Connection';
   } else {

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:terra_trace/source/constants/app_sizes.dart';
 
-
 /// Primary button based on [ElevatedButton].
 /// Useful for CTAs in the app.
 /// @param text - text to display on the button.
@@ -10,10 +9,10 @@ import 'package:terra_trace/source/constants/app_sizes.dart';
 /// @param onPressed - callback to be called when the button is pressed.
 class PrimaryButton extends StatelessWidget {
   const PrimaryButton(
-      {@required this.text, this.isLoading = false, this.onPressed});
+      {required this.text, this.isLoading = false, this.onPressed});
   final String text;
   final bool isLoading;
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
   @override
   Widget build(BuildContext context) {
     return SizedBox(
@@ -27,7 +26,7 @@ class PrimaryButton extends StatelessWidget {
                 textAlign: TextAlign.center,
                 style: Theme.of(context)
                     .textTheme
-                    .button
+                    .titleLarge!
                     .copyWith(color: Colors.white),
               ),
       ),

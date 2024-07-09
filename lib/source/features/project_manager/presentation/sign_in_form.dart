@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:terra_trace/source/features/authentication/authentication_managment.dart';
 
 class SignInForm extends ConsumerStatefulWidget {
-  const SignInForm({Key key}) : super(key: key);
+  const SignInForm({Key? key}) : super(key: key);
 
   @override
   ConsumerState<SignInForm> createState() => _SignInFormState();
@@ -53,7 +53,7 @@ class _SignInFormState extends ConsumerState<SignInForm> {
                 const SizedBox(height: 20),
                 ElevatedButton(
                   onPressed: () async {
-                    if (_formKey.currentState.validate()) {
+                    if (_formKey.currentState!.validate()) {
                       await authManager.signInWithEmailAndPassword(
                         _emailController.text.trim(),
                         _passwordController.text.trim(),

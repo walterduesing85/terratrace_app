@@ -6,7 +6,7 @@ import 'package:terra_trace/source/features/authentication/data.dart';
 import 'package:terra_trace/source/features/project_manager/presentation/remote_projects_tab.dart';
 
 class ProjectManagementScreen extends ConsumerWidget {
-  const ProjectManagementScreen({Key key}) : super(key: key);
+  const ProjectManagementScreen({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

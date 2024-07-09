@@ -5,9 +5,9 @@ import 'package:terra_trace/source/constants/constants.dart';
 
 class UserCard extends StatefulWidget {
   UserCard({
-    @required this.userName,
-    @required this.userMail,
-    @required this.userID,
+    required this.userName,
+    required this.userMail,
+    required this.userID,
     this.projectName,
     this.index,
     this.boxKey,
@@ -15,11 +15,11 @@ class UserCard extends StatefulWidget {
   });
   final String userName;
   final String userMail;
-  final String projectName;
-  final int index;
-  final String boxKey;
+  final String? projectName;
+  final int? index;
+  final String? boxKey;
   final String userID;
-  final Map userProjects;
+  final Map? userProjects;
 
   @override
   _UserCardState createState() => _UserCardState();
@@ -36,7 +36,7 @@ class _UserCardState extends State<UserCard> {
     var collection = FirebaseFirestore.instance.collection('users');
     var docSnapshot = await collection.doc(widget.userID).get();
 
-    Map data = docSnapshot.data();
+    Map data = docSnapshot.data()!;
     Map projects = data['projects']; // <-- The value you want to retrieve.
     // Call setState if needed.
 
@@ -44,22 +44,22 @@ class _UserCardState extends State<UserCard> {
   }
 
   checkIsMember() {
-    if (widget.userProjects[widget.projectName] == 'owner') {
+    if (widget.userProjects![widget.projectName] == 'owner') {
       isMember = Icon(Icons.card_membership, color: kGreenFluxColor);
       setState(() {});
-    } else if (widget.userProjects[widget.projectName] == 'collaborator') {
+    } else if (widget.userProjects![widget.projectName] == 'collaborator') {
       isMember = Icon(Icons.how_to_reg, color: kGreenFluxColor);
       setState(() {});
-    } else if (widget.userProjects[widget.projectName] == 'applicant') {
+    } else if (widget.userProjects![widget.projectName] == 'applicant') {
       isMember = Icon(Icons.contact_mail, color: kGreenFluxColor);
       setState(() {});
-    } else if (widget.userProjects[widget.projectName] == null) {
+    } else if (widget.userProjects![widget.projectName] == null) {
       isMember = Icon(Icons.person_add_disabled, color: Colors.redAccent);
       setState(() {});
     }
   }
 
-  Icon isMember;
+  Icon? isMember;
 
   @override
   void initState() {
@@ -67,7 +67,7 @@ class _UserCardState extends State<UserCard> {
     super.initState();
   }
 
-  bool confirmedByUser;
+  bool? confirmedByUser;
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -177,7 +177,7 @@ class _UserCardState extends State<UserCard> {
                               .update({'members': projectMember});
                         });
 
-                        widget.userProjects[widget.projectName] =
+                        widget.userProjects![widget.projectName] =
                             'collaborator';
 
                         FirebaseFirestore.instance

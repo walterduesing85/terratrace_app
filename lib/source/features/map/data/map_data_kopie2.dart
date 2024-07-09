@@ -12,7 +12,7 @@ class MinMaxValues {
   double minV;
   double maxV;
 
-  MinMaxValues({@required this.minV, @required this.maxV});
+  MinMaxValues({required this.minV, required this.maxV});
 }
 
 class MapData {
@@ -60,7 +60,7 @@ class MapData {
 
     for (int i = 0; i < fluxDataList.length; i++) {
       FluxData fluxData = fluxDataList[i];
-      cO2.add(double.parse(fluxData.dataCfluxGram));
+      cO2.add(double.parse(fluxData.dataCfluxGram!));
     }
 
     String roundedValue;
@@ -97,12 +97,12 @@ class MapState {
   double layerOpacity = 0.75;
 
   MapState copyWith({
-    Set<Heatmap> heatmaps,
-    double zoom,
-    int radius,
-    double minOpacity,
-    double blurFactor,
-    double layerOpacity,
+    Set<Heatmap>? heatmaps,
+    double? zoom,
+    int? radius,
+    double? minOpacity,
+    double? blurFactor,
+    double? layerOpacity,
   }) {
     return MapState()
       ..heatmaps = heatmaps ?? this.heatmaps
@@ -196,7 +196,7 @@ final minMaxValuesProvider = StateProvider.autoDispose<MinMaxValues>((ref) {
       // Extract the List<double> from FluxData.dataCflux
       final List<double> cO2List = dataList.map((fluxData) {
         try {
-          return double.parse(fluxData.dataCflux);
+          return double.parse(fluxData.dataCflux!);
         } catch (e) {
           // Handle the case where parsing fails (e.g., log an error)
 
@@ -229,7 +229,7 @@ final minMaxGramProvider = StateProvider<MinMaxValues>((ref) {
       // Extract the List<double> from FluxData.dataCflux
       final List<double> cO2List = dataList.map((fluxData) {
         try {
-          return double.parse(fluxData.dataCfluxGram);
+          return double.parse(fluxData.dataCfluxGram!);
         } catch (e) {
           // Handle the case where parsing fails (e.g., log an error)
 
@@ -320,8 +320,8 @@ final weightedLatLngListProvider =
 
   for (int i = 0; i < dataList.length; i++) {
     weightedLatLngList.add(WeightedLatLng(
-      point: LatLng(double.parse(dataList[i].dataLat),
-          double.parse(dataList[i].dataLong)),
+      point: LatLng(double.parse(dataList[i].dataLat!),
+          double.parse(dataList[i].dataLong!)),
       intensity: intensities[i],
     ));
   }
@@ -395,7 +395,7 @@ class HeatmapStateNotifier extends StateNotifier<AsyncValue<void>> {
 
       state = AsyncValue.data(null);
     } catch (error, stackTrace) {
-      state = AsyncValue.error(error, stackTrace: stackTrace);
+      state = AsyncValue.error(error, stackTrace);
     }
   }
 }
@@ -426,8 +426,8 @@ final initialCameraPositionProvider = StateProvider<LatLng>((ref) {
       if (dataList.isNotEmpty) {
         final firstEntry = dataList.first;
         defaultPosition = LatLng(
-          double.parse(firstEntry.dataLat),
-          double.parse(firstEntry.dataLong),
+          double.parse(firstEntry.dataLat!),
+          double.parse(firstEntry.dataLong!),
         );
       }
     },
@@ -454,8 +454,8 @@ final initialCameraPositionProvider2 = StateProvider<LatLng>((ref) {
         // Use the first entry in the dataList to determine camera position
         final firstEntry = dataList.first;
         defaultPosition = LatLng(
-          double.parse(firstEntry.dataLat),
-          double.parse(firstEntry.dataLong),
+          double.parse(firstEntry.dataLat!),
+          double.parse(firstEntry.dataLong!),
         );
       }
     },

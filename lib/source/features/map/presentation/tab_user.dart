@@ -12,7 +12,7 @@ class TabUser extends StatefulWidget {
 }
 
 class _TabUserState extends State<TabUser> {
-  String searchValue;
+  String? searchValue;
   var _controller = TextEditingController();
 
   @override
@@ -44,7 +44,7 @@ class _TabUserState extends State<TabUser> {
                           FocusScopeNode currentFocus = FocusScope.of(context);
                           if (!currentFocus.hasPrimaryFocus &&
                               currentFocus.focusedChild != null) {
-                            currentFocus.focusedChild.unfocus();
+                            currentFocus.focusedChild?.unfocus();
                           }
                         });
                       }),
@@ -58,12 +58,13 @@ class _TabUserState extends State<TabUser> {
             ),
             Expanded(
                 child: StreamBuilder(
-              stream: searchValue == null || searchValue.isEmpty
+              stream: searchValue == null || searchValue?.isEmpty == true
                   ? FirebaseFirestore.instance.collection('users').snapshots()
                   : FirebaseFirestore.instance
                       .collection('users')
                       .where('userName', isGreaterThanOrEqualTo: searchValue)
-                      .where('userName', isLessThanOrEqualTo: searchValue + '\uf8ff')
+                      .where('userName',
+                          isLessThanOrEqualTo: (searchValue ?? '') + '\uf8ff')
                       .snapshots(),
               builder: (ctx, streamSnapshot) {
                 if (streamSnapshot.connectionState == ConnectionState.waiting) {
@@ -78,7 +79,7 @@ class _TabUserState extends State<TabUser> {
                   );
                 }
 
-                final documents = streamSnapshot.data.docs;
+                final documents = streamSnapshot.data?.docs ?? [];
 
                 return ListView.builder(
                     itemCount: documents.length,
@@ -100,15 +101,16 @@ class _TabUserState extends State<TabUser> {
 
 class CircleIconButton extends StatelessWidget {
   final double size;
-  final Function onPressed;
+  final Function() onPressed;
   final IconData icon;
 
-  CircleIconButton({this.size = 30.0, this.icon = Icons.clear, this.onPressed});
+  CircleIconButton(
+      {this.size = 30.0, this.icon = Icons.clear, required this.onPressed});
 
   @override
   Widget build(BuildContext context) {
     return InkWell(
-        onTap: this.onPressed,
+        onTap: onPressed,
         child: SizedBox(
             width: size,
             height: size,

@@ -11,8 +11,8 @@ import 'package:terra_trace/source/routing/app_router.dart';
 
 class DataCardTab extends ConsumerStatefulWidget {
   const DataCardTab({
-    Key key,
-    @required this.fluxData,
+    Key? key,
+    required this.fluxData,
   }) : super(key: key);
 
   final FluxData fluxData;
@@ -44,7 +44,7 @@ class _DataCardTabState extends ConsumerState<DataCardTab> {
           child: Text('Yes'),
           onPressed: () {
             context.pushNamed(AppRoute.editDataScreen.name,
-                params: {'projectName': ref.read(projectNameProvider)},
+                pathParameters: {'projectName': ref.read(projectNameProvider)},
                 extra: fluxData); // Dismiss the dialog
             //Navigator.pushNamed(); // Navigate to edit screen
           },
@@ -85,7 +85,7 @@ class _DataCardTabState extends ConsumerState<DataCardTab> {
                   ),
                   child: Checkbox(
                     value: isSelected,
-                    onChanged: (bool value) {
+                    onChanged: (bool? value) {
                       ref
                           .read(selectedFluxDataProvider.notifier)
                           .toggleFluxData(widget.fluxData);
@@ -107,14 +107,14 @@ class _DataCardTabState extends ConsumerState<DataCardTab> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text(
-                          truncateWithEllipsis(widget.fluxData.dataSite, 20),
+                          truncateWithEllipsis(widget.fluxData.dataSite!, 20),
                           style: kCardHeadeTextStyle,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
                         SizedBox(height: 4.0),
                         Text(
-                          widget.fluxData.dataDate,
+                          widget.fluxData.dataDate!,
                           style: kCardSubtitleTextStyle,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -143,8 +143,8 @@ class _DataCardTabState extends ConsumerState<DataCardTab> {
                       final mapController =
                           ref.read(mapControllerProvider.notifier);
                       final target = LatLng(
-                          double.parse(widget.fluxData.dataLat),
-                          double.parse(widget.fluxData.dataLong));
+                          double.parse(widget.fluxData.dataLat!),
+                          double.parse(widget.fluxData.dataLong!));
                       mapController.moveCamera(target);
                     },
                   ),

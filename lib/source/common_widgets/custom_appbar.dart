@@ -7,7 +7,7 @@ import 'package:terra_trace/source/constants/constants.dart';
 import '../features/data/data/data_management.dart';
 
 class CustomAppBar extends StatelessWidget {
-  const CustomAppBar({@required this.title});
+  const CustomAppBar({required this.title});
   final String title;
   @override
   Widget build(BuildContext context) {

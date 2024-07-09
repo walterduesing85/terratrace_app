@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:terra_trace/source/common_widgets/custom_appbar.dart';
@@ -11,7 +10,7 @@ import 'package:terra_trace/source/features/data/prensentation/data_card.dart';
 import 'circle_icon_button.dart';
 
 class DataListScreen extends StatefulWidget {
-  const DataListScreen({Key key}) : super(key: key);
+  const DataListScreen({Key? key}) : super(key: key);
 
   @override
   _DataListScreenState createState() => _DataListScreenState();
@@ -54,8 +53,8 @@ class _DataListScreenState extends State<DataListScreen> {
                         itemBuilder: (context, index) {
                           FluxData fluxData = dataList[index];
                           return DataCard(
-                            date: fluxData.dataDate,
-                            site: fluxData.dataSite,
+                            date: fluxData.dataDate!,
+                            site: fluxData.dataSite!,
                           );
                         },
                       );
@@ -74,13 +73,17 @@ class _DataListScreenState extends State<DataListScreen> {
                     color: Colors.white70,
                   ),
                   onChanged: (value) {
-                    ref.read(searchValueProvider.notifier).setSearchValue(value);
+                    ref
+                        .read(searchValueProvider.notifier)
+                        .setSearchValue(value);
                     print(value);
                   },
                   decoration: kInputTextField.copyWith(
                     suffixIcon: CircleIconButton(
                       onPressed: () {
-                        ref.read(searchValueProvider.notifier).clearSearchValue();
+                        ref
+                            .read(searchValueProvider.notifier)
+                            .clearSearchValue();
                         FocusScope.of(context).unfocus();
                         _controller.clear();
                       },

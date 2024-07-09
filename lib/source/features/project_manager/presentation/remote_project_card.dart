@@ -8,8 +8,8 @@ import 'package:terra_trace/source/routing/app_router.dart';
 
 class RemoteProjectCard extends StatelessWidget {
   const RemoteProjectCard({
-    @required this.project,
-    @required this.membershipStatus,
+    required this.project,
+    required this.membershipStatus,
   });
 
   final String project;
