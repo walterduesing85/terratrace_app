@@ -36,35 +36,25 @@ dependencies:
 
 
 
-  google_maps_flutter_heatmap:
-    git: https://github.com/Butterfly-Technologies-Ltd/google_maps_flutter_heatmap
   charts_flutter:
     git:
       url: https://github.com/michalfelski/charts
       path: charts_flutter
   csv: ^6.0.0
-  ##hive: ^2.0.4
- ## hive_flutter: any
-  modal_progress_hud:
-    git: https://github.com/ShakyaCsun/modal_progress_hud
-  animated_text_kit: ^4.2.2
-  # sliding_up_panel: ^1.0.2
-  flutter_slidable:
   watcher: ^1.0.1
   flutter_local_notifications: ^17.2.1
   firebase_core: ^3.1.1
   firebase_auth: ^5.1.1
   cloud_firestore: ^5.0.2
   rflutter_alert: ^2.0.7
-  data_connection_checker:
-    git: https://github.com/PAULOTEK/data_connection_checker
   firebase_crashlytics: ^4.0.2
   go_router: ^14.2.0
   flutter_riverpod: ^2.5.1 #^1.0.3+1
   internet_connection_checker: ^1.0.0+1
-  # device_info_plus: ^10.1.0
-  geolocator: ^12.0.0
   sliding_up_panel2: ^3.3.0+1
+  flutter_map_heatmap: ^0.0.7
+  flutter_map: ^6.2.1
+  latlong2: ^0.9.1
  
 
 
@@ -83,9 +73,6 @@ dev_dependencies:
     sdk: flutter
   flutter_test:
     sdk: flutter
-  hive_generator: ^2.0.1
-  build_runner:
-
 
 
 # For information on the generic Dart part of this file, see the
@@ -100,7 +87,7 @@ flutter:
   uses-material-design: true
 
   assets:
-    - images/
+   - images/
 
   fonts:
   - family: Barlow

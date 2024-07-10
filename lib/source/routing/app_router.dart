@@ -1,9 +1,7 @@
 import 'package:go_router/go_router.dart';
-
 import 'package:terra_trace/source/features/data/domain/flux_data.dart';
 import 'package:terra_trace/source/features/data/prensentation/data_list_screen.dart';
 import 'package:terra_trace/source/features/data/prensentation/edit_data_screen.dart';
-
 import 'package:terra_trace/source/features/home/home_screen.dart';
 import 'package:terra_trace/source/features/map/presentation/map_screen_selector.dart';
 import 'package:terra_trace/source/features/project_manager/presentation/create_new_project_screen.dart';
@@ -16,7 +14,6 @@ enum AppRoute {
   dataListScreen,
   createNewProjectScreen,
   mapScreen,
-  histogramScreen,
   editDataScreen,
 }
 
@@ -47,11 +44,11 @@ final goRouter = GoRouter(
             GoRoute(
               path: 'mapScreen',
               name: AppRoute.mapScreen.name,
-              builder: (context, state) => MapScreenSelector(),
+              builder: (context, state) =>  MapScreenSelector(),
               routes: [
                 GoRoute(
-                  name: AppRoute.editDataScreen.name,
                   path: 'edit-data-screen/:projectName',
+                  name: AppRoute.editDataScreen.name,
                   builder: (context, state) {
                     final projectName = state.pathParameters['projectName'];
                     final fluxData = state.extra as FluxData;
@@ -69,5 +66,5 @@ final goRouter = GoRouter(
       ],
     ),
   ],
-  errorBuilder: (context, state) => NotFoundScreen(),
+  errorBuilder: (context, state) => const NotFoundScreen(),
 );

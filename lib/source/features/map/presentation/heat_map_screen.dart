@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_maps_flutter_heatmap/google_maps_flutter_heatmap.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:flutter_map_heatmap/flutter_map_heatmap.dart';
 import 'package:sliding_up_panel2/sliding_up_panel2.dart';
 import 'package:terra_trace/source/common_widgets/custom_appbar.dart';
 import 'package:terra_trace/source/common_widgets/custom_drawer.dart';
@@ -8,10 +9,9 @@ import 'package:terra_trace/source/constants/text_styles.dart';
 import 'package:terra_trace/source/features/bar_chart/presentation/bar_chart_container.dart';
 import 'package:terra_trace/source/features/data/data/data_management.dart';
 import 'package:terra_trace/source/features/map/data/map_data.dart';
+import 'package:terra_trace/source/features/map/data/map_state.dart';
 import 'package:terra_trace/source/features/map/presentation/tab_data.dart';
 import 'package:terra_trace/source/features/map/presentation/tab_user.dart';
-
-import '../../data/data/map_provider.dart';
 
 class HeatMapScreen extends ConsumerStatefulWidget {
   @override
@@ -20,14 +20,13 @@ class HeatMapScreen extends ConsumerStatefulWidget {
 
 class _HeatMapScreenState extends ConsumerState<HeatMapScreen> {
   late PanelController _panelController;
-
   @override
   void initState() {
     super.initState();
     _panelController = PanelControllerSingleton.instance;
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(heatmapControllerProvider.notifier).initHeatmap(ref);
+      ref.read(mapStateProvider.notifier).initHeatmap(ref);
     });
   }
 
@@ -36,10 +35,8 @@ class _HeatMapScreenState extends ConsumerState<HeatMapScreen> {
       final weightedLatLngList =
           await ref.read(weightedLatLngListProvider.future);
       if (weightedLatLngList.isNotEmpty) {
-        ref.read(heatmapControllerProvider.notifier).updateHeatmap(
-            weightedLatLngList,
-            ref.read(radiusProvider),
-            ref.read(layerOpacityProvider));
+        ref.read(mapStateProvider.notifier).updateHeatmap(weightedLatLngList,
+            ref.read(radiusProvider), ref.read(layerOpacityProvider));
       } else {
         print("Error: weightedLatLngList is empty updateHeatMap");
       }
@@ -57,11 +54,12 @@ class _HeatMapScreenState extends ConsumerState<HeatMapScreen> {
     final opacity = ref.watch(layerOpacityProvider);
     final radius = ref.watch(radiusProvider);
     final cameraPosition = ref.watch(initialCameraPositionProvider);
-    final heatmaps = ref.watch(heatmapControllerProvider);
-    final markers = ref.watch(markersProvider);
+    final mapState = ref.watch(mapStateProvider);
+    final heatmaps = mapState.heatmaps;
+    final markers = ref.watch(markersProvider2);
 
     // Listen to changes in relevant providers and update heatmap accordingly
-    ref.listen<int>(radiusProvider, (previous, next) {
+    ref.listen<double>(radiusProvider, (previous, next) {
       updateHeatmap();
     });
 
@@ -123,13 +121,13 @@ class _HeatMapScreenState extends ConsumerState<HeatMapScreen> {
                                         value: radius.toDouble(),
                                         onChanged: (newValue) {
                                           ref
-                                              .read(mapProvider.notifier)
-                                              .setRadius(newValue.toInt());
+                                              .read(mapStateProvider.notifier)
+                                              .setRadius(newValue);
                                         },
                                         onChangeEnd: (newValue) {
                                           ref
-                                              .read(mapProvider.notifier)
-                                              .setRadius(newValue.toInt());
+                                              .read(mapStateProvider.notifier)
+                                              .setRadius(newValue);
                                         },
                                       ),
                                     ],
@@ -151,12 +149,12 @@ class _HeatMapScreenState extends ConsumerState<HeatMapScreen> {
                                         value: opacity,
                                         onChanged: (newValue) {
                                           ref
-                                              .read(mapProvider.notifier)
+                                              .read(mapStateProvider.notifier)
                                               .setLayerOpacity(newValue);
                                         },
                                         onChangeEnd: (newValue) {
                                           ref
-                                              .read(mapProvider.notifier)
+                                              .read(mapStateProvider.notifier)
                                               .setLayerOpacity(newValue);
                                         },
                                       ),
@@ -235,19 +233,30 @@ class _HeatMapScreenState extends ConsumerState<HeatMapScreen> {
             ),
           );
         },
-        body: GoogleMap(
-          myLocationEnabled: true,
-          mapType: MapType.satellite,
-          initialCameraPosition: CameraPosition(
-            target: cameraPosition,
-            zoom: 14,
-            tilt: 10,
+        body: FlutterMap(
+          options: MapOptions(
+            initialCenter: cameraPosition,
+            initialZoom: 14.0,
           ),
-          onMapCreated: (GoogleMapController controller) {
-            ref.read(mapControllerProvider.notifier).setController(controller);
-          },
-          markers: markers,
-          heatmaps: heatmaps,
+          children: [
+            TileLayer(
+              urlTemplate: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+              subdomains: ['a', 'b', 'c'],
+            ),
+            if (heatmaps.isNotEmpty)
+              HeatMapLayer(
+                heatMapDataSource:
+                    InMemoryHeatMapDataSource(data: heatmaps.toList()),
+                heatMapOptions: HeatMapOptions(
+                  gradient: HeatMapOptions.defaultGradient,
+                  minOpacity: opacity,
+                  radius: radius,
+                ),
+              ),
+            MarkerLayer(
+              markers: markers.toList(),
+            ),
+          ],
         ),
       ),
     );

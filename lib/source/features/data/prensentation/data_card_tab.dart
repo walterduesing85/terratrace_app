@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_maps_flutter_heatmap/google_maps_flutter_heatmap.dart';
+import 'package:latlong2/latlong.dart';
+
 import 'package:rflutter_alert/rflutter_alert.dart';
 import 'package:terra_trace/source/constants/constants.dart';
 import 'package:terra_trace/source/features/data/data/data_management.dart';
 import 'package:terra_trace/source/features/data/data/map_provider.dart';
+
 import 'package:terra_trace/source/features/data/domain/flux_data.dart';
 import 'package:terra_trace/source/routing/app_router.dart';
 

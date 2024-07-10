@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_maps_flutter_heatmap/google_maps_flutter_heatmap.dart';
+
 import 'package:sliding_up_panel2/sliding_up_panel2.dart';
 
 import 'package:terra_trace/source/common_widgets/custom_appbar.dart';
@@ -13,7 +14,7 @@ import 'package:terra_trace/source/features/data/data/data_management.dart';
 import 'package:terra_trace/source/features/map/data/map_data.dart';
 import 'package:terra_trace/source/features/map/presentation/tab_data.dart';
 
-import '../../data/data/map_provider.dart';
+
 
 class MarkerMapScreen extends ConsumerStatefulWidget {
   final PanelController? panelController;
@@ -62,18 +63,16 @@ class _MarkerMapScreenState extends ConsumerState<MarkerMapScreen> {
             ),
           );
         },
-        body: GoogleMap(
-          myLocationEnabled: true,
-          mapType: MapType.satellite,
-          initialCameraPosition: CameraPosition(
-            target: cameraPosition,
-            zoom: 14,
-            tilt: 10,
+        body: FlutterMap(
+          options: MapOptions(
+            initialCenter: cameraPosition,
+            initialZoom: 14.0,
           ),
-          onMapCreated: (GoogleMapController controller) {
-            ref.read(mapControllerProvider.notifier).setController(controller);
-          },
-          markers: markers,
+          children: [
+            MarkerLayer(
+              markers: markers.toList(),
+            ),
+          ],
         ),
       ),
     );

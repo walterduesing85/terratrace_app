@@ -1,34 +1,26 @@
-import 'package:google_maps_flutter_heatmap/google_maps_flutter_heatmap.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 
-final cameraPositionProvider = StateProvider<CameraPosition>((ref) {
-  return CameraPosition(
-    target: LatLng(0, 0), // Initial position
-    zoom: 14,
-    tilt: 10,
-  );
+final cameraPositionProvider = StateProvider<LatLng>((ref) {
+  return LatLng(0, 0); // Initial position
 });
 
 final mapControllerProvider =
-    StateNotifierProvider<MapController, GoogleMapController?>((ref) {
-  return MapController();
+    StateNotifierProvider<MapControllerNotifier, MapController?>((ref) {
+  return MapControllerNotifier();
 });
 
-final mapControllerProvider2 =
-    StateNotifierProvider<MapController, GoogleMapController?>((ref) {
-  return MapController();
-});
+class MapControllerNotifier extends StateNotifier<MapController?> {
+  MapControllerNotifier() : super(null);
 
-class MapController extends StateNotifier<GoogleMapController?> {
-  MapController() : super(null);
-
-  void setController(GoogleMapController controller) {
+  void setController(MapController controller) {
     state = controller;
   }
 
   Future<void> moveCamera(LatLng target) async {
     if (state != null) {
-      await state?.animateCamera(CameraUpdate.newLatLng(target));
+      state?.move(target, state!.camera.zoom); // move to the new target without changing the zoom level
     }
   }
 }

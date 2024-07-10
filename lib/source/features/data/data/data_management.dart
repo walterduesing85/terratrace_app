@@ -1,60 +1,16 @@
 import 'dart:async';
-import 'dart:math';
 
+
+import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_maps_flutter_heatmap/google_maps_flutter_heatmap.dart';
+import 'package:latlong2/latlong.dart';
+
 //import 'package:hive/hive.dart';
 
-import 'package:terra_trace/source/constants/constants.dart';
-
-import 'package:terra_trace/source/features/data/domain/flux_data.dart';
-import 'package:intl/intl.dart';
 import 'package:terra_trace/source/features/data/domain/flux_data.dart';
 import 'package:terra_trace/source/features/project_manager/data/project_managment.dart';
-import 'package:terra_trace/source/features/project_manager/domain/project_data.dart';
 
-// class DataManagement {
-//   Box projectBox;
-//   Box dataBox;
-
-//   Future<void> openProjectBox() async {
-//     await Hive.openBox<ProjectData>('projects');
-//   }
-
-//   Future<void> createNewProject(
-//       String project, bool isRemote, bool browseFiles) async {
-//     projectBox = await Hive.openBox<ProjectData>('projects');
-//     final projectData = ProjectData(
-//         projectName: project,
-//         isRemote: isRemote,
-//         browseFiles: browseFiles,
-//         defaultTemperature: defaultTemperature,
-//         defaultPressure: defaultPressure,
-//         chamberVolume: chamberVolume,
-//         surfaceArea: chamberArea);
-//     await projectBox.put(project, projectData);
-//   }
-
-//   Future<void> deleteProject(String project) async {
-//     projectBox = await Hive.openBox<ProjectData>('projects');
-//     await projectBox.delete(project);
-//   }
-// }
-
-// final dataManagementProvider = Provider<DataManagement>((ref) {
-//   return DataManagement();
-// });
-
-// Provider to manage Hive box state
-// final hiveDataBoxProvider = FutureProvider<Box<FluxData>>((ref) async {
-//   // Wait until projectName is available
-//   final projectName = ref.watch(projectNameProvider);
-//   await projectName.isNotEmpty;
-//   // if (projectName.isEmpty) {
-//   //   throw Exception('Project name is empty, Bro!');
-//   // }
-//   return Hive.openBox<FluxData>(projectName);
-// });
 
 final projectNameProvider =
     StateNotifierProvider<ProjectNameValueNotifier, String>(
@@ -181,31 +137,45 @@ class SelectedFluxDataNotifier extends StateNotifier<List<FluxData>> {
   }
 }
 
-final markersProvider = Provider<Set<Marker>>((ref) {
-  final selectedData = ref.watch(selectedFluxDataProvider);
-  return selectedData
-      .map((data) => Marker(
-            markerId: MarkerId(data.dataKey!),
-            position: LatLng(
-                double.parse(data.dataLat!), double.parse(data.dataLong!)),
-            infoWindow:
-                InfoWindow(title: data.dataSite, snippet: data.dataCfluxGram),
-          ))
-      .toSet();
-});
-
 final markersProvider2 = Provider<Set<Marker>>((ref) {
   final selectedData = ref.watch(selectedFluxDataProvider);
   return selectedData
       .map((data) => Marker(
-            markerId: MarkerId(data.dataKey!),
-            position: LatLng(
-                double.parse(data.dataLat!), double.parse(data.dataLong!)),
-            infoWindow:
-                InfoWindow(title: data.dataSite, snippet: data.dataCfluxGram),
+            point: LatLng(
+              double.parse(data.dataLat!),
+              double.parse(data.dataLong!),
+            ),
+            width: 80,
+            height: 80,
+            child: GestureDetector(
+              // onTap: () => _showInfoWindow(, data),
+              child: Icon(
+                Icons.location_on,
+                color: Colors.red,
+                size: 40.0,
+              ),
+            ),
           ))
       .toSet();
 });
+
+void _showInfoWindow(BuildContext context, FluxData data) {
+  showDialog(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: Text(data.dataSite ?? 'No Title'),
+      content: Text(data.dataCfluxGram ?? 'No Content'),
+      actions: <Widget>[
+        TextButton(
+          child: Text('Close'),
+          onPressed: () {
+            Navigator.of(ctx).pop();
+          },
+        ),
+      ],
+    ),
+  );
+}
 
 
 
