@@ -25,7 +25,7 @@ class CustomAppBar extends StatelessWidget {
             ),
           );
         }),
-        const Expanded(child: SizedBox(width: 100)),
+        Expanded(child: SizedBox(width: 100)),
         Image.asset(
           'images/TT_Logo.png',
           width: 100,
