@@ -26,7 +26,7 @@ class ProjectManagementScreen extends ConsumerWidget {
         ),
       ),
       body:
-          RemoteProjectsTab(), // Place RemoteProjectsTab inside the Scaffold body
+          RemoteProjectsTab(), //TODO Solve Stream already listend error when signing in and out
     );
   }
 }

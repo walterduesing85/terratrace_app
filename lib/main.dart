@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -10,9 +11,25 @@ import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 
 Future<void> main() async {
   // Ensure that the Flutter bindings are initialized in the same zone
-  WidgetsFlutterBinding.ensureInitialized();
+  runZonedGuarded(() async {
+    WidgetsFlutterBinding.ensureInitialized();
 
-  // Request permissions
+    // Conditionally request permissions on mobile platforms
+    if (!kIsWeb) {
+      await requestPermissions();
+    }
+
+    await Firebase.initializeApp();
+    FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterError;
+
+    // Run the app in the same zone
+    runApp(ProviderScope(child: MyApp()));
+  }, (error, stackTrace) {
+    FirebaseCrashlytics.instance.recordError(error, stackTrace);
+  });
+}
+
+Future<void> requestPermissions() async {
   final storageStatus = await Permission.storage.request();
   await Permission.location.request();
 
@@ -24,17 +41,10 @@ Future<void> main() async {
     print('Storage permission permanently denied, opening app settings');
     openAppSettings();
   }
-
-  // Initialize Firebase
-  await Firebase.initializeApp();
-  FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterError;
-
-  // Run the app in the same zone
-  runApp(ProviderScope(child: MyApp()));
 }
 
 class MyApp extends StatelessWidget {
-  //static final navigatorKey = GlobalKey<NavigatorState>();
+  static bool _initialized = false;
 
   @override
   Widget build(BuildContext context) {
@@ -55,14 +65,10 @@ class MyApp extends StatelessWidget {
           ref.watch(remoteStreamingProvider);
           return MaterialApp.router(
             routerConfig: goRouter,
-            // routeInformationParser: goRouter.routeInformationParser,
-            // debugShowCheckedModeBanner: false,
-            // routerDelegate: goRouter.routerDelegate,
+            debugShowCheckedModeBanner: false,
           );
         },
       ),
     );
   }
-
-  static bool _initialized = false;
 }

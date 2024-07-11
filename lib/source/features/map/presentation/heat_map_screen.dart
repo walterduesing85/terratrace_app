@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_map_heatmap/flutter_map_heatmap.dart';
 import 'package:sliding_up_panel2/sliding_up_panel2.dart';
+import 'package:terra_trace/source/common_widgets/async_value_widget.dart';
 import 'package:terra_trace/source/common_widgets/custom_appbar.dart';
 import 'package:terra_trace/source/common_widgets/custom_drawer.dart';
 import 'package:terra_trace/source/constants/text_styles.dart';
@@ -54,8 +55,8 @@ class _HeatMapScreenState extends ConsumerState<HeatMapScreen> {
     final opacity = ref.watch(layerOpacityProvider);
     final radius = ref.watch(radiusProvider);
     final cameraPosition = ref.watch(initialCameraPositionProvider);
-    final mapState = ref.watch(mapStateProvider);
-    final heatmaps = mapState.heatmaps;
+
+    final heatmaps = ref.watch(weightedLatLngListProvider);
     final markers = ref.watch(markersProvider2);
 
     // Listen to changes in relevant providers and update heatmap accordingly
@@ -78,6 +79,7 @@ class _HeatMapScreenState extends ConsumerState<HeatMapScreen> {
         title: CustomAppBar(title: ref.read(projectNameProvider)),
       ),
       body: SlidingUpPanel(
+        //TODO make sliding up panel stick at top of screen
         controller: _panelController,
         minHeight: 60,
         color: Color.fromRGBO(255, 255, 255, 0.3),
@@ -241,18 +243,23 @@ class _HeatMapScreenState extends ConsumerState<HeatMapScreen> {
           children: [
             TileLayer(
               urlTemplate: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-              subdomains: ['a', 'b', 'c'],
+              //subdomains: ['a', 'b', 'c'],
             ),
-            if (heatmaps.isNotEmpty)
-              HeatMapLayer(
-                heatMapDataSource:
-                    InMemoryHeatMapDataSource(data: heatmaps.toList()),
-                heatMapOptions: HeatMapOptions(
-                  gradient: HeatMapOptions.defaultGradient,
-                  minOpacity: opacity,
-                  radius: radius,
-                ),
-              ),
+            Consumer(builder: (context, ref, child) {
+              return AsyncValueWidget(
+                  value: heatmaps,
+                  data: (heatmaps) {
+                    return HeatMapLayer(
+                      heatMapDataSource:
+                          InMemoryHeatMapDataSource(data: heatmaps),
+                      heatMapOptions: HeatMapOptions(
+                        gradient: HeatMapOptions.defaultGradient,
+                        minOpacity: opacity,
+                        radius: radius,
+                      ),
+                    );
+                  });
+            }),
             MarkerLayer(
               markers: markers.toList(),
             ),

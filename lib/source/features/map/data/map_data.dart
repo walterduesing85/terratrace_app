@@ -47,85 +47,12 @@ class MapData {
 
     return intensitiy;
   }
-
-  //Intensities values for Google Maps Heatmap
-
-  // List<int> createIntensitiy(
-  //     MinMaxValues minMaxV, List<FluxData> fluxDataList) {
-  //   List<int> intensity = [];
-  //   List<double> cO2 = [];
-  //   double minV = minMaxV.minV;
-  //   double maxV = minMaxV.maxV;
-
-  //   for (int i = 0; i < fluxDataList.length; i++) {
-  //     FluxData fluxData = fluxDataList[i];
-  //     cO2.add(double.parse(fluxData.dataCfluxGram!));
-  //   }
-
-  //   String roundedValue;
-
-  //   for (int i = 0; i < fluxDataList.length; i++) {
-  //     if (cO2[i] > minV.round() && cO2[i] < maxV.round()) {
-  //       roundedValue =
-  //           (((cO2[i] - minV.round()) / (maxV.round() - minV.round())) * 100)
-  //               .round()
-  //               .toStringAsFixed(0);
-
-  //       intensity.add(int.parse(roundedValue));
-  //     } else if (cO2[i] < minV.round()) {
-  //       intensity.add(1);
-  //     } else if (cO2[i] > maxV.round()) {
-  //       intensity.add(100);
-  //     } else if (cO2[i] == maxV.round()) {
-  //       intensity.add(100);
-  //     } else if (cO2[i] == minV.round()) {
-  //       intensity.add(1);
-  //     }
-  //   }
-
-  //   return intensity;
-  // }
 }
 
 final mapDataProvider = Provider<MapData>((ref) {
   return MapData();
 });
 
-class MapState {
-  Set<WeightedLatLng> heatmaps;
-  double zoom;
-  int radius;
-  double minOpacity;
-  double blurFactor;
-  double layerOpacity;
-
-  MapState({
-    this.heatmaps = const {},
-    this.zoom = 15.0,
-    this.radius = 30,
-    this.minOpacity = 0.3,
-    this.blurFactor = 0.5,
-    this.layerOpacity = 0.75,
-  });
-
-  MapState copyWith({
-    Set<WeightedLatLng>? heatmaps,
-    double? zoom,
-    int? radius,
-    double? minOpacity,
-    double? blurFactor,
-    double? layerOpacity,
-  }) {
-    return MapState(
-      heatmaps: heatmaps ?? this.heatmaps,
-      zoom: zoom ?? this.zoom,
-      radius: radius ?? this.radius,
-      minOpacity: minOpacity ?? this.minOpacity,
-      blurFactor: blurFactor ?? this.blurFactor,
-      layerOpacity: layerOpacity ?? this.layerOpacity,
-    );
-  }
-}
 
 final minMaxValuesProvider = StateProvider.autoDispose<MinMaxValues>((ref) {
   final dataListAsyncValue = ref.watch(fluxDataListProvider);
@@ -159,6 +86,8 @@ final minMaxValuesProvider = StateProvider.autoDispose<MinMaxValues>((ref) {
     },
   );
 });
+
+
 //returns the values in grams for the range slider
 final minMaxGramProvider = StateProvider<MinMaxValues>((ref) {
   final dataListAsyncValue = ref.watch(fluxDataListProvider);

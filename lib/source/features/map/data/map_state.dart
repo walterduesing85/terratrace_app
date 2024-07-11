@@ -96,7 +96,10 @@ final layerOpacityProvider = StateProvider<double>((ref) {
 class RangeSliderNotifier extends StateNotifier<RangeValues> {
   RangeSliderNotifier() : super(RangeValues(0.0, 1.0));
 
+
+
   void updateMinMaxValues(double min, double max) {
+
     state = RangeValues(min, max);
   }
 }
