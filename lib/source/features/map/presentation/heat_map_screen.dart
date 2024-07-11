@@ -9,8 +9,8 @@ import 'package:terra_trace/source/common_widgets/custom_drawer.dart';
 import 'package:terra_trace/source/constants/text_styles.dart';
 import 'package:terra_trace/source/features/bar_chart/presentation/bar_chart_container.dart';
 import 'package:terra_trace/source/features/data/data/data_management.dart';
+import 'package:terra_trace/source/features/data/data/map_provider.dart';
 import 'package:terra_trace/source/features/map/data/map_data.dart';
-import 'package:terra_trace/source/features/map/data/map_state.dart';
 import 'package:terra_trace/source/features/map/presentation/tab_data.dart';
 import 'package:terra_trace/source/features/map/presentation/tab_user.dart';
 
@@ -55,6 +55,7 @@ class _HeatMapScreenState extends ConsumerState<HeatMapScreen> {
     final opacity = ref.watch(layerOpacityProvider);
     final radius = ref.watch(radiusProvider);
     final cameraPosition = ref.watch(initialCameraPositionProvider);
+    final mapController = ref.watch(mapControllerProvider);
 
     final heatmaps = ref.watch(weightedLatLngListProvider);
     final markers = ref.watch(markersProvider2);
@@ -173,16 +174,32 @@ class _HeatMapScreenState extends ConsumerState<HeatMapScreen> {
                                     quarterTurns: 1,
                                     child: RangeSlider(
                                       values: RangeValues(
-                                          rangeSliderValuesChanged.minV,
-                                          rangeSliderValuesChanged.maxV),
-                                      min: rangeSliderValuesInitial.minV,
-                                      max: rangeSliderValuesInitial.maxV,
+                                        double.parse(rangeSliderValuesInitial
+                                            .minV
+                                            .toStringAsFixed(2)),
+                                        double.parse(rangeSliderValuesInitial
+                                            .maxV
+                                            .toStringAsFixed(2)),
+                                      ),
+                                      min: double.parse(rangeSliderValuesInitial
+                                          .minV
+                                          .toStringAsFixed(2)),
+                                      max: double.parse(rangeSliderValuesInitial
+                                          .maxV
+                                          .toStringAsFixed(2)),
                                       onChanged: (values) {
+                                        // Round the start and end values to two decimal places
+                                        final roundedStart = double.parse(
+                                            values.start.toStringAsFixed(2));
+                                        final roundedEnd = double.parse(
+                                            values.end.toStringAsFixed(2));
+
+                                        // Update the values in the notifier
                                         ref
                                             .read(rangeSliderNotifierProvider
                                                 .notifier)
                                             .updateMinMaxValues(
-                                                values.start, values.end);
+                                                roundedStart, roundedEnd);
                                       },
                                     ),
                                   ),
@@ -236,26 +253,32 @@ class _HeatMapScreenState extends ConsumerState<HeatMapScreen> {
           );
         },
         body: FlutterMap(
+          mapController: mapController,
           options: MapOptions(
             initialCenter: cameraPosition,
             initialZoom: 14.0,
+            // onMapCreated: (controller) {
+            //   ref.read(mapControllerProvider.notifier).setController(controller);
+            // }
           ),
           children: [
             TileLayer(
-              urlTemplate: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+              urlTemplate: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
               //subdomains: ['a', 'b', 'c'],
             ),
             Consumer(builder: (context, ref, child) {
               return AsyncValueWidget(
-                  value: heatmaps,
+                  value: heatmaps, //TODO fix not in inclusive Range error
                   data: (heatmaps) {
                     return HeatMapLayer(
                       heatMapDataSource:
                           InMemoryHeatMapDataSource(data: heatmaps),
                       heatMapOptions: HeatMapOptions(
                         gradient: HeatMapOptions.defaultGradient,
-                        minOpacity: opacity,
-                        radius: radius,
+                        minOpacity:
+                            opacity, //TODO make this work with the slider in the panel
+                        radius:
+                            radius, //TODO make this work with the slider in the panel
                       ),
                     );
                   });

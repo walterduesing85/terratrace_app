@@ -90,7 +90,8 @@ class _DataCardTabState extends ConsumerState<DataCardTab> {
                     onChanged: (bool? value) {
                       ref
                           .read(selectedFluxDataProvider.notifier)
-                          .toggleFluxData(widget.fluxData);
+                          .toggleFluxData(widget
+                              .fluxData); //TODO Implement when checked Marker is out on the map
                     },
                     activeColor: Colors.black,
                   ),
@@ -142,12 +143,14 @@ class _DataCardTabState extends ConsumerState<DataCardTab> {
                       size: 25.0,
                     ),
                     onPressed: () {
+                      print('Pressed');
                       final mapController =
                           ref.read(mapControllerProvider.notifier);
                       final target = LatLng(
                           double.parse(widget.fluxData.dataLat!),
                           double.parse(widget.fluxData.dataLong!));
-                      mapController.moveCamera(target);
+                      mapController
+                          .moveCamera(target); //TODO implement move camera
                     },
                   ),
                 ),

@@ -111,7 +111,7 @@ class TabData extends ConsumerWidget {
                 shrinkWrap: true,
                 itemCount: filteredList.length,
                 itemBuilder: (context, index) {
-                  FluxData fluxData = filteredList[index];
+                  FluxData fluxData = filteredList[index]; //TODO still occuring error concurrent interation modification something
                   return DataCardTab(
                     fluxData: fluxData,
                   );
