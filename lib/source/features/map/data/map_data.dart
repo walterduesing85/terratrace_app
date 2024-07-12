@@ -1,11 +1,9 @@
 import 'dart:math';
-import 'package:flutter/material.dart';
+
 import 'package:flutter_map_heatmap/flutter_map_heatmap.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart';
-
 import 'package:terra_trace/source/features/data/data/data_management.dart';
-
 import '../../data/domain/flux_data.dart';
 
 class MinMaxValues {
@@ -16,24 +14,21 @@ class MinMaxValues {
 }
 
 class MapData {
-  //Intensities values for FLutter Maps Heatmap
+  // Intensities values for Flutter Maps Heatmap
   List<double> createIntensitiy(
       MinMaxValues minMaxV, List<FluxData> fluxDataList) {
     List<double> intensitiy = [];
     List<double> cO2 = [];
     for (int i = 0; i < fluxDataList.length; i++) {
       FluxData fluxData = fluxDataList[i];
-
       cO2.add(double.parse(fluxData.dataCflux!));
     }
 
     double roundedValue;
-
     for (int i = 0; i < fluxDataList.length; i++) {
       if (cO2[i] >= minMaxV.minV && cO2[i] <= minMaxV.maxV) {
         roundedValue =
             (((cO2[i] - minMaxV.minV) / (minMaxV.maxV - minMaxV.minV)));
-
         intensitiy.add(double.parse(roundedValue.toStringAsFixed(2)));
       } else if (cO2[i] < minMaxV.minV.round()) {
         intensitiy.add(0);
@@ -45,7 +40,6 @@ class MapData {
         intensitiy.add(0);
       }
     }
-
     return intensitiy;
   }
 }
@@ -118,7 +112,7 @@ class MapStateNotifier extends StateNotifier<MapState> {
   }
 
   void updateHeatmap(List<WeightedLatLng> data, double radius, double opacity) {
-    print('hello from updateHeatmap');
+    print('hello from updateHeatmap $radius $opacity');
     state = state.copyWith(
       heatmaps: data.toSet(),
       radius: radius,
@@ -140,12 +134,9 @@ final layerOpacityProvider = StateProvider<double>((ref) {
   return 0.75;
 });
 
-
-
 final mapDataProvider = Provider<MapData>((ref) {
   return MapData();
 });
-
 
 final minMaxValuesProvider = StateProvider.autoDispose<MinMaxValues>((ref) {
   final dataListAsyncValue = ref.watch(fluxDataListProvider);
@@ -158,7 +149,6 @@ final minMaxValuesProvider = StateProvider.autoDispose<MinMaxValues>((ref) {
           return double.parse(fluxData.dataCflux!);
         } catch (e) {
           // Handle the case where parsing fails (e.g., log an error)
-
           return 0.0; // Provide a default value
         }
       }).toList();
@@ -173,15 +163,12 @@ final minMaxValuesProvider = StateProvider.autoDispose<MinMaxValues>((ref) {
         minV: 0.0, maxV: 1), // Provide default values during loading
     error: (error, stackTrace) {
       // Handle the error state as needed
-
       return MinMaxValues(
           minV: 0.0, maxV: 1); // Provide default values on error
     },
   );
 });
 
-
-//returns the values in grams for the range slider
 final minMaxGramProvider = StateProvider<MinMaxValues>((ref) {
   final dataListAsyncValue = ref.watch(fluxDataListProvider);
 
@@ -193,7 +180,6 @@ final minMaxGramProvider = StateProvider<MinMaxValues>((ref) {
           return double.parse(fluxData.dataCfluxGram!);
         } catch (e) {
           // Handle the case where parsing fails (e.g., log an error)
-
           return 0.0; // Provide a default value
         }
       }).toList();
@@ -208,7 +194,6 @@ final minMaxGramProvider = StateProvider<MinMaxValues>((ref) {
         minV: 0.0, maxV: 1), // Provide default values during loading
     error: (error, stackTrace) {
       // Handle the error state as needed
-
       return MinMaxValues(
           minV: 0.0, maxV: 1); // Provide default values on error
     },
@@ -250,7 +235,6 @@ final intensityProvider = FutureProvider<List<double>>((ref) async {
         // Calculate intensities based on minMaxValues and fluxDataList
         List<double> intensities =
             mapData.createIntensitiy(minMaxValues, fluxDataList);
-
         return intensities;
       } else {
         // Return an empty list if minMaxValues or fluxDataList is unavailable
@@ -263,7 +247,6 @@ final intensityProvider = FutureProvider<List<double>>((ref) async {
     },
     error: (error, stackTrace) {
       // Handle error state if needed
-
       return [];
     },
   );
@@ -316,6 +299,37 @@ final weightedLatLngListProvider =
       // Handle error state if needed
       return [];
     },
+  );
+});
+
+
+// Define the MapSettingsClass
+class MapSettings {
+  final List<WeightedLatLng> weightedLatLngList;
+  final double pointRadius;
+  final double mapOpacity;
+
+  MapSettings({
+    required this.weightedLatLngList,
+    required this.pointRadius,
+    required this.mapOpacity,
+  });
+}
+
+// Define the provider for MapSettingsClass
+final mapSettingsProvider = FutureProvider<MapSettings>((ref) async {
+  // Fetch the weightedLatLngList from the weightedLatLngListProvider
+  final weightedLatLngList = await ref.watch(weightedLatLngListProvider.future);
+
+  // Get the current pointRadius and mapOpacity from their respective providers
+  final pointRadius = ref.watch(radiusProvider);
+  final mapOpacity = ref.watch(layerOpacityProvider);
+
+  // Create and return the MapSettingsClass instance
+  return MapSettings(
+    weightedLatLngList: weightedLatLngList,
+    pointRadius: pointRadius,
+    mapOpacity: mapOpacity,
   );
 });
 
@@ -386,3 +400,50 @@ final initialCameraPositionProvider2 = StateProvider<LatLng>((ref) {
 
   return defaultPosition;
 });
+
+
+            // Slider(
+            //                             min: 10,
+            //                             max: 50,
+            //                             value: radius,
+            //                             onChanged: (newValue) {
+            //                               ref
+            //                                   .read(radiusProvider.notifier)
+            //                                   .state = newValue;
+            //                               ref
+            //                                   .read(mapStateProvider.notifier)
+            //                                   .setRadius(newValue);
+            //                             },
+            //                             onChangeEnd: (newValue) {
+            //                               ref
+            //                                   .read(radiusProvider.notifier)
+            //                                   .state = newValue;
+            //                               ref
+            //                                   .read(mapStateProvider.notifier)
+            //                                   .setRadius(newValue);
+            //                             },
+            //                           ),
+
+
+                    //  Slider(
+                    //                     divisions: 20,
+                    //                     min: 0,
+                    //                     max: 1,
+                    //                     value: opacity,
+                    //                     onChanged: (newValue) {
+                    //                       ref
+                    //                           .read(layerOpacityProvider.notifier)
+                    //                           .state = newValue;
+                    //                       ref
+                    //                           .read(mapStateProvider.notifier)
+                    //                           .setLayerOpacity(newValue);
+                    //                     },
+                    //                     onChangeEnd: (newValue) {
+                    //                       ref
+                    //                           .read(layerOpacityProvider.notifier)
+                    //                           .state = newValue;
+                    //                       ref
+                    //                           .read(mapStateProvider.notifier)
+                    //                           .setLayerOpacity(newValue);
+                    //                     },
+                    //                   ),

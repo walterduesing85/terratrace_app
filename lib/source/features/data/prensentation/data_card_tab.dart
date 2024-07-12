@@ -7,8 +7,8 @@ import 'package:rflutter_alert/rflutter_alert.dart';
 import 'package:terra_trace/source/constants/constants.dart';
 import 'package:terra_trace/source/features/data/data/data_management.dart';
 import 'package:terra_trace/source/features/data/data/map_provider.dart';
-
 import 'package:terra_trace/source/features/data/domain/flux_data.dart';
+
 import 'package:terra_trace/source/routing/app_router.dart';
 
 class DataCardTab extends ConsumerStatefulWidget {
@@ -48,7 +48,6 @@ class _DataCardTabState extends ConsumerState<DataCardTab> {
             context.pushNamed(AppRoute.editDataScreen.name,
                 pathParameters: {'projectName': ref.read(projectNameProvider)},
                 extra: fluxData); // Dismiss the dialog
-            //Navigator.pushNamed(); // Navigate to edit screen
           },
           color: Colors.green,
         ),
@@ -90,8 +89,7 @@ class _DataCardTabState extends ConsumerState<DataCardTab> {
                     onChanged: (bool? value) {
                       ref
                           .read(selectedFluxDataProvider.notifier)
-                          .toggleFluxData(widget
-                              .fluxData); //TODO Implement when checked Marker is out on the map
+                          .toggleFluxData(widget.fluxData);
                     },
                     activeColor: Colors.black,
                   ),
@@ -104,7 +102,15 @@ class _DataCardTabState extends ConsumerState<DataCardTab> {
                       horizontal: 16.0, vertical: 10.0),
                   child: MaterialButton(
                     onLongPress: () => showEditDialog(context, widget.fluxData),
-                    onPressed: () {},
+                    onPressed: () {
+                      final mapController =
+                          ref.read(mapControllerProvider.notifier);
+                      final target = LatLng(
+                          double.parse(widget.fluxData.dataLat!),
+                          double.parse(widget.fluxData.dataLong!));
+                      mapController.moveCamera(target);
+                      ref.read(cameraPositionProvider) == target;
+                    },
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -149,8 +155,8 @@ class _DataCardTabState extends ConsumerState<DataCardTab> {
                       final target = LatLng(
                           double.parse(widget.fluxData.dataLat!),
                           double.parse(widget.fluxData.dataLong!));
-                      mapController
-                          .moveCamera(target); //TODO implement move camera
+                      mapController.moveCamera(target);
+                      ref.read(cameraPositionProvider) == target;
                     },
                   ),
                 ),

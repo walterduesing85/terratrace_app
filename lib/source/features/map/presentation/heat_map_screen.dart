@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_map_heatmap/flutter_map_heatmap.dart';
 import 'package:sliding_up_panel2/sliding_up_panel2.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:terra_trace/source/common_widgets/async_value_widget.dart';
 import 'package:terra_trace/source/common_widgets/custom_appbar.dart';
 import 'package:terra_trace/source/common_widgets/custom_drawer.dart';
@@ -10,6 +11,7 @@ import 'package:terra_trace/source/constants/text_styles.dart';
 import 'package:terra_trace/source/features/bar_chart/presentation/bar_chart_container.dart';
 import 'package:terra_trace/source/features/data/data/data_management.dart';
 import 'package:terra_trace/source/features/data/data/map_provider.dart';
+
 import 'package:terra_trace/source/features/map/data/map_data.dart';
 import 'package:terra_trace/source/features/map/presentation/tab_data.dart';
 import 'package:terra_trace/source/features/map/presentation/tab_user.dart';
@@ -21,6 +23,8 @@ class HeatMapScreen extends ConsumerStatefulWidget {
 
 class _HeatMapScreenState extends ConsumerState<HeatMapScreen> {
   late PanelController _panelController;
+  final mapController = MapController();
+
   @override
   void initState() {
     super.initState();
@@ -55,8 +59,6 @@ class _HeatMapScreenState extends ConsumerState<HeatMapScreen> {
     final opacity = ref.watch(layerOpacityProvider);
     final radius = ref.watch(radiusProvider);
     final cameraPosition = ref.watch(initialCameraPositionProvider);
-    final mapController = ref.watch(mapControllerProvider);
-
     final heatmaps = ref.watch(weightedLatLngListProvider);
     final markers = ref.watch(markersProvider2);
 
@@ -80,7 +82,6 @@ class _HeatMapScreenState extends ConsumerState<HeatMapScreen> {
         title: CustomAppBar(title: ref.read(projectNameProvider)),
       ),
       body: SlidingUpPanel(
-        //TODO make sliding up panel stick at top of screen
         controller: _panelController,
         minHeight: 60,
         color: Color.fromRGBO(255, 255, 255, 0.3),
@@ -113,7 +114,7 @@ class _HeatMapScreenState extends ConsumerState<HeatMapScreen> {
                                   child: Column(
                                     children: [
                                       Text(
-                                        'Point Radius: $radius',
+                                        'Point Radius: ${radius.toStringAsFixed(2)}',
                                         style: TextStyle(
                                             fontSize: 18,
                                             fontWeight: FontWeight.bold),
@@ -121,13 +122,19 @@ class _HeatMapScreenState extends ConsumerState<HeatMapScreen> {
                                       Slider(
                                         min: 10,
                                         max: 50,
-                                        value: radius.toDouble(),
+                                        value: radius,
                                         onChanged: (newValue) {
+                                          ref
+                                              .read(radiusProvider.notifier)
+                                              .state = newValue;
                                           ref
                                               .read(mapStateProvider.notifier)
                                               .setRadius(newValue);
                                         },
                                         onChangeEnd: (newValue) {
+                                          ref
+                                              .read(radiusProvider.notifier)
+                                              .state = newValue;
                                           ref
                                               .read(mapStateProvider.notifier)
                                               .setRadius(newValue);
@@ -152,10 +159,18 @@ class _HeatMapScreenState extends ConsumerState<HeatMapScreen> {
                                         value: opacity,
                                         onChanged: (newValue) {
                                           ref
+                                              .read(
+                                                  layerOpacityProvider.notifier)
+                                              .state = newValue;
+                                          ref
                                               .read(mapStateProvider.notifier)
                                               .setLayerOpacity(newValue);
                                         },
                                         onChangeEnd: (newValue) {
+                                          ref
+                                              .read(
+                                                  layerOpacityProvider.notifier)
+                                              .state = newValue;
                                           ref
                                               .read(mapStateProvider.notifier)
                                               .setLayerOpacity(newValue);
@@ -174,10 +189,10 @@ class _HeatMapScreenState extends ConsumerState<HeatMapScreen> {
                                     quarterTurns: 1,
                                     child: RangeSlider(
                                       values: RangeValues(
-                                        double.parse(rangeSliderValuesInitial
+                                        double.parse(rangeSliderValuesChanged
                                             .minV
                                             .toStringAsFixed(2)),
-                                        double.parse(rangeSliderValuesInitial
+                                        double.parse(rangeSliderValuesChanged
                                             .maxV
                                             .toStringAsFixed(2)),
                                       ),
@@ -252,39 +267,44 @@ class _HeatMapScreenState extends ConsumerState<HeatMapScreen> {
             ),
           );
         },
-        body: FlutterMap(
-          mapController: mapController,
-          options: MapOptions(
-            initialCenter: cameraPosition,
-            initialZoom: 14.0,
-            // onMapCreated: (controller) {
-            //   ref.read(mapControllerProvider.notifier).setController(controller);
-            // }
-          ),
+        body: Stack(
           children: [
-            TileLayer(
-              urlTemplate: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-              //subdomains: ['a', 'b', 'c'],
-            ),
-            Consumer(builder: (context, ref, child) {
-              return AsyncValueWidget(
-                  value: heatmaps, //TODO fix not in inclusive Range error
-                  data: (heatmaps) {
-                    return HeatMapLayer(
-                      heatMapDataSource:
-                          InMemoryHeatMapDataSource(data: heatmaps),
-                      heatMapOptions: HeatMapOptions(
-                        gradient: HeatMapOptions.defaultGradient,
-                        minOpacity:
-                            opacity, //TODO make this work with the slider in the panel
-                        radius:
-                            radius, //TODO make this work with the slider in the panel
-                      ),
-                    );
-                  });
-            }),
-            MarkerLayer(
-              markers: markers.toList(),
+            FlutterMap(
+              mapController: mapController,
+              options: MapOptions(
+                initialCenter: cameraPosition,
+                initialZoom: 14.0,
+                onMapReady: () {
+                  ref
+                      .read(mapControllerProvider.notifier)
+                      .setController(mapController);
+                },
+              ),
+              children: [
+                TileLayer(
+                  urlTemplate: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+                ),
+                Consumer(builder: (context, ref, child) {
+                  return AsyncValueWidget<MapSettings>(
+                    value: ref.watch(mapSettingsProvider),
+                    data: (mapSettings) {
+                      return HeatMapLayer(
+                        heatMapDataSource: InMemoryHeatMapDataSource(
+                            data: mapSettings.weightedLatLngList),
+                        heatMapOptions: HeatMapOptions(
+                          gradient: HeatMapOptions.defaultGradient,
+                          minOpacity: 0,
+                          layerOpacity: mapSettings.mapOpacity,
+                          radius: mapSettings.pointRadius,
+                        ),
+                      );
+                    },
+                  );
+                }),
+                MarkerLayer(
+                  markers: markers.toList(),
+                ),
+              ],
             ),
           ],
         ),

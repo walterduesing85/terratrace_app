@@ -8,11 +8,13 @@ final cameraPositionProvider = StateProvider<LatLng>((ref) {
 
 final mapControllerProvider =
     StateNotifierProvider<MapControllerNotifier, MapController?>((ref) {
-  return MapControllerNotifier();
+  return MapControllerNotifier(ref);
 });
 
 class MapControllerNotifier extends StateNotifier<MapController?> {
-  MapControllerNotifier() : super(null);
+  MapControllerNotifier(this.ref) : super(null);
+
+  final Ref ref;
 
   void setController(MapController controller) {
     state = controller;
@@ -20,7 +22,12 @@ class MapControllerNotifier extends StateNotifier<MapController?> {
 
   Future<void> moveCamera(LatLng target) async {
     if (state != null) {
-      state?.move(target, state!.camera.zoom); // move to the new target without changing the zoom level
+      state?.move(
+          target,
+          state!.camera
+              .zoom); // move to the new target without changing the zoom level
+      ref.read(cameraPositionProvider) ==
+          target; // update the camera position provider
     }
   }
 }
