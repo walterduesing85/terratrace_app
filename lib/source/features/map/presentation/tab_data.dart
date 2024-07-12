@@ -102,8 +102,11 @@ class TabData extends ConsumerWidget {
               if (sortPreference == 'latest') {
                 filteredList.sort((a, b) => b.dataDate!.compareTo(a.dataDate!));
               } else if (sortPreference == 'highest') {
-                filteredList.sort(
-                    (a, b) => b.dataCfluxGram!.compareTo(a.dataCfluxGram!));
+                filteredList.sort((a, b) {
+                  double aValue = double.tryParse(a.dataCfluxGram!) ?? 0;
+                  double bValue = double.tryParse(b.dataCfluxGram!) ?? 0;
+                  return bValue.compareTo(aValue);
+                });
               }
 
               return ListView.builder(
@@ -111,7 +114,8 @@ class TabData extends ConsumerWidget {
                 shrinkWrap: true,
                 itemCount: filteredList.length,
                 itemBuilder: (context, index) {
-                  FluxData fluxData = filteredList[index]; //TODO still occuring error concurrent interation modification something
+                  FluxData fluxData = filteredList[
+                      index]; //TODO still occuring error concurrent interation modification something
                   return DataCardTab(
                     fluxData: fluxData,
                   );

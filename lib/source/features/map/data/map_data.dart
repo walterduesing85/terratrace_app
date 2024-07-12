@@ -21,25 +21,27 @@ class MapData {
     List<double> cO2 = [];
     for (int i = 0; i < fluxDataList.length; i++) {
       FluxData fluxData = fluxDataList[i];
-      cO2.add(double.parse(fluxData.dataCflux!));
+      cO2.add(double.parse(fluxData.dataCfluxGram!));
     }
 
     double roundedValue;
     for (int i = 0; i < fluxDataList.length; i++) {
-      if (cO2[i] >= minMaxV.minV && cO2[i] <= minMaxV.maxV) {
+      if (cO2[i] > minMaxV.minV && cO2[i] < minMaxV.maxV) {
         roundedValue =
             (((cO2[i] - minMaxV.minV) / (minMaxV.maxV - minMaxV.minV)));
+
         intensitiy.add(double.parse(roundedValue.toStringAsFixed(2)));
-      } else if (cO2[i] < minMaxV.minV.round()) {
+      } else if (cO2[i] < minMaxV.minV) {
         intensitiy.add(0);
-      } else if (cO2[i] > minMaxV.maxV.round()) {
+      } else if (cO2[i] > minMaxV.maxV) {
         intensitiy.add(1);
-      } else if (cO2[i] == minMaxV.maxV.round()) {
+      } else if (cO2[i] == minMaxV.maxV) {
         intensitiy.add(1);
-      } else if (cO2[i] == minMaxV.minV.round()) {
+      } else if (cO2[i] == minMaxV.minV) {
         intensitiy.add(0);
       }
     }
+    print(intensitiy.toString());
     return intensitiy;
   }
 }
@@ -138,37 +140,6 @@ final mapDataProvider = Provider<MapData>((ref) {
   return MapData();
 });
 
-final minMaxValuesProvider = StateProvider.autoDispose<MinMaxValues>((ref) {
-  final dataListAsyncValue = ref.watch(fluxDataListProvider);
-
-  return dataListAsyncValue.when(
-    data: (dataList) {
-      // Extract the List<double> from FluxData.dataCflux
-      final List<double> cO2List = dataList.map((fluxData) {
-        try {
-          return double.parse(fluxData.dataCflux!);
-        } catch (e) {
-          // Handle the case where parsing fails (e.g., log an error)
-          return 0.0; // Provide a default value
-        }
-      }).toList();
-
-      // Calculate the minimum and maximum values
-      double minV = cO2List.reduce(min);
-      double maxV = cO2List.reduce(max);
-
-      return MinMaxValues(minV: minV, maxV: maxV);
-    },
-    loading: () => MinMaxValues(
-        minV: 0.0, maxV: 1), // Provide default values during loading
-    error: (error, stackTrace) {
-      // Handle the error state as needed
-      return MinMaxValues(
-          minV: 0.0, maxV: 1); // Provide default values on error
-    },
-  );
-});
-
 final minMaxGramProvider = StateProvider<MinMaxValues>((ref) {
   final dataListAsyncValue = ref.watch(fluxDataListProvider);
 
@@ -256,7 +227,7 @@ final weightedLatLngListProvider =
     FutureProvider<List<WeightedLatLng>>((ref) async {
   // Watch the fluxDataListProvider to get the list of FluxData asynchronously
   final dataListAsyncValue = await ref.watch(fluxDataListProvider);
-  print('hello from weightedLatLngListProvider-_-_-_-_-_');
+  //print('hello from weightedLatLngListProvider-_-_-_-_-_');
   // Wait for the intensityProvider to resolve
   final intensitiesAsyncValue = await ref.watch(intensityProvider);
 
@@ -301,7 +272,6 @@ final weightedLatLngListProvider =
     },
   );
 });
-
 
 // Define the MapSettingsClass
 class MapSettings {

@@ -11,7 +11,6 @@ class ChartDisplay extends ConsumerWidget {
     return charts.BarChart(
       dataSeriesList,
       animate: false,
-      vertical: false,
       domainAxis: charts.OrdinalAxisSpec(
         renderSpec: charts.SmallTickRendererSpec(
           labelStyle: charts.TextStyleSpec(
@@ -21,6 +20,8 @@ class ChartDisplay extends ConsumerWidget {
           lineStyle: charts.LineStyleSpec(
             color: charts.MaterialPalette.black,
           ),
+          labelAnchor: charts.TickLabelAnchor.centered,
+          labelRotation: 35, // Rotate labels 90 degrees
         ),
       ),
       primaryMeasureAxis: charts.NumericAxisSpec(

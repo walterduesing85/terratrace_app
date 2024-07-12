@@ -55,7 +55,7 @@ class RemoteProjectCard extends StatelessWidget {
                   ),
                   title: Text(
                     project,
-                    style: const TextStyle(color: Colors.white, fontSize: 20),
+                    style: const TextStyle(color: Colors.white, fontSize: 15),
                   ),
                   // subtitle: Text("Intermediate", style: TextStyle(color: Colors.white)),
 

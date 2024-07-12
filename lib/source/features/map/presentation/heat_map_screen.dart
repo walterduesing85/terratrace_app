@@ -35,20 +35,20 @@ class _HeatMapScreenState extends ConsumerState<HeatMapScreen> {
     });
   }
 
-  void updateHeatmap() async {
-    try {
-      final weightedLatLngList =
-          await ref.read(weightedLatLngListProvider.future);
-      if (weightedLatLngList.isNotEmpty) {
-        ref.read(mapStateProvider.notifier).updateHeatmap(weightedLatLngList,
-            ref.read(radiusProvider), ref.read(layerOpacityProvider));
-      } else {
-        print("Error: weightedLatLngList is empty updateHeatMap");
-      }
-    } catch (e) {
-      print("Error updating heatmap: $e");
-    }
-  }
+  // void updateHeatmap() async {
+  //   try {
+  //     final weightedLatLngList =
+  //         await ref.read(weightedLatLngListProvider.future);
+  //     if (weightedLatLngList.isNotEmpty) {
+  //       ref.read(mapStateProvider.notifier).updateHeatmap(weightedLatLngList,
+  //           ref.read(radiusProvider), ref.read(layerOpacityProvider));
+  //     } else {
+  //       print("Error: weightedLatLngList is empty updateHeatMap");
+  //     }
+  //   } catch (e) {
+  //     print("Error updating heatmap: $e");
+  //   }
+  // }
 
   @override
   Widget build(BuildContext context) {
@@ -59,21 +59,21 @@ class _HeatMapScreenState extends ConsumerState<HeatMapScreen> {
     final opacity = ref.watch(layerOpacityProvider);
     final radius = ref.watch(radiusProvider);
     final cameraPosition = ref.watch(initialCameraPositionProvider);
-    final heatmaps = ref.watch(weightedLatLngListProvider);
+    // final heatmaps = ref.watch(weightedLatLngListProvider);
     final markers = ref.watch(markersProvider2);
 
-    // Listen to changes in relevant providers and update heatmap accordingly
-    ref.listen<double>(radiusProvider, (previous, next) {
-      updateHeatmap();
-    });
+    // // Listen to changes in relevant providers and update heatmap accordingly
+    // ref.listen<double>(radiusProvider, (previous, next) {
+    //   updateHeatmap();
+    // });
 
-    ref.listen<double>(layerOpacityProvider, (previous, next) {
-      updateHeatmap();
-    });
+    // ref.listen<double>(layerOpacityProvider, (previous, next) {
+    //   updateHeatmap();
+    // });
 
-    ref.listen<MinMaxValues>(rangeSliderNotifierProvider, (previous, next) {
-      updateHeatmap();
-    });
+    // ref.listen<MinMaxValues>(rangeSliderNotifierProvider, (previous, next) {
+    //   updateHeatmap();
+    // });
 
     return Scaffold(
       drawer: CustomDrawer(),
@@ -182,47 +182,41 @@ class _HeatMapScreenState extends ConsumerState<HeatMapScreen> {
                               ],
                             ),
                             Expanded(
-                              child: Row(
+                              child: Column(
                                 children: [
-                                  SizedBox(width: 20),
-                                  RotatedBox(
-                                    quarterTurns: 1,
-                                    child: RangeSlider(
-                                      values: RangeValues(
-                                        double.parse(rangeSliderValuesChanged
-                                            .minV
-                                            .toStringAsFixed(2)),
-                                        double.parse(rangeSliderValuesChanged
-                                            .maxV
-                                            .toStringAsFixed(2)),
-                                      ),
-                                      min: double.parse(rangeSliderValuesInitial
-                                          .minV
-                                          .toStringAsFixed(2)),
-                                      max: double.parse(rangeSliderValuesInitial
-                                          .maxV
-                                          .toStringAsFixed(2)),
-                                      onChanged: (values) {
-                                        // Round the start and end values to two decimal places
-                                        final roundedStart = double.parse(
-                                            values.start.toStringAsFixed(2));
-                                        final roundedEnd = double.parse(
-                                            values.end.toStringAsFixed(2));
-
-                                        // Update the values in the notifier
-                                        ref
-                                            .read(rangeSliderNotifierProvider
-                                                .notifier)
-                                            .updateMinMaxValues(
-                                                roundedStart, roundedEnd);
-                                      },
-                                    ),
-                                  ),
                                   Expanded(
                                     child: Container(
                                       padding: EdgeInsets.all(20.0),
                                       child: BarChartContainer(),
                                     ),
+                                  ),
+                                  RangeSlider(
+                                    values: RangeValues(
+                                      double.parse(rangeSliderValuesChanged.minV
+                                          .toStringAsFixed(2)),
+                                      double.parse(rangeSliderValuesChanged.maxV
+                                          .toStringAsFixed(2)),
+                                    ),
+                                    min: double.parse(rangeSliderValuesInitial
+                                        .minV
+                                        .toStringAsFixed(2)),
+                                    max: double.parse(rangeSliderValuesInitial
+                                        .maxV
+                                        .toStringAsFixed(2)),
+                                    onChanged: (values) {
+                                      // Round the start and end values to two decimal places
+                                      final roundedStart = double.parse(
+                                          values.start.toStringAsFixed(2));
+                                      final roundedEnd = double.parse(
+                                          values.end.toStringAsFixed(2));
+
+                                      // Update the values in the notifier
+                                      ref
+                                          .read(rangeSliderNotifierProvider
+                                              .notifier)
+                                          .updateMinMaxValues(
+                                              roundedStart, roundedEnd);
+                                    },
                                   ),
                                 ],
                               ),
@@ -292,12 +286,19 @@ class _HeatMapScreenState extends ConsumerState<HeatMapScreen> {
                         heatMapDataSource: InMemoryHeatMapDataSource(
                             data: mapSettings.weightedLatLngList),
                         heatMapOptions: HeatMapOptions(
-                          gradient: HeatMapOptions.defaultGradient,
+                          gradient: {
+                            0: Colors.green,
+                            0.1: Colors.lime,
+                            0.55: Colors.yellow,
+                            0.9: Colors.blue,
+                            1.0: Colors.blue,
+                          },
                           minOpacity: 0,
+                          blurFactor: 0.1,
                           layerOpacity: mapSettings.mapOpacity,
                           radius: mapSettings.pointRadius,
                         ),
-                      );
+                      ); //TODO find a better HeatMap maybe MapBox?
                     },
                   );
                 }),
