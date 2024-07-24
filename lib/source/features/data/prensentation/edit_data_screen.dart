@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:terra_trace/source/features/data/data/data_management.dart';
 import 'package:terra_trace/source/features/data/domain/flux_data.dart';
 
 import 'package:terra_trace/source/features/project_manager/data/project_managment.dart';
@@ -33,9 +32,30 @@ class _EditFluxDataScreenState extends ConsumerState<EditDataScreen> {
             children: [
               TextFormField(
                 initialValue: widget.fluxData.dataSite,
-                decoration: InputDecoration(labelText: 'Data Site'),
+                decoration: InputDecoration(labelText: 'Site'),
                 onChanged: (value) {
                   _updatedFields['dataSite'] = value;
+                },
+              ),
+                TextFormField(
+                initialValue: widget.fluxData.dataSite,
+                decoration: InputDecoration(labelText: 'Date'),
+                onChanged: (value) {
+                  _updatedFields['dataDate'] = value;
+                },
+              ),
+               TextFormField(
+                initialValue: widget.fluxData.dataSite,
+                decoration: InputDecoration(labelText: 'Date'),
+                onChanged: (value) {
+                  _updatedFields['dataDate'] = value;
+                },
+              ),
+                  TextFormField(
+                initialValue: widget.fluxData.dataSite,
+                decoration: InputDecoration(labelText: 'Date'),
+                onChanged: (value) {
+                  _updatedFields['dataDate'] = value;
                 },
               ),
               // Add other fields similarly...

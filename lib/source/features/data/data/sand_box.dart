@@ -4,7 +4,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-
 import 'package:terra_trace/source/constants/constants.dart';
 
 import 'package:terra_trace/source/features/data/data/flux_reg_exp.dart';
@@ -45,6 +44,7 @@ class SandBox {
   }
 
   String? findDataPointValue(data, RegExp exp) {
+    //TODO if value not found we need to send a notification what is missing and exclude the data from the all the methods
     return exp.firstMatch(data) == null
         ? 'No Data Found'
         : exp.firstMatch(data)?.group(1);

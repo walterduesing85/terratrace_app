@@ -55,6 +55,7 @@ dependencies:
   flutter_map_heatmap: ^0.0.7
   flutter_map: ^6.2.1
   latlong2: ^0.9.1
+  ##flutter_map_location_marker: ^8.0.1
  
 
 

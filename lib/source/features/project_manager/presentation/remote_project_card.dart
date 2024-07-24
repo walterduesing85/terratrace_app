@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:terra_trace/source/features/data/data/data_management.dart';
+import 'package:terra_trace/source/features/project_manager/data/project_managment.dart';
 
 import 'package:terra_trace/source/routing/app_router.dart';
 
@@ -49,8 +50,11 @@ class RemoteProjectCard extends StatelessWidget {
                         color: Colors.blueGrey,
                         size: 30,
                       ),
-                      onPressed:
-                          () async {}, //TODO implement delete remoteproject
+                      onPressed: () async {
+                        ref
+                            .watch(projectManagementProvider)
+                            .deleteFireStoreProject(project, context);
+                      },
                     ),
                   ),
                   title: Text(

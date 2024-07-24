@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-//import 'package:hive/hive.dart';
-
 import 'package:terra_trace/source/common_widgets/custom_appbar.dart';
 import 'package:terra_trace/source/constants/constants.dart';
 import 'package:terra_trace/source/features/authentication/authentication_managment.dart';
@@ -64,15 +62,16 @@ class ProjectQuestions extends ConsumerWidget {
             ElevatedButton(
               onPressed: () async {
                 final projectName = ref.read(projectNameProvider);
-
                 final browseFiles = ref.read(browseFilesProvider);
-
+                ref.read(contextProvider.notifier).setContext(context); // Set context here
+                final currentUser = ref.read(currentUserProvider);
                 await ref
                     .watch(createNewRemoteProjectProvider)
                     .createNewEmptyProject(
-                        projectName,
-                        ref.read(contextProvider as ProviderBase<BuildContext>),
-                        ref.read(currentUserProvider));
+                      projectName,
+                      context,
+                      currentUser,
+                    );
                 await ref
                     .watch(projectManagementProvider)
                     .startStreamingRemoteData(projectName);

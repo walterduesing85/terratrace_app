@@ -51,7 +51,7 @@ class TabData extends ConsumerWidget {
               ),
               PopupMenuButton<String>(
                 onSelected: (value) {
-                  ref.read(sortPreferenceProvider.state).state = value;
+                  ref.read(sortPreferenceProvider.notifier).state = value;
                 },
                 itemBuilder: (context) => [
                   const PopupMenuItem(
@@ -115,7 +115,7 @@ class TabData extends ConsumerWidget {
                 itemCount: filteredList.length,
                 itemBuilder: (context, index) {
                   FluxData fluxData = filteredList[
-                      index]; //TODO still occuring error concurrent interation modification something
+                      index]; 
                   return DataCardTab(
                     fluxData: fluxData,
                   );

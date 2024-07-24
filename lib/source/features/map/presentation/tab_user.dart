@@ -57,7 +57,7 @@ class _TabUserState extends State<TabUser> {
               ),
             ),
             Expanded(
-                child: StreamBuilder(
+                child: StreamBuilder( //TODO make the search functionality work
               stream: searchValue == null || searchValue?.isEmpty == true
                   ? FirebaseFirestore.instance.collection('users').snapshots()
                   : FirebaseFirestore.instance
