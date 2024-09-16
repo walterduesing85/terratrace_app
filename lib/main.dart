@@ -31,8 +31,15 @@ Future<void> main() async {
 
 Future<void> requestPermissions() async {
   final storageStatus = await Permission.storage.request();
-  await Permission.location.request();
-
+  final locationStatus = await Permission.location.request();
+  if (locationStatus == PermissionStatus.granted) {
+    print('Location permission granted');
+  } else if (locationStatus == PermissionStatus.denied) {
+    print('Location permission denied');
+  } else if (locationStatus == PermissionStatus.permanentlyDenied) {
+    print('Location permission permanently denied, opening app settings');
+    openAppSettings();
+  }
   if (storageStatus == PermissionStatus.granted) {
     print('Storage permission granted');
   } else if (storageStatus == PermissionStatus.denied) {
@@ -40,6 +47,16 @@ Future<void> requestPermissions() async {
   } else if (storageStatus == PermissionStatus.permanentlyDenied) {
     print('Storage permission permanently denied, opening app settings');
     openAppSettings();
+  }
+
+  if (await Permission.manageExternalStorage.isDenied) {
+    // Request MANAGE_EXTERNAL_STORAGE for Android 11+
+    final manageStorageStatus =
+        await Permission.manageExternalStorage.request();
+    if (!manageStorageStatus.isGranted) {
+      print('Manage External Storage permission denied, opening app settings');
+      openAppSettings();
+    }
   }
 }
 
