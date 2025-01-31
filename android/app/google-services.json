@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "230653883435",
+    "project_id": "terratrace-1555e",
+    "storage_bucket": "terratrace-1555e.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:230653883435:android:b47ea6d51ece750287266e",
+        "android_client_info": {
+          "package_name": "ai.terratrace.terratrace"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDYiKSCHJSeWiKKdeOb0h6re9Mhl_0ATRs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
