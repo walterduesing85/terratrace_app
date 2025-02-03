@@ -22,8 +22,12 @@ class AuthenticationManager {
     }
   }
 
-  Future<void> registerWithEmailAndPassword(String email, String password,
-      String projectName, String userName, BuildContext context) async {
+  Future<void> registerWithEmailAndPassword(
+      String email,
+      String password,
+      // String projectName,
+      String userName,
+      BuildContext context) async {
     try {
       final newUser = await _auth.createUserWithEmailAndPassword(
           email: email.trim(), password: password);
@@ -35,7 +39,7 @@ class AuthenticationManager {
         'UserName': userName,
         'UserID': newUser.user?.uid,
         'UserEmail': newUser.user?.email,
-        'projects': {projectName: 'owner'}
+        'projects': {}
       };
 
       await userDocRef.set(userData);

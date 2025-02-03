@@ -44,9 +44,9 @@ class _HomeScrenState extends State<HomeScreen> {
                         });
                   }),
                 ),
-                const SizedBox(
-                  height: 40.0,
-                ),
+                // const SizedBox(
+                //   height: 40.0,
+                // ),
                 Flexible(
                   child: RoundedButton(
                       buttonColor: const Color.fromRGBO(64, 75, 96, 1),
@@ -58,24 +58,28 @@ class _HomeScrenState extends State<HomeScreen> {
                 const SizedBox(
                   height: 40.0,
                 ),
-                // Flexible(
-                //   child: RoundedButton(
-                //       buttonColor: const Color.fromRGBO(64, 75, 96, 1),
-                //       buttonText: 'MBU1 (CO2)',
-                //       goTo: () {
-                //         context.pushNamed(AppRoute.chamberAcquisition.name);
-                //         // context.pushNamed(AppRoute.chamberConnect.name);
-                //       }),
-                // ),
-                // Flexible(
-                //   child: RoundedButton(
-                //       buttonColor: const Color.fromRGBO(64, 75, 96, 1),
-                //       buttonText: 'MBU2 (CH4)',
-                //       goTo: () {
-                //         context.pushNamed(AppRoute.chamberAcquisition.name);
-                //         // context.pushNamed(AppRoute.chamberConnect.name);
-                //       }),
-                // ),
+                Flexible(
+                  child: RoundedButton(
+                      buttonColor: const Color.fromRGBO(64, 75, 96, 1),
+                      buttonText: 'MBU1 (CO2)',
+                      goTo: () {
+                        context.pushNamed(
+                          AppRoute.chamberAcquisition.name,
+                          queryParameters: {'type': 'mbu1'},
+                        );
+                        // context.pushNamed(AppRoute.chamberConnect.name);
+                      }),
+                ),
+                Flexible(
+                  child: RoundedButton(
+                      buttonColor: const Color.fromRGBO(64, 75, 96, 1),
+                      buttonText: 'MBU2 (CH4)',
+                      goTo: () {
+                        context.pushNamed(AppRoute.chamberAcquisition.name,
+                            queryParameters: {'type': 'mbu2'});
+                        // context.pushNamed(AppRoute.chamberConnect.name);
+                      }),
+                ),
               ])),
     );
   }

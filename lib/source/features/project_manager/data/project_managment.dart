@@ -25,6 +25,22 @@ class ProjectManagement {
     });
   }
 
+  Stream<List<Project>> getUserProjects(String userId) {
+    return projectCollection
+        .where('members.$userId',
+            isEqualTo: 'owner') // or just check existence with isNull: false
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs.map((doc) {
+        return Project(
+          name: doc['name'],
+          members: doc['members'],
+          // Other properties...
+        );
+      }).toList();
+    });
+  }
+
   // Stream for Flux Data
   Stream<List<FluxData>> getFluxDataStream(String project) {
     return projectCollection
@@ -72,7 +88,32 @@ class ProjectManagement {
   Future<void> deleteFireStoreProject(
       String projectName, BuildContext context) async {
     try {
-      await projectCollection.doc(projectName).delete();
+      final projectDoc = await projectCollection.doc(projectName).get();
+
+      if (!projectDoc.exists) {
+        throw Exception("Project does not exist.");
+      }
+
+      final projectData = projectDoc.data();
+      final members = projectData?['members'] ?? {}; // Get project members
+
+      // Start a batch operation to delete references efficiently
+      final batch = FirebaseFirestore.instance.batch();
+
+      // Remove project reference from each user's "projects" field
+      for (String userId in members.keys) {
+        final userDocRef =
+            FirebaseFirestore.instance.collection('users').doc(userId);
+        batch.update(userDocRef, {
+          'projects.$projectName': FieldValue.delete(),
+        });
+      }
+
+      // Delete the project document
+      batch.delete(projectCollection.doc(projectName));
+
+      // Commit batch operation
+      await batch.commit();
     } catch (e) {
       _showErrorDialog(context, e.toString());
     }
@@ -117,20 +158,21 @@ final remoteProjectStreamProvider =
   final projectManagement = ref.watch(projectManagementProvider);
   return projectManagement.projectsStream;
 });
-
 final remoteProjectsCardStreamProvider2 =
     StreamProvider.autoDispose<List<RemoteProjectCard>>((ref) {
   final projectManagement = ref.watch(projectManagementProvider);
   final userAsync = ref.watch(currentUserStateProvider);
-  // Transform userAsync into a stream of RemoteProjectCards
+
   return userAsync.when(
     data: (user) {
-      // Stream transformation for valid user data
-      return projectManagement.projectsStream.map((projects) {
-        debugPrint('User: $user');
+      if (user == null) return Stream.value([]);
+
+      // Filter projects where the user is a member
+      return projectManagement.getUserProjects(user.uid).map((projects) {
+        debugPrint('User: ${user.uid}');
+
         return projects.map((project) {
-          final userMembership =
-              user == null ? null : project.members?[user.uid];
+          final userMembership = project.members?[user.uid];
 
           final membershipStatus = userMembership == 'owner'
               ? const Icon(Icons.card_membership, color: Colors.green)
@@ -145,14 +187,49 @@ final remoteProjectsCardStreamProvider2 =
         }).toList();
       });
     },
-    loading: () {
-      // Return a stream with an empty list while loading
-      return Stream.value([]);
-    },
+    loading: () => Stream.value([]),
     error: (error, stack) {
       debugPrint('Error fetching user data: $error');
-      // Return a stream with an empty list on error
       return Stream.value([]);
     },
   );
 });
+
+// final remoteProjectsCardStreamProvider2 =
+//     StreamProvider.autoDispose<List<RemoteProjectCard>>((ref) {
+//   final projectManagement = ref.watch(projectManagementProvider);
+//   final userAsync = ref.watch(currentUserStateProvider);
+//   // Transform userAsync into a stream of RemoteProjectCards
+//   return userAsync.when(
+//     data: (user) {
+//       // Stream transformation for valid user data
+//       return projectManagement.projectsStream.map((projects) {
+//         debugPrint('User: $user');
+//         return projects.map((project) {
+//           final userMembership =
+//               user == null ? null : project.members?[user.uid];
+
+//           final membershipStatus = userMembership == 'owner'
+//               ? const Icon(Icons.card_membership, color: Colors.green)
+//               : userMembership == 'collaborator'
+//                   ? const Icon(Icons.how_to_reg, color: Colors.blue)
+//                   : const Icon(Icons.person, color: Colors.grey);
+
+//           return RemoteProjectCard(
+//             project: project.name ?? 'Unnamed Project',
+//             membershipStatus: membershipStatus,
+//           );
+//         }).toList();
+//       });
+//     },
+//     loading: () {
+//       // Return a stream with an empty list while loading
+//       return Stream.value([]);
+//     },
+//     error: (error, stack) {
+//       debugPrint('Error fetching user data: $error');
+//       // Return a stream with an empty list on error
+//       return Stream.value([]);
+//     },
+//   );
+// });

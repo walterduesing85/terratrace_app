@@ -41,7 +41,7 @@ class CustomDrawer extends StatelessWidget {
                   ),
                   accountEmail: Consumer(builder: (context, ref, _) {
                     final user = ref.watch(userStateProvider);
-                    final projectName = ref.watch(projectNameProvider);
+                    // final projectName = ref.watch(projectNameProvider);
                     return GestureDetector(
                         child: Text(
                           user?.email ?? '',
@@ -51,8 +51,8 @@ class CustomDrawer extends StatelessWidget {
                               fontWeight: FontWeight.bold),
                         ),
                         onTap: () {
-                          SigninRegisterPopup(projectName: projectName)
-                              .openPopup(context);
+                          SigninRegisterPopup.showAuthPopup(context, ref);
+                          // projectName: projectName).openPopup(context);
                         });
                   }),
                 );

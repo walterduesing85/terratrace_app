@@ -14,10 +14,10 @@ class CustomAppBar extends StatelessWidget {
     return Row(
       children: [
         Consumer(builder: (context, ref, _) {
-          final projectName = ref.watch(projectNameProvider);
+          // final projectName = ref.watch(projectNameProvider);
           return GestureDetector(
             onTap: () {
-              SigninRegisterPopup(projectName: projectName).openPopup(context);
+              SigninRegisterPopup.showAuthPopup(context, ref);
             },
             child: Text(
               title,

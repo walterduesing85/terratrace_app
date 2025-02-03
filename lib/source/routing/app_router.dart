@@ -4,8 +4,7 @@ import 'package:terratrace/source/features/data/presentation/data_list_screen.da
 import 'package:terratrace/source/features/data/presentation/edit_data_screen.dart';
 import 'package:terratrace/source/features/home/home_screen.dart';
 import 'package:terratrace/source/features/map/presentation/map_screen_selector.dart';
-// import 'package:terratrace/source/features/mbu_control/chart_menu.dart';
-// import 'package:terratrace/source/features/mbu_control/data_acquistion_screen.dart';
+import 'package:terratrace/source/features/mbu_control/data_acquistion_screen.dart';
 import 'package:terratrace/source/features/project_manager/presentation/create_new_project_screen.dart';
 import 'package:terratrace/source/features/project_manager/presentation/project_management_screen.dart';
 import 'package:terratrace/source/routing/not_found_screen.dart';
@@ -65,12 +64,13 @@ final goRouter = GoRouter(
                 ),
               ],
             ),
-
-            // GoRoute(
-            //   path: 'chamberAcquisition',
-            //   name: AppRoute.chamberAcquisition.name,
-            //   builder: (context, state) => DataAcquisitionScreenScreen(),
-            // ),
+            GoRoute(
+              path: 'chamberAcquisition',
+              name: AppRoute.chamberAcquisition.name,
+              builder: (context, state) => DataAcquisitionScreenScreen(
+                type: state.uri.queryParameters['type'],
+              ),
+            ),
           ],
         ),
       ],

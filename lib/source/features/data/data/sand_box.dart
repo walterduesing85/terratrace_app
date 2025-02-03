@@ -66,7 +66,7 @@ class SandBox {
   }
 
   Future<void> makeSingleDataPoint(String dataFile, String projectName) async {
-    print('hello from makeSingleDataPoint');
+    print('HELLOOO!!!!!!! hello from makeSingleDataPoint');
 
     try {
       String data;
@@ -192,6 +192,8 @@ class SandBox {
   }
 
   Future<void> getFileList() async {
+    // fileList = Directory("/data/data/ai.terratrace.terratrace/app_flutter/data")
+    //     .listSync(); // for testing
     fileList = Directory("storage/emulated/0/fluxmanager/data/").listSync();
   }
 

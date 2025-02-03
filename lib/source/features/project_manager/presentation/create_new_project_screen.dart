@@ -9,6 +9,7 @@ import 'package:terratrace/source/features/data/data/sand_box.dart';
 import 'package:terratrace/source/features/project_manager/data/project_managment.dart';
 import 'package:terratrace/source/features/project_manager/domain/create_new_project.dart';
 import 'package:terratrace/source/routing/app_router.dart';
+import 'sign_in_form.dart';
 
 final currentQuestionProvider = StateProvider<int>((ref) => 0);
 
@@ -17,29 +18,39 @@ class CreateNewProjectScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final authState = ref.watch(currentUserStateProvider);
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: const Color.fromRGBO(58, 66, 86, 1.0),
-        title: CustomAppBar(
-          title: ref.watch(projectNameProvider).isEmpty
-              ? 'Create Project'
-              : ref.watch(projectNameProvider),
-        ),
-      ),
-      backgroundColor: const Color.fromRGBO(58, 66, 86, 1),
-      body: SingleChildScrollView(
-        child: Center(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              ProjectSummary(),
-              ProjectQuestions(),
-            ],
+        appBar: AppBar(
+          backgroundColor: const Color.fromRGBO(58, 66, 86, 1.0),
+          title: CustomAppBar(
+            title: ref.watch(projectNameProvider).isEmpty
+                ? 'Create Project'
+                : ref.watch(projectNameProvider),
           ),
         ),
-      ),
-    );
+        backgroundColor: const Color.fromRGBO(58, 66, 86, 1),
+        body: authState.when(
+          data: (user) {
+            if (user == null) {
+              return SignInForm(); // Show the SignInForm when not signed in
+            } else {
+              return SingleChildScrollView(
+                child: Center(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      ProjectSummary(),
+                      ProjectQuestions(),
+                    ],
+                  ),
+                ),
+              );
+            }
+          },
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (error, stack) => Center(child: Text('Error: $error')),
+        ));
   }
 }
 
@@ -49,7 +60,7 @@ class ProjectQuestions extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final currentQuestion = ref.watch(currentQuestionProvider);
-
+    print("AAAA!!!: $currentQuestion");
     return Padding(
       padding: const EdgeInsets.all(8.0),
       child: Column(
@@ -89,6 +100,7 @@ class ProjectQuestions extends ConsumerWidget {
                   return; // Handle the case when no user is signed in
                 }
                 print(currentUser);
+                ref.read(currentQuestionProvider.notifier).state = 0;
                 await ref
                     .watch(createNewRemoteProjectProvider)
                     .createNewEmptyProject(
@@ -108,10 +120,8 @@ class ProjectQuestions extends ConsumerWidget {
 
                   // Handle loading state if necessary
                   CircularProgressIndicator();
-
-                  context.pushNamed(AppRoute.mapScreen.name);
+                  context.pushNamed(AppRoute.home.name);
                 }
-                ref.read(currentQuestionProvider.notifier).state = 0;
               },
               child: const Text('Create Project'),
             ),
@@ -204,7 +214,7 @@ class ProjectSummary extends ConsumerWidget {
     final browseFiles = ref.watch(browseFilesProvider);
 
     // Display the summary only if the project name is not empty
-    if (projectName.isEmpty) {
+    if (ref.watch(currentQuestionProvider) != 2) {
       return Container();
     }
 
