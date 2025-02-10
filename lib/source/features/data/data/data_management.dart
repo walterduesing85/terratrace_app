@@ -5,7 +5,6 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart';
 
-//import 'package:hive/hive.dart';
 
 import 'package:terratrace/source/features/data/domain/flux_data.dart';
 import 'package:terratrace/source/features/project_manager/data/project_managment.dart';
@@ -40,7 +39,7 @@ class SearchValueNotifier extends StateNotifier<String> {
 
 final searchValueTabProvider =
     StateNotifierProvider<SearchValueNotifier, String>((ref) {
-  print('SearchValueNotifier working');
+
   return SearchValueNotifier();
 });
 

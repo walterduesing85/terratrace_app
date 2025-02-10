@@ -1,0 +1,13 @@
+#Wed Feb 05 18:11:56 CET 2025
+path.3=13/classes.dex
+path.2=1/classes.dex
+path.1=0/classes.dex
+path.0=classes.dex
+base.3=/Users/wduesing/AndroidStudioProjects/terra_trace/terra_trace/android/build/app/intermediates/dex/profile/mergeProjectDexProfile/13/classes.dex
+base.2=/Users/wduesing/AndroidStudioProjects/terra_trace/terra_trace/android/build/app/intermediates/dex/profile/mergeProjectDexProfile/1/classes.dex
+base.1=/Users/wduesing/AndroidStudioProjects/terra_trace/terra_trace/android/build/app/intermediates/dex/profile/mergeProjectDexProfile/0/classes.dex
+base.0=/Users/wduesing/AndroidStudioProjects/terra_trace/terra_trace/android/build/app/intermediates/dex/profile/mergeExtDexProfile/classes.dex
+renamed.3=classes4.dex
+renamed.2=classes3.dex
+renamed.1=classes2.dex
+renamed.0=classes.dex

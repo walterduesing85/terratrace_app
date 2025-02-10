@@ -2,7 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:terratrace/source/features/data/data/sand_box.dart';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -47,7 +47,8 @@ class _SaveDataPopupState extends State<SaveDataPopup> {
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
       if (permission == LocationPermission.denied) {
-        print("Location permissions are denied.");
+        print(
+            "Location permissions are denied."); //TODO: we ask all permissions in the main before starting the app
         return;
       }
     }
@@ -167,10 +168,10 @@ FLUX RECORD TRACKS
       }
     }
     // final sandbox = SandBox();
-    final sandBox = widget.ref.read(sandBoxProvider);
-    await sandBox.makeSingleDataPoint(
-        "${directory.path}/$site/${samplingPoint}_ble_data.txt", site);
-    print('Data saved to $filePath');
+    // final sandBox = widget.ref.read(sandBoxProvider); // TODO: this is the wrong method, Sandbox was only for the Westsytems
+    // await sandBox.makeSingleDataPoint(
+    //     "${directory.path}/$site/${samplingPoint}_ble_data.txt", site);
+
     widget.collectedData.clear();
     Navigator.of(context).pop();
   }

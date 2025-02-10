@@ -206,7 +206,7 @@ class _HeatMapScreenState extends ConsumerState<HeatMapScreen>
 
             ref.read(mapStateProvider.notifier).setRadius(newRadius);
             ref.read(mapStateProvider.notifier).setLayerOpacity(newOpacity);
-            ref.read(showMarkersProvider.notifier).state = zoom > 15;
+            ref.read(showMarkersProvider.notifier).state = zoom > 15; // Show markers only when zoom > 15
           }),
       children: [
         TileLayer(

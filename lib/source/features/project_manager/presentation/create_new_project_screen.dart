@@ -1,16 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
+
 import 'package:terratrace/source/common_widgets/custom_appbar.dart';
 import 'package:terratrace/source/constants/constants.dart';
 import 'package:terratrace/source/features/authentication/authentication_managment.dart';
 import 'package:terratrace/source/features/data/data/data_management.dart';
-import 'package:terratrace/source/features/data/data/sand_box.dart';
+
 import 'package:terratrace/source/features/project_manager/data/project_managment.dart';
 import 'package:terratrace/source/features/project_manager/domain/create_new_project.dart';
-import 'package:terratrace/source/routing/app_router.dart';
+
 import 'sign_in_form.dart';
 
+//TODO create new work flow to create new project
 final currentQuestionProvider = StateProvider<int>((ref) => 0);
 
 class CreateNewProjectScreen extends ConsumerWidget {
@@ -112,16 +113,16 @@ class ProjectQuestions extends ConsumerWidget {
                     .watch(projectManagementProvider)
                     .getFluxDataStream(projectName);
 
-                if (browseFiles) {
-                  await ref.read(sandBoxProvider).browseAllFiles(projectName);
-                  ref
-                      .watch(projectManagementProvider)
-                      .getFluxDataStream(projectName);
+                // if (browseFiles) {
+                //   await ref.read(sandBoxProvider).browseAllFiles(projectName);
+                //   ref
+                //       .watch(projectManagementProvider)
+                //       .getFluxDataStream(projectName);
 
-                  // Handle loading state if necessary
-                  CircularProgressIndicator();
-                  context.pushNamed(AppRoute.home.name);
-                }
+                //   // Handle loading state if necessary
+                //   CircularProgressIndicator();
+                //   context.pushNamed(AppRoute.home.name);
+                // }
               },
               child: const Text('Create Project'),
             ),

@@ -20,7 +20,7 @@ class RemoteProjectsTab extends ConsumerWidget {
           return SignInForm(); // Show the SignInForm when not signed in
         } else {
           return AsyncValueWidget<List<RemoteProjectCard>>(
-            value: ref.watch(remoteProjectsCardStreamProvider2),
+            value: ref.watch(remoteProjectsCardStreamProvider),
             data: (remoteProjectCards) => ListView.builder(
               itemCount: remoteProjectCards.length,
               itemBuilder: (context, index) {

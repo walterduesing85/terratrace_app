@@ -158,7 +158,7 @@ final remoteProjectStreamProvider =
   final projectManagement = ref.watch(projectManagementProvider);
   return projectManagement.projectsStream;
 });
-final remoteProjectsCardStreamProvider2 =
+final remoteProjectsCardStreamProvider =
     StreamProvider.autoDispose<List<RemoteProjectCard>>((ref) {
   final projectManagement = ref.watch(projectManagementProvider);
   final userAsync = ref.watch(currentUserStateProvider);
@@ -194,42 +194,3 @@ final remoteProjectsCardStreamProvider2 =
     },
   );
 });
-
-// final remoteProjectsCardStreamProvider2 =
-//     StreamProvider.autoDispose<List<RemoteProjectCard>>((ref) {
-//   final projectManagement = ref.watch(projectManagementProvider);
-//   final userAsync = ref.watch(currentUserStateProvider);
-//   // Transform userAsync into a stream of RemoteProjectCards
-//   return userAsync.when(
-//     data: (user) {
-//       // Stream transformation for valid user data
-//       return projectManagement.projectsStream.map((projects) {
-//         debugPrint('User: $user');
-//         return projects.map((project) {
-//           final userMembership =
-//               user == null ? null : project.members?[user.uid];
-
-//           final membershipStatus = userMembership == 'owner'
-//               ? const Icon(Icons.card_membership, color: Colors.green)
-//               : userMembership == 'collaborator'
-//                   ? const Icon(Icons.how_to_reg, color: Colors.blue)
-//                   : const Icon(Icons.person, color: Colors.grey);
-
-//           return RemoteProjectCard(
-//             project: project.name ?? 'Unnamed Project',
-//             membershipStatus: membershipStatus,
-//           );
-//         }).toList();
-//       });
-//     },
-//     loading: () {
-//       // Return a stream with an empty list while loading
-//       return Stream.value([]);
-//     },
-//     error: (error, stack) {
-//       debugPrint('Error fetching user data: $error');
-//       // Return a stream with an empty list on error
-//       return Stream.value([]);
-//     },
-//   );
-// });

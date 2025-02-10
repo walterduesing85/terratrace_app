@@ -141,7 +141,6 @@ class CustomDrawer extends StatelessWidget {
                     DataExport fluxStorage =
                         DataExport(ref.read(projectNameProvider));
 
-                    await fluxStorage.getPermission();
                     fluxStorage
                         .saveData(ref.read(fluxDataListProvider).asData!.value);
                     Alert(

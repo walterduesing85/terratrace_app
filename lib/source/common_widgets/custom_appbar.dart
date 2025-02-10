@@ -4,7 +4,6 @@ import 'package:terratrace/source/common_widgets/signin_register_popup.dart';
 
 import 'package:terratrace/source/constants/constants.dart';
 
-import '../features/data/data/data_management.dart';
 
 class CustomAppBar extends StatelessWidget {
   const CustomAppBar({required this.title});

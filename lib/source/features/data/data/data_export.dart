@@ -1,7 +1,7 @@
 import 'dart:io';
-
 import 'package:csv/csv.dart';
-import 'package:permission_handler/permission_handler.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:terratrace/source/features/data/domain/flux_data.dart';
 
 class DataExport {
@@ -12,17 +12,6 @@ class DataExport {
   List<String> rows = [];
 
   List<List<String>> fluxListData = [];
-  Future<void> getPermission() async {
-    var status = await Permission.storage.status;
-    if (status.isDenied) {
-      // You can request multiple permissions at once.
-      Map<Permission, PermissionStatus> statuses = await [
-        Permission.storage,
-      ].request();
-      print(statuses[
-          Permission.storage]); // it should print PermissionStatus.granted
-    }
-  }
 
   Future<String> createCSV(List<FluxData> fluxDataList) async {
     int num = fluxDataList.length;
@@ -63,14 +52,24 @@ class DataExport {
     return dataTable;
   }
 
+/// Gets the local storage path in a cross-compatible way
   Future<String> get _localPath async {
-    await getPermission();
-    // final Directory directoryFolder = Directory('${directory.path}/data/');
-    final Directory directoryFolder =
-        Directory('storage/emulated/0/terratrace/data/');
-    final directoryNewFolder = await directoryFolder.create(recursive: true);
+   
+    
+    Directory? directory;
+    if (Platform.isAndroid) {
+      directory = await getExternalStorageDirectory();
+    } else if (Platform.isIOS) {
+      directory = await getApplicationDocumentsDirectory();
+    }
 
-    return directoryNewFolder.path;
+    if (directory != null) {
+      final storageDir = Directory('${directory.path}/terratrace/data/');
+      await storageDir.create(recursive: true);
+      return storageDir.path;
+    } else {
+      throw Exception("Could not get storage directory");
+    }
   }
 
   Future<String> get _fileName async {
@@ -96,7 +95,6 @@ class DataExport {
 
       // Read the file
       String contents = await file.readAsString();
-      print(contents);
 
       return contents;
     } catch (e) {
@@ -106,7 +104,7 @@ class DataExport {
     }
   }
 
-  Future<File> writeCounter(String dataTable) async {
+  Future<File> writeTable(String dataTable) async {
     final file = await _localFile;
 
     return file.writeAsString(dataTable);
@@ -114,6 +112,10 @@ class DataExport {
 
   Future<void> saveData(List<FluxData> fluxDataList) async {
     String dataTable = await createCSV(fluxDataList);
-    writeCounter(dataTable);
+    writeTable(dataTable);
   }
 }
+
+// final dataExportProvider = Provider<DataExport>((ref) {
+//   return DataExport();
+// });
