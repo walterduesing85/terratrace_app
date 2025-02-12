@@ -8,7 +8,7 @@ import 'package:terratrace/source/features/project_manager/presentation/remote_p
 import 'sign_in_form.dart'; // Import the SignInForm widget
 
 class RemoteProjectsTab extends ConsumerWidget {
-  const RemoteProjectsTab({Key? key}) : super(key: key);
+  const RemoteProjectsTab({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

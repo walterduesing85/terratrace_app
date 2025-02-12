@@ -28,17 +28,17 @@ class ProjectManagement {
   Stream<List<Project>> getUserProjects(String userId) {
     return projectCollection
         .where('members.$userId',
-            isEqualTo: 'owner') // or just check existence with isNull: false
+            whereIn: ['owner', 'collaborator']) // Include both roles
         .snapshots()
         .map((snapshot) {
-      return snapshot.docs.map((doc) {
-        return Project(
-          name: doc['name'],
-          members: doc['members'],
-          // Other properties...
-        );
-      }).toList();
-    });
+          return snapshot.docs.map((doc) {
+            return Project(
+              name: doc['name'],
+              members: doc['members'],
+              // Other properties...
+            );
+          }).toList();
+        });
   }
 
   // Stream for Flux Data
@@ -167,18 +167,25 @@ final remoteProjectsCardStreamProvider =
     data: (user) {
       if (user == null) return Stream.value([]);
 
-      // Filter projects where the user is a member
+      // Fetch projects where the user is either an owner OR a collaborator
       return projectManagement.getUserProjects(user.uid).map((projects) {
         debugPrint('User: ${user.uid}');
 
-        return projects.map((project) {
+        return projects
+            .where((project) =>
+                project.members?.containsKey(user.uid) ??
+                false) // Ensure user is in members
+            .map((project) {
           final userMembership = project.members?[user.uid];
 
           final membershipStatus = userMembership == 'owner'
-              ? const Icon(Icons.card_membership, color: Colors.green)
+              ? const Icon(Icons.card_membership,
+                  color: Colors.green) // Owner Icon
               : userMembership == 'collaborator'
-                  ? const Icon(Icons.how_to_reg, color: Colors.blue)
-                  : const Icon(Icons.person, color: Colors.grey);
+                  ? const Icon(Icons.how_to_reg,
+                      color: Colors.blue) // Collaborator Icon
+                  : const Icon(Icons.person,
+                      color: Colors.grey); // Default Icon
 
           return RemoteProjectCard(
             project: project.name ?? 'Unnamed Project',
