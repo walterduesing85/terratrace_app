@@ -14,7 +14,7 @@ import 'package:terratrace/source/routing/app_router.dart';
 
 //This drawer is the main menu that changes appearance when remote = true is selected
 class CustomDrawer extends StatelessWidget {
-  CustomDrawer();
+  const CustomDrawer({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -27,35 +27,37 @@ class CustomDrawer extends StatelessWidget {
             children: [
               Consumer(builder: (context, ref, _) {
                 final projectName = ref.watch(projectNameProvider);
+                final authState = ref.watch(currentUserStateProvider);
                 return UserAccountsDrawerHeader(
-                  decoration: BoxDecoration(
-                    image: DecorationImage(
-                      image: AssetImage('images/drawer_image_02.png'),
-                      fit: BoxFit.cover,
+                    decoration: BoxDecoration(
+                      image: DecorationImage(
+                        image: AssetImage('images/drawer_image_02.png'),
+                        fit: BoxFit.cover,
+                      ),
+                      color: Color.fromRGBO(255, 255, 255, 9),
                     ),
-                    color: Color.fromRGBO(255, 255, 255, 9),
-                  ),
-                  accountName: Text(
-                    projectName,
-                    style: drawerHeader,
-                  ),
-                  accountEmail: Consumer(builder: (context, ref, _) {
-                    final user = ref.watch(userStateProvider);
-                    // final projectName = ref.watch(projectNameProvider);
-                    return GestureDetector(
-                        child: Text(
-                          user?.email ?? '',
-                          style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 15,
-                              fontWeight: FontWeight.bold),
+                    accountName: Text(
+                      projectName,
+                      style: drawerHeader,
+                    ),
+                    accountEmail: GestureDetector(
+                        child: authState.when(
+                          data: (user) {
+                            return Text(
+                              user?.email ?? '',
+                              style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold),
+                            );
+                          },
+                          loading: () => Text('Loading...'),
+                          error: (error, _) => Text('Error loading email'),
                         ),
                         onTap: () {
                           SigninRegisterPopup.showAuthPopup(context, ref);
                           // projectName: projectName).openPopup(context);
-                        });
-                  }),
-                );
+                        }));
               }),
               ListTile(
                   title: Text(

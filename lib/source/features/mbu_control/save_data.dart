@@ -2,7 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:terratrace/source/features/data/data/sand_box.dart';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -166,10 +166,10 @@ FLUX RECORD TRACKS
         });
       }
     }
-    // final sandbox = SandBox();
-    final sandBox = widget.ref.read(sandBoxProvider);
-    await sandBox.makeSingleDataPoint(
-        "${directory.path}/$site/${samplingPoint}_ble_data.txt", site);
+    // // final sandbox = SandBox();
+    // final sandBox = widget.ref.read(sandBoxProvider);
+    // await sandBox.makeSingleDataPoint(
+    //     "${directory.path}/$site/${samplingPoint}_ble_data.txt", site);
     print('Data saved to $filePath');
     widget.collectedData.clear();
     Navigator.of(context).pop();

@@ -33,8 +33,7 @@ class _HomeScrenState extends State<HomeScreen> {
                         buttonColor: const Color.fromRGBO(64, 75, 96, 1),
                         buttonText: 'Create new project',
                         goTo: () {
-                          ref.read(isRemoteProvider.notifier).state = false;
-                          ref.read(isRemoteProvider.notifier).state = false;
+
                           ref
                               .read(projectNameProvider.notifier)
                               .setProjectName('');

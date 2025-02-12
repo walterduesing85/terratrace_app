@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:terratrace/source/features/data/data/data_point_watcher.dart';
+
 import 'package:terratrace/source/features/project_manager/data/project_managment.dart';
 import 'package:terratrace/source/routing/app_router.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
@@ -164,15 +164,15 @@ class MyApp extends StatelessWidget {
       child: Consumer(
         builder: (context, ref, _) {
           // Initialize the DataPointWatcher singleton with the ref
-          final dataPointWatcher = DataPointWatcher(ref);
+          // final dataPointWatcher = DataPointWatcher(ref);
 
           // Initialize directly here
-          if (!_initialized) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              dataPointWatcher.watchForFiles();
-            });
-            _initialized = true;
-          }
+          // if (!_initialized) {
+          //   WidgetsBinding.instance.addPostFrameCallback((_) {
+          //     dataPointWatcher.watchForFiles();
+          //   });
+          //   _initialized = true;
+          // }
 
           ref.watch(remoteProjectsCardStreamProvider2);
           return MaterialApp.router(

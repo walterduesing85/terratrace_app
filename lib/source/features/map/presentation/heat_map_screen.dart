@@ -8,7 +8,7 @@ import 'package:sliding_up_panel2/sliding_up_panel2.dart';
 import 'package:terratrace/source/common_widgets/async_value_widget.dart';
 import 'package:terratrace/source/common_widgets/custom_appbar.dart';
 import 'package:terratrace/source/common_widgets/custom_drawer.dart';
-import 'package:terratrace/source/constants/text_styles.dart';
+
 // import 'package:terratrace/source/features/bar_chart/presentation/bar_chart_container.dart';
 import 'package:terratrace/source/features/data/data/data_management.dart';
 
@@ -20,6 +20,8 @@ import 'package:latlong2/latlong.dart';
 final panelDraggableProvider = StateProvider<bool>((ref) => true);
 
 class HeatMapScreen extends ConsumerStatefulWidget {
+  const HeatMapScreen({super.key});
+
   @override
   _HeatMapScreenState createState() => _HeatMapScreenState();
 }

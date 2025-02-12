@@ -27,3 +27,4 @@ final firebaseUsersProvider = StreamProvider<List<User>>((ref) {
 });
 
 final userSearchValueProvider = StateProvider<String>((ref) => '');
+//TODO assign to user also the chamber volume and area

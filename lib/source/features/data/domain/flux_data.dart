@@ -29,3 +29,4 @@ class FluxData {
     this.dataOrigin,
   });
 }
+//TODO expand fluxDta class to include all Data fronm data aquisition

@@ -78,7 +78,6 @@ class RemoteProjectCard extends StatelessWidget {
                       await ref
                           .read(projectNameProvider.notifier)
                           .setProjectName(project);
-                      ref.read(isRemoteProvider.notifier).state = true;
 
                       context.pushNamed(AppRoute.mapScreen.name);
                     }
