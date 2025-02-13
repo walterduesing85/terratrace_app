@@ -2,7 +2,9 @@ import 'dart:async';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import 'package:terratrace/source/features/project_manager/data/project_managment.dart';
@@ -14,6 +16,8 @@ import 'firebase_options.dart';
 // import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 
 Future<void> main() async {
+  // Override error logging to ignore FrameEvents errors
+
   // Ensure that the Flutter bindings are initialized in the same zone
   runZonedGuarded(() async {
     WidgetsFlutterBinding.ensureInitialized();
@@ -27,25 +31,23 @@ Future<void> main() async {
       options: DefaultFirebaseOptions.currentPlatform,
     );
     FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterError;
-
-    // WidgetsFlutterBinding.ensureInitialized();
-    // final prefs = await SharedPreferences.getInstance();
-    // List<String> savedDevices = prefs.getStringList('savedDevices') ?? [];
-
-    // for (var deviceId in savedDevices) {
-    //   BluetoothDevice device = BluetoothDevice.fromId(deviceId);
-    //   try {
-    //     await device.connect(autoConnect: true);
-    //   } catch (e) {
-    //     print('Failed to auto-connect to $deviceId: $e');
-    //   }
-    // }
-
-    // Run the app in the same zone
+    await setupMapBox();
     runApp(ProviderScope(child: MyApp()));
   }, (error, stackTrace) {
     FirebaseCrashlytics.instance.recordError(error, stackTrace);
   });
+}
+
+Future<void> setupMapBox() async {
+  await dotenv.load(fileName: "assets/.env");
+  String? accessToken = dotenv.env['MAPBOX_ACCESS_TOKEN'];
+
+  if (accessToken == null || accessToken.isEmpty) {
+    print("❌ ERROR: Mapbox API key is missing or invalid");
+  } else {
+    print("✅ Mapbox API Key Loaded: $accessToken");
+    MapboxOptions.setAccessToken(accessToken);
+  }
 }
 
 Future<void> requestPermissions() async {
@@ -163,17 +165,6 @@ class MyApp extends StatelessWidget {
     return ProviderScope(
       child: Consumer(
         builder: (context, ref, _) {
-          // Initialize the DataPointWatcher singleton with the ref
-          // final dataPointWatcher = DataPointWatcher(ref);
-
-          // Initialize directly here
-          // if (!_initialized) {
-          //   WidgetsBinding.instance.addPostFrameCallback((_) {
-          //     dataPointWatcher.watchForFiles();
-          //   });
-          //   _initialized = true;
-          // }
-
           ref.watch(remoteProjectsCardStreamProvider2);
           return MaterialApp.router(
             routerConfig: goRouter,

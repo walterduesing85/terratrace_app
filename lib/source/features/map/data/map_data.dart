@@ -2,6 +2,7 @@ import 'dart:math';
 import 'package:flutter_map_heatmap/flutter_map_heatmap.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
 import 'package:terratrace/source/features/data/data/data_management.dart';
 import '../../data/domain/flux_data.dart';
 
@@ -24,12 +25,6 @@ class MapData {
               .clamp(0.0, 1.0);
       return normalized;
     }).toList();
-    //   final cO2 = double.tryParse(fluxData.dataCfluxGram ?? '0.0') ?? 0.0;
-    //   if (cO2 <= minMax.minV) return 0.0;
-    //   if (cO2 >= minMax.maxV) return 1.0;
-    //   return ((cO2 - minMax.minV) / (minMax.maxV - minMax.minV))
-    //       .clamp(0.0, 1.0); // Ensure minimum intensity
-    // }).toList();
   }
 }
 
@@ -119,15 +114,6 @@ class MapStateNotifier extends StateNotifier<MapState> {
   void setLayerOpacity(double value) {
     state = state.copyWith(layerOpacity: value);
   }
-
-  // void updateHeatmap(List<WeightedLatLng> data, double radius, double opacity) {
-  //   print('hello from updateHeatmap $radius $opacity');
-  //   state = state.copyWith(
-  //     heatmaps: data.toSet(),
-  //     radius: radius,
-  //     layerOpacity: opacity,
-  //   );
-  // }
 }
 
 // Providers for map state and settings
@@ -170,7 +156,7 @@ final intensityProvider = FutureProvider.autoDispose<List<double>>((ref) async {
   );
 });
 
-// Provider for WeightedLatLng list
+// // Provider for WeightedLatLng list
 final weightedLatLngListProvider =
     FutureProvider.autoDispose<List<WeightedLatLng>>((ref) async {
   final intensities = await ref.watch(intensityProvider.future);
@@ -189,21 +175,53 @@ final weightedLatLngListProvider =
           intensities[index].clamp(0.0, 1.0),
         );
       }).toList();
-      // return List<WeightedLatLng>.generate(
-      //     min(dataList.length, intensities.length), (index) {
-      //   // Ensure intensities.length == dataList.length.
-      //   final fluxData = dataList[index];
-      //   return WeightedLatLng(
-      //     LatLng(
-      //       double.tryParse(fluxData.dataLat ?? '0.0') ?? 0.0,
-      //       double.tryParse(fluxData.dataLong ?? '0.0') ?? 0.0,
-      //     ),
-      //     intensities[index],
-      //   );
-      // });
     },
     orElse: () => [],
   );
+});
+
+final geoJsonProvider = FutureProvider.autoDispose<String>((ref) async {
+  final intensities = await ref.watch(intensityProvider.future);
+  final fluxDataListAsync = ref.watch(fluxDataListProvider);
+
+  final geoJson = fluxDataListAsync.maybeWhen(
+    data: (dataList) {
+      final features = dataList.asMap().entries.map((entry) {
+        final index = entry.key;
+        final fluxData = entry.value;
+
+        final lat = double.tryParse(fluxData.dataLat ?? '0.0') ?? 0.0;
+        final long = double.tryParse(fluxData.dataLong ?? '0.0') ?? 0.0;
+        final weight = intensities[index].clamp(0.0, 1.0);
+
+        return '''
+          {
+            "type": "Feature",
+            "properties": { "weight": $weight },
+            "geometry": {
+              "type": "Point",
+              "coordinates": [$long, $lat]
+            }
+          }
+        ''';
+      }).join(',');
+
+      final jsonString = '''
+      {
+        "type": "FeatureCollection",
+        "features": [
+          $features
+        ]
+      }
+      ''';
+
+      print("✅ Generated GeoJSON: $jsonString"); // Debugging
+      return jsonString;
+    },
+    orElse: () => '{ "type": "FeatureCollection", "features": [] }',
+  );
+
+  return geoJson;
 });
 
 // Provider for MapSettings
@@ -238,5 +256,39 @@ final initialCameraPositionProvider = StateProvider<LatLng>((ref) {
       return const LatLng(52.4894, 13.4381); // Default location
     },
     orElse: () => const LatLng(52.4894, 13.4381),
+  );
+});
+
+final heatmapProvider = Provider<HeatmapLayer>((ref) {
+  final radius = ref.watch(radiusProvider);
+  final opacity = ref.watch(layerOpacityProvider);
+
+  return HeatmapLayer(
+    id: "heatmap-layer",
+    sourceId: "heatmap-source",
+    heatmapWeightExpression: [
+      "interpolate",
+      ["linear"],
+      ["get", "weight"],
+      0.1, 0.1, // Very low weight → weak effect
+      0.2, 0.2, // Low weight → slightly visible
+      0.4, 0.4, // Medium-low weight → moderate visibility
+      0.7, 0.7, // Medium-high weight → stronger contribution
+      0.8, 1.0 // High weight → full intensity
+    ],
+    heatmapColorExpression: [
+      "interpolate",
+      ["linear"],
+      ["heatmap-density"],
+      0, "rgba(0, 0, 255, 0)", // Transparent at low density
+      0.2, "royalblue",
+      0.4, "cyan",
+      0.6, "lime",
+      0.8, "yellow",
+      1.0, "red" // High density → red
+    ],
+    heatmapRadius: radius, // Dynamic radius
+    heatmapIntensity: 4, // Dynamic intensity
+    heatmapOpacity: opacity, // Dynamic opacity
   );
 });

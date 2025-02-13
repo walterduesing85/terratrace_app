@@ -4,6 +4,7 @@ import 'package:terratrace/source/features/data/presentation/data_list_screen.da
 import 'package:terratrace/source/features/data/presentation/edit_data_screen.dart';
 import 'package:terratrace/source/features/home/home_screen.dart';
 import 'package:terratrace/source/features/map/presentation/map_screen_selector.dart';
+import 'package:terratrace/source/features/map/presentation/test_heat_map_mapbox.dart';
 import 'package:terratrace/source/features/mbu_control/data_acquistion_screen.dart';
 import 'package:terratrace/source/features/project_manager/presentation/create_new_project_screen.dart';
 import 'package:terratrace/source/features/project_manager/presentation/project_management_screen.dart';

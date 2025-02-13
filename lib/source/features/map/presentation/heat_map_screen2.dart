@@ -58,7 +58,7 @@ class _HeatMapScreenState extends ConsumerState<HeatMapScreen>
   Widget build(BuildContext context) {
     // final cameraPosition = ref.watch(initialCameraPositionProvider);
     // final markers = ref.watch(mapStateProvider).heatmaps;
-    ref.watch(geoJsonProvider);
+
     return Scaffold(
       drawer: CustomDrawer(),
       appBar: AppBar(
@@ -210,8 +210,6 @@ class _HeatMapScreenState extends ConsumerState<HeatMapScreen>
     // Ensure the style is loaded before adding heatmap
     String? styleURI = await mapboxMapController?.style.getStyleURI();
     if (styleURI != null) {
-      // ref.listen(radiusProvider, (_, __) => _addHeatmapLayer(ref));
-      // ref.listen(layerOpacityProvider, (_, __) => _addHeatmapLayer(ref));
       _addHeatmapLayer(ref);
     }
   }
@@ -226,7 +224,7 @@ class _HeatMapScreenState extends ConsumerState<HeatMapScreen>
       if (position != null && mapboxMapController != null) {
         mapboxMapController?.setCamera(
           mp.CameraOptions(
-              zoom: 13,
+              zoom: 5,
               center: mp.Point(coordinates: mp.Position(12.46811, 50.20735))),
           // mp.Position(position.longitude, position.latitude))),
         );
@@ -255,7 +253,43 @@ class _HeatMapScreenState extends ConsumerState<HeatMapScreen>
 
       print("✅ GeoJSON Source added successfully");
 
-      await mapboxMapController?.style.addLayer(ref.watch(heatmapProvider));
+      mp.HeatmapLayer heatmapLayer = mp.HeatmapLayer(
+        id: "heatmap-layer",
+        sourceId: "heatmap-source",
+        heatmapWeightExpression: [
+          "interpolate",
+          ["linear"],
+          ["get", "weight"],
+          0.0, 0.05, // Very low weight → very weak effect
+          0.1, 0.2, // Low weight → slightly visible
+          0.3, 0.4, // Medium-low weight → more visible
+          0.5, 0.6, // Medium weight → stronger contribution
+          0.7, 0.8, // Medium-high weight → near peak effect
+          1.0, 1.0 // Maximum weight → full intensity
+        ],
+        heatmapColorExpression: [
+          "interpolate",
+          ["linear"],
+          ["heatmap-density"],
+          0,
+          "rgba(0, 0, 255, 0)",
+          0.1,
+          "royalblue",
+          0.3,
+          "cyan",
+          0.5,
+          "lime",
+          0.7,
+          "yellow",
+          1,
+          "red"
+        ],
+        heatmapRadius: 20,
+        heatmapIntensity: 4,
+        heatmapOpacity: 0.9,
+      );
+
+      await mapboxMapController?.style.addLayer(heatmapLayer);
       print("✅ Heatmap Layer added successfully");
     } catch (e) {
       print("❌ Error updating heatmap: $e");
