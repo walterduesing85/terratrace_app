@@ -1,12 +1,10 @@
 import 'dart:math';
-import 'package:flutter_map_heatmap/flutter_map_heatmap.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:latlong2/latlong.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
 import 'package:terratrace/source/features/data/data/data_management.dart';
 import '../../data/domain/flux_data.dart';
 
-// Class to hold minimum and maximum values
+// Class to hold min/max CO2 values for normalization
 class MinMaxValues {
   final double minV;
   final double maxV;
@@ -30,111 +28,68 @@ class MapData {
 
 // State class for map configuration
 class MapState {
-  final Set<WeightedLatLng> heatmaps;
+  final String geoJson;
   final double zoom;
   final double radius;
-  final double minOpacity;
-  final double blurFactor;
-  final double layerOpacity;
-  final bool showMarkers;
+  final double opacity;
 
   MapState({
-    this.heatmaps = const {},
+    this.geoJson = '',
     this.zoom = 15.0,
     this.radius = 30.0,
-    this.minOpacity = 0.3,
-    this.blurFactor = 0.5,
-    this.layerOpacity = 0.75,
-    this.showMarkers = false,
+    this.opacity = 0.75,
   });
 
   MapState copyWith({
-    Set<WeightedLatLng>? heatmaps,
+    String? geoJson,
     double? zoom,
     double? radius,
-    double? minOpacity,
-    double? blurFactor,
-    double? layerOpacity,
-    bool? showMarkers,
+    double? opacity,
   }) {
     return MapState(
-      heatmaps: heatmaps ?? this.heatmaps,
+      geoJson: geoJson ?? this.geoJson,
       zoom: zoom ?? this.zoom,
       radius: radius ?? this.radius,
-      minOpacity: minOpacity ?? this.minOpacity,
-      blurFactor: blurFactor ?? this.blurFactor,
-      layerOpacity: layerOpacity ?? this.layerOpacity,
-      showMarkers: showMarkers ?? this.showMarkers,
+      opacity: opacity ?? this.opacity,
     );
   }
-}
-
-class MapSettings {
-  final List<WeightedLatLng> weightedLatLngList;
-  final double pointRadius;
-  final double mapOpacity;
-  final bool showMarkers;
-
-  MapSettings({
-    required this.weightedLatLngList,
-    required this.pointRadius,
-    required this.mapOpacity,
-    required this.showMarkers,
-  });
 }
 
 // StateNotifier for managing map state
 class MapStateNotifier extends StateNotifier<MapState> {
   MapStateNotifier() : super(MapState());
 
-  void initHeatmap(WidgetRef ref) async {
-    final weightedLatLngList =
-        await ref.watch(weightedLatLngListProvider.future);
-    state = state.copyWith(heatmaps: weightedLatLngList.toSet());
-  }
-
-  void setWeightedLatLngList(List<WeightedLatLng> list) {
-    state = state.copyWith(heatmaps: list.toSet());
-  }
-
-  void setZoom(double value) {
-    state = state.copyWith(
-      zoom: value,
-      radius: (50 / value).clamp(10.0, 50.0),
-      layerOpacity: (value / 18).clamp(0.3, 1.0),
-      showMarkers: value > 15,
-      // showMarkers: value > 15,
-    );
+  Future<void> initHeatmap(WidgetRef ref) async {
+    final geoJson = await ref.watch(geoJsonProvider.future);
+    state = state.copyWith(geoJson: geoJson);
   }
 
   void setRadius(double value) {
     state = state.copyWith(radius: value);
   }
 
-  void setLayerOpacity(double value) {
-    state = state.copyWith(layerOpacity: value);
+  void setOpacity(double value) {
+    state = state.copyWith(opacity: value);
   }
 }
 
-// Providers for map state and settings
+// Providers
 final mapStateProvider = StateNotifierProvider<MapStateNotifier, MapState>(
     (ref) => MapStateNotifier());
 
 final radiusProvider = StateProvider<double>((ref) => 30.0);
 final layerOpacityProvider = StateProvider<double>((ref) => 0.75);
-final showMarkersProvider = StateProvider<bool>((ref) => false);
+
 final mapDataProvider = Provider<MapData>((ref) => MapData());
 
-// Provider for min and max values
+// Provider for min and max CO2 values
 final minMaxGramProvider = StateProvider<MinMaxValues>((ref) {
   final fluxDataListAsync = ref.watch(fluxDataListProvider);
-
   return fluxDataListAsync.maybeWhen(
     data: (dataList) {
       final cO2List = dataList.map((fluxData) {
         return double.tryParse(fluxData.dataCfluxGram ?? '0.0') ?? 0.0;
       }).toList();
-
       if (cO2List.isEmpty) return const MinMaxValues(minV: 0.0, maxV: 1.0);
       return MinMaxValues(
         minV: cO2List.reduce(min),
@@ -156,35 +111,12 @@ final intensityProvider = FutureProvider.autoDispose<List<double>>((ref) async {
   );
 });
 
-// // Provider for WeightedLatLng list
-final weightedLatLngListProvider =
-    FutureProvider.autoDispose<List<WeightedLatLng>>((ref) async {
-  final intensities = await ref.watch(intensityProvider.future);
-  final fluxDataListAsync = ref.watch(fluxDataListProvider);
-
-  return fluxDataListAsync.maybeWhen(
-    data: (dataList) {
-      return dataList.asMap().entries.map((entry) {
-        final index = entry.key;
-        final fluxData = entry.value;
-        return WeightedLatLng(
-          LatLng(
-            double.tryParse(fluxData.dataLat ?? '0.0') ?? 0.0,
-            double.tryParse(fluxData.dataLong ?? '0.0') ?? 0.0,
-          ),
-          intensities[index].clamp(0.0, 1.0),
-        );
-      }).toList();
-    },
-    orElse: () => [],
-  );
-});
-
+// Provider for GeoJSON generation
 final geoJsonProvider = FutureProvider.autoDispose<String>((ref) async {
   final intensities = await ref.watch(intensityProvider.future);
   final fluxDataListAsync = ref.watch(fluxDataListProvider);
 
-  final geoJson = fluxDataListAsync.maybeWhen(
+  return fluxDataListAsync.maybeWhen(
     data: (dataList) {
       final features = dataList.asMap().entries.map((entry) {
         final index = entry.key;
@@ -206,7 +138,7 @@ final geoJsonProvider = FutureProvider.autoDispose<String>((ref) async {
         ''';
       }).join(',');
 
-      final jsonString = '''
+      return '''
       {
         "type": "FeatureCollection",
         "features": [
@@ -214,72 +146,29 @@ final geoJsonProvider = FutureProvider.autoDispose<String>((ref) async {
         ]
       }
       ''';
-
-      print("✅ Generated GeoJSON: $jsonString"); // Debugging
-      return jsonString;
     },
     orElse: () => '{ "type": "FeatureCollection", "features": [] }',
   );
-
-  return geoJson;
 });
 
-// Provider for MapSettings
-final mapSettingsProvider =
-    FutureProvider.autoDispose<MapSettings>((ref) async {
-  final weightedLatLngList = await ref.watch(weightedLatLngListProvider.future);
+final heatmapProvider = FutureProvider.autoDispose<HeatmapLayer>((ref) async {
   final radius = ref.watch(radiusProvider);
   final opacity = ref.watch(layerOpacityProvider);
-  final showMarkers = ref.watch(showMarkersProvider);
-
-  return MapSettings(
-    weightedLatLngList: weightedLatLngList,
-    pointRadius: radius,
-    mapOpacity: opacity,
-    showMarkers: showMarkers,
-  );
-});
-
-// Provider for initial camera position
-final initialCameraPositionProvider = StateProvider<LatLng>((ref) {
-  final fluxDataListAsync = ref.watch(fluxDataListProvider);
-
-  return fluxDataListAsync.maybeWhen(
-    data: (dataList) {
-      if (dataList.isNotEmpty) {
-        final firstEntry = dataList.first;
-        return LatLng(
-          double.tryParse(firstEntry.dataLat ?? '0.0') ?? 0.0,
-          double.tryParse(firstEntry.dataLong ?? '0.0') ?? 0.0,
-        );
-      }
-      return const LatLng(52.4894, 13.4381); // Default location
-    },
-    orElse: () => const LatLng(52.4894, 13.4381),
-  );
-});
-
-final heatmapProvider = Provider<HeatmapLayer>((ref) {
-  final radius = ref.watch(radiusProvider);
-  final opacity = ref.watch(layerOpacityProvider);
+  await ref.watch(geoJsonProvider.future);
 
   return HeatmapLayer(
     id: "heatmap-layer",
     sourceId: "heatmap-source",
     heatmapWeightExpression: [
-      "interpolate",
-      ["linear"],
-      ["get", "weight"],
+      "interpolate", ["linear"], ["get", "weight"],
       0.1, 0.1, // Very low weight → weak effect
-      0.2, 0.2, // Low weight → slightly visible
-      0.4, 0.4, // Medium-low weight → moderate visibility
-      0.7, 0.7, // Medium-high weight → stronger contribution
-      0.8, 1.0 // High weight → full intensity
+      0.3, 0.3, // Low weight → slightly visible
+      0.6, 0.6, // Medium-low weight → moderate visibility
+      0.8, 0.9, // High weight → strong intensity
+      1.0, 1.0 // Maximum weight → full intensity
     ],
     heatmapColorExpression: [
-      "interpolate",
-      ["linear"],
-      ["heatmap-density"],
+      "interpolate", ["linear"], ["heatmap-density"],
       0, "rgba(0, 0, 255, 0)", // Transparent at low density
       0.2, "royalblue",
       0.4, "cyan",
@@ -287,8 +176,8 @@ final heatmapProvider = Provider<HeatmapLayer>((ref) {
       0.8, "yellow",
       1.0, "red" // High density → red
     ],
-    heatmapRadius: radius, // Dynamic radius
-    heatmapIntensity: 4, // Dynamic intensity
-    heatmapOpacity: opacity, // Dynamic opacity
+    heatmapRadius: radius,
+    heatmapIntensity: 4,
+    heatmapOpacity: opacity,
   );
 });

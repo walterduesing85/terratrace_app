@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 //import 'package:flutter_map_location_marker/flutter_map_location_marker.dart';
@@ -36,15 +37,12 @@ class _HeatMapScreenState extends ConsumerState<HeatMapScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
-    _setupPositionTracking();
+    // _setupPositionTracking();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      // Trigger geoJsonProvider fetch early
-      ref.read(geoJsonProvider);
+      ref.read(mapStateProvider.notifier).initHeatmap(ref);
     });
   }
-
-  mp.MapboxMap? mapboxMapController;
 
   @override
   void dispose() {
@@ -52,12 +50,19 @@ class _HeatMapScreenState extends ConsumerState<HeatMapScreen>
     super.dispose();
   }
 
+  mp.MapboxMap? mapboxMapController;
+
   StreamSubscription? userPositionStream;
 
   @override
   Widget build(BuildContext context) {
+    ref.listen(mapStateProvider, (previous, next) {
+      _updateHeatmapLayer(ref, next);
+    });
     // final cameraPosition = ref.watch(initialCameraPositionProvider);
-    // final markers = ref.watch(mapStateProvider).heatmaps;
+
+    ref.watch(radiusProvider);
+    ref.watch(layerOpacityProvider);
     ref.watch(geoJsonProvider);
     return Scaffold(
       drawer: CustomDrawer(),
@@ -132,9 +137,6 @@ class _HeatMapScreenState extends ConsumerState<HeatMapScreen>
   }
 
   Widget _buildMapSettingsTab() {
-    final radius = ref.watch(radiusProvider);
-    final opacity = ref.watch(layerOpacityProvider);
-
     return Padding(
       padding: const EdgeInsets.all(16.0),
       child: Column(
@@ -142,7 +144,7 @@ class _HeatMapScreenState extends ConsumerState<HeatMapScreen>
         children: [
           _buildSlider(
             label: 'Point Radius',
-            value: radius,
+            value: ref.watch(radiusProvider),
             min: 10,
             max: 50,
             onChanged: (newValue) {
@@ -153,13 +155,13 @@ class _HeatMapScreenState extends ConsumerState<HeatMapScreen>
           const SizedBox(height: 16),
           _buildSlider(
             label: 'Map Opacity',
-            value: opacity,
+            value: ref.watch(layerOpacityProvider),
             min: 0.1,
             max: 1.0,
             divisions: 10,
             onChanged: (newValue) {
               ref.read(layerOpacityProvider.notifier).state = newValue;
-              ref.read(mapStateProvider.notifier).setLayerOpacity(newValue);
+              ref.read(mapStateProvider.notifier).setOpacity(newValue);
             },
           ),
         ],
@@ -195,71 +197,153 @@ class _HeatMapScreenState extends ConsumerState<HeatMapScreen>
 
   Widget _buildMap() {
     return mp.MapWidget(
-        styleUri: "mapbox://styles/mapbox/dark-v10",
-        onMapCreated: _onMapCreated);
+      styleUri: "mapbox://styles/mapbox/dark-v10",
+      onMapCreated: (mapboxMap) => _onMapCreated(mapboxMap, ref),
+    );
   }
 
-  void _onMapCreated(mp.MapboxMap controller) async {
+  void _onMapCreated(mp.MapboxMap mapboxMap, WidgetRef ref) {
     setState(() {
-      mapboxMapController = controller;
+      mapboxMapController = mapboxMap; // ✅ Store the controller
     });
 
-    await mapboxMapController?.location.updateSettings(
-        mp.LocationComponentSettings(enabled: true, pulsingEnabled: true));
+    mapboxMap.setCamera(
+      mp.CameraOptions(
+          zoom: 13,
+          center: mp.Point(coordinates: mp.Position(12.46811, 50.20735))),//TODO add cameraPostionProvider
+    );
 
-    // Ensure the style is loaded before adding heatmap
-    String? styleURI = await mapboxMapController?.style.getStyleURI();
-    if (styleURI != null) {
-      // ref.listen(radiusProvider, (_, __) => _addHeatmapLayer(ref));
-      // ref.listen(layerOpacityProvider, (_, __) => _addHeatmapLayer(ref));
-      _addHeatmapLayer(ref);
-    }
-  }
+    print("✅ MapboxMap Controller Initialized!");
 
-  Future<void> _setupPositionTracking() async {
-    gl.LocationSettings locationSettings = gl.LocationSettings(
-        accuracy: gl.LocationAccuracy.high, distanceFilter: 1);
-    userPositionStream?.cancel();
-    userPositionStream =
-        gl.Geolocator.getPositionStream(locationSettings: locationSettings)
-            .listen((gl.Position? position) {
-      if (position != null && mapboxMapController != null) {
-        mapboxMapController?.setCamera(
-          mp.CameraOptions(
-              zoom: 13,
-              center: mp.Point(coordinates: mp.Position(12.46811, 50.20735))),
-          // mp.Position(position.longitude, position.latitude))),
-        );
+    // ✅ Ensure the controller is not null before calling heatmap update
+    Future.delayed(Duration(milliseconds: 500), () {
+      if (mapboxMapController != null) {
+        _updateHeatmapLayer(ref, ref.read(mapStateProvider));
+      } else {
+        print("🚨 ERROR: MapboxMap Controller still NULL after delay!");
       }
     });
   }
 
-  Future<void> _addHeatmapLayer(WidgetRef ref) async {
-    try {
-      final geoJsonData = ref.watch(geoJsonProvider).maybeWhen(
-            data: (data) => data,
-            orElse: () => null,
-          );
+  Future<void> _updateHeatmapLayer(WidgetRef ref, MapState mapState) async {
+    if (mapboxMapController == null) {
+      print("🚨 ERROR: MapboxMap Controller is NULL! Aborting heatmap update.");
+      return;
+    }
 
-      if (geoJsonData == null || geoJsonData.isEmpty) {
-        print("🚨 No GeoJSON data available.");
+    try {
+      final geoJsonData = await ref.watch(geoJsonProvider.future);
+
+      if (geoJsonData.isEmpty || geoJsonData.contains('"features": []')) {
+        print("🚨 ERROR: No valid features in GeoJSON!");
         return;
       }
 
-      print("✅ Adding GeoJSON Source: $geoJsonData");
+      final style = mapboxMapController!.style;
 
-      await mapboxMapController?.style.addSource(mp.GeoJsonSource(
-        id: "heatmap-source",
-        data: geoJsonData,
-      ));
+      // ✅ Check if the heatmap source exists
+      final sources = await style.getStyleSources();
+      final hasHeatmapSource = sources.any((s) => s?.id == "heatmap-source");
 
-      print("✅ GeoJSON Source added successfully");
+      if (hasHeatmapSource) {
+        // ✅ Update existing GeoJSON source using updateGeoJSONSourceFeatures
+        final List<mp.Feature> features = _parseGeoJsonFeatures(geoJsonData);
 
-      await mapboxMapController?.style.addLayer(ref.watch(heatmapProvider));
-      print("✅ Heatmap Layer added successfully");
+        if (features.isNotEmpty) {
+          await style.updateGeoJSONSourceFeatures(
+            "heatmap-source",
+            "features",
+            features,
+          );
+          print("✅ GeoJSON Source updated successfully");
+        } else {
+          print("🚨 ERROR: No valid features found to update in GeoJSON!");
+        }
+      } else {
+        // ✅ Add a new GeoJSON source
+        await style.addSource(mp.GeoJsonSource(
+          id: "heatmap-source",
+          data: geoJsonData, // ✅ Pass raw JSON string
+        ));
+        print("✅ GeoJSON Source added successfully");
+      }
+
+      // ✅ Check if the heatmap layer exists
+      final layers = await style.getStyleLayers();
+      final hasHeatmapLayer = layers.any((l) => l?.id == "heatmap-layer");
+
+      final heatmapLayer = mp.HeatmapLayer(
+        id: "heatmap-layer",
+        sourceId: "heatmap-source",
+        heatmapWeightExpression: [
+          "interpolate",
+          ["linear"],
+          ["get", "weight"],
+          0.1,
+          0.1,
+          0.3,
+          0.3,
+          0.6,
+          0.6,
+          0.8,
+          0.9,
+          1.0,
+          1.0
+        ],
+        heatmapColorExpression: [
+          "interpolate",
+          ["linear"],
+          ["heatmap-density"],
+          0,
+          "rgba(0, 0, 255, 0)",
+          0.2,
+          "royalblue",
+          0.4,
+          "cyan",
+          0.6,
+          "lime",
+          0.8,
+          "yellow",
+          1.0,
+          "red"
+        ],
+        heatmapRadius: mapState.radius,
+        heatmapIntensity: 4,
+        heatmapOpacity: mapState.opacity,
+      );
+
+      if (!hasHeatmapLayer) {
+        // ✅ Only add the heatmap layer if it does not exist
+        await style.addLayer(heatmapLayer);
+        print("✅ Heatmap Layer added successfully");
+      } else {
+        // ✅ Update layer properties instead of removing it
+        await style.updateLayer(heatmapLayer);
+        print("✅ Heatmap Layer updated successfully");
+      }
     } catch (e) {
       print("❌ Error updating heatmap: $e");
     }
+  }
+
+  List<mp.Feature> _parseGeoJsonFeatures(String geoJsonString) {
+    try {
+      final geoJsonMap = jsonDecode(geoJsonString);
+      if (geoJsonMap['features'] is List) {
+        return (geoJsonMap['features'] as List).map((feature) {
+          return mp.Feature(
+            geometry: mp.GeoJSONObject.fromJson(feature['geometry'])
+                as mp.GeometryObject,
+            id: feature['properties']?['id'] ??
+                "feature-${DateTime.now().millisecondsSinceEpoch}",
+            properties: feature['properties'] ?? {},
+          );
+        }).toList();
+      }
+    } catch (e) {
+      print("❌ Error parsing GeoJSON: $e");
+    }
+    return [];
   }
 }
 
@@ -269,3 +353,25 @@ class PanelControllerSingleton {
 }
 
 final showOnPositionProvider = StateProvider<bool>((ref) => false);
+
+
+
+
+
+  // Future<void> _setupPositionTracking() async {
+  //   gl.LocationSettings locationSettings = gl.LocationSettings(
+  //       accuracy: gl.LocationAccuracy.high, distanceFilter: 1);
+  //   userPositionStream?.cancel();
+  //   userPositionStream =
+  //       gl.Geolocator.getPositionStream(locationSettings: locationSettings)
+  //           .listen((gl.Position? position) {
+  //     if (position != null && mapboxMapController != null) {
+  //       mapboxMapController?.setCamera(
+  //         mp.CameraOptions(
+  //             zoom: 13,
+  //             center: mp.Point(coordinates: mp.Position(12.46811, 50.20735))),
+  //         // mp.Position(position.longitude, position.latitude))),
+  //       );
+  //     }
+  //   });
+  // }
