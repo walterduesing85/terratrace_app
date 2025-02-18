@@ -8,6 +8,8 @@ import 'package:terratrace/source/features/mbu_control/commands.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:terratrace/source/common_widgets/custom_appbar.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'dart:async';
+import 'dart:math';
 // import 'package:go_router/go_router.dart';
 // import 'package:terratrace/source/routing/app_router.dart';
 
@@ -26,6 +28,26 @@ class _BLEScreenState extends State<BLEScreen> {
   Map<Guid, List<int>> readValues = {};
   final Map<String, List<Map<String, dynamic>>> collectedData = {};
   Position? userLocation;
+  // int playStopCounter = 0;
+
+  // These boundaries are expressed in pixel offsets relative to the chart's width.
+  double leftBoundary = 40.0;
+  double rightBoundary = 350.0;
+  double chartWidth = 1.0;
+
+  // Regression results
+  double slope = 0.0;
+  double rSquared = 0.0;
+
+  // A minimum separation (in pixels) between handles
+  final double minHandleSeparation = 20.0;
+  // Handle width for display purposes
+  final double handleWidth = 16.0;
+
+  List<FlSpot> slopeLinePoints = [];
+
+  // Subscription to track the connected device's state.
+  StreamSubscription<BluetoothConnectionState>? deviceStateSubscription;
 
   final List<String> parameters = [
     "CO2",
@@ -40,6 +62,17 @@ class _BLEScreenState extends State<BLEScreen> {
     "VOC",
   ];
 
+// Store boundaries and calculated values for each parameter
+  Map<String, List<double>> r2SlopeMap = {
+    "CO2": [],
+    "Battery Voltage": [],
+    "CH4": [],
+    "VOC": [],
+    "Barometric Pressure": [],
+    "Air Temperature": [],
+    "Air Humidity": [],
+  };
+
   final List<String> commands = ["CO2 to Zero", "Set Filter Value"];
 
   String selectedParameter = "CO2";
@@ -47,7 +80,6 @@ class _BLEScreenState extends State<BLEScreen> {
   List<FlSpot> dataPoints = [];
   bool isPlaying = false;
   bool showSaveButton = false;
-  double xValue = 0;
 
   @override
   void initState() {
@@ -69,19 +101,6 @@ class _BLEScreenState extends State<BLEScreen> {
     }
   }
 
-  // void startScan() {
-  //   FlutterBluePlus.startScan(timeout: Duration(seconds: 5));
-  //   FlutterBluePlus.scanResults.listen((results) {
-  //     for (ScanResult scanResult in results) {
-  //       if (scanResult.device.platformName == "Terratrace") {
-  //         FlutterBluePlus.stopScan();
-  //         connectToDevice(scanResult.device);
-  //         break;
-  //       }
-  //     }
-  //   });
-  // }
-
   void startScan() {
     setState(() {
       availableDevices.clear();
@@ -93,7 +112,11 @@ class _BLEScreenState extends State<BLEScreen> {
     FlutterBluePlus.scanResults.listen((results) {
       setState(() {
         for (ScanResult scanResult in results) {
-          if (!availableDevices.contains(scanResult.device)) {
+          final deviceName = scanResult.device.platformName ?? "";
+
+          // Only add devices with "Terratrace" in their name
+          if (deviceName.contains("Terratrace") &&
+              !availableDevices.contains(scanResult.device)) {
             availableDevices.add(scanResult.device);
           }
         }
@@ -109,8 +132,27 @@ class _BLEScreenState extends State<BLEScreen> {
   Future<void> connectToDevice(BluetoothDevice device) async {
     try {
       setState(() => connectedDevice = device);
+      // Connect to the device
       await device.connect(timeout: Duration(seconds: 10));
-      saveLastConnectedDevice(device);
+
+      // Listen to the device state changes
+      deviceStateSubscription = device.connectionState.listen((state) {
+        if (state == BluetoothConnectionState.disconnected) {
+          print("Device disconnected, switching back to connecting screen");
+          // Cancel the subscription and update the UI
+          deviceStateSubscription?.cancel();
+          deviceStateSubscription = null;
+          setState(() {
+            connectedDevice = null;
+            dataPoints.clear();
+            collectedData.clear();
+            showSaveButton = false;
+            isPlaying = false;
+          });
+        }
+      });
+
+      await saveLastConnectedDevice(device);
       discoverServices();
     } catch (e) {
       print('Error connecting to device: $e');
@@ -124,24 +166,16 @@ class _BLEScreenState extends State<BLEScreen> {
   }
 
   void disconnectDevice() async {
+    // Cancel the state subscription if active.
+    await deviceStateSubscription?.cancel();
+    deviceStateSubscription = null;
+
     await connectedDevice?.disconnect();
     setState(() => connectedDevice = null);
 
     SharedPreferences prefs = await SharedPreferences.getInstance();
     prefs.remove('last_connected_device_${widget.type}');
   }
-
-  // Future<void> connectToDevice(BluetoothDevice device) async {
-  //   try {
-  //     setState(() {
-  //       connectedDevice = device;
-  //     });
-  //     await device.connect();
-  //     discoverServices();
-  //   } catch (e) {
-  //     print('Error connecting to device: $e');
-  //   }
-  // }
 
   Future<void> discoverServices() async {
     if (connectedDevice == null) return;
@@ -221,13 +255,22 @@ class _BLEScreenState extends State<BLEScreen> {
         });
 
         // Keep only the last 30 data points for each parameter
-        if (collectedData[parameter]!.length > 30) {
-          collectedData[parameter]!.removeAt(0);
-        }
+        // if (collectedData[parameter]!.length > 30) {
+        //   collectedData[parameter]!.removeAt(0);
+        // }
 
         // Ensure plot updates correctly when switching parameters
-        if (parameter == selectedParameter) {
+        if (r2SlopeMap.containsKey(selectedParameter) &&
+            r2SlopeMap[selectedParameter]!.length >= 2 &&
+            parameter == selectedParameter) {
+          leftBoundary =
+              r2SlopeMap[selectedParameter]![0]; // Saved left boundary
+          rightBoundary =
+              r2SlopeMap[selectedParameter]![1]; // Saved right boundary
+        }
+        if (parameter == selectedParameter && isPlaying) {
           updatePlotData();
+          _calculateSlopeAndRSquared();
         }
       });
     }
@@ -239,12 +282,20 @@ class _BLEScreenState extends State<BLEScreen> {
       dataPoints.clear();
 
       if (collectedData.containsKey(selectedParameter)) {
-        List<Map<String, dynamic>> last30 = collectedData[selectedParameter]!
-            .take(30) // Ensure we only take the last 30 values
-            .toList();
+        List<Map<String, dynamic>> allData = collectedData[selectedParameter]!;
 
-        for (int i = 0; i < last30.length; i++) {
-          dataPoints.add(FlSpot(i.toDouble(), last30[i]["value"]));
+        if (allData.isNotEmpty) {
+          // Get the timestamp of the first data point within the last 30 elements
+          int startIndex = allData.length > 30 ? allData.length - 30 : 1;
+          List<Map<String, dynamic>> last30 = allData.sublist(startIndex);
+
+          DateTime startTime = allData.first["timestamp"];
+
+          for (var point in last30) {
+            int xMilliseconds =
+                point["timestamp"].difference(startTime).inSeconds;
+            dataPoints.add(FlSpot(xMilliseconds.toDouble(), point["value"]));
+          }
         }
       }
     });
@@ -268,27 +319,120 @@ class _BLEScreenState extends State<BLEScreen> {
 
   void togglePlay() {
     setState(() {
+      // playStopCounter += 1;
       isPlaying = !isPlaying;
     });
 
-    if (isPlaying) {
+    if (!isPlaying) {
       sendCommand(Guid("2a3c"), 1); // openAC
-      sendCommand(Guid("2a3e"), 1); // setPumpStatus
+      sendCommand(Guid("2a3e"), 0); // setPumpStatus
       setState(() {
-        showSaveButton = false;
+        showSaveButton = true;
       });
       // collectedData.clear();
       // dataPoints.clear();
     } else {
       sendCommand(Guid("2a3d"), 1); // closeAC
+      sendCommand(Guid("2a3e"), 1); // setPumpStatus
       setState(() {
-        showSaveButton = true;
+        // if (playStopCounter > 1) {
+        showSaveButton = false;
+        // }
       });
     }
   }
 
+  void saveParameterValues() {
+    if (r2SlopeMap.containsKey(selectedParameter)) {
+      r2SlopeMap[selectedParameter] = [
+        leftBoundary,
+        rightBoundary,
+        slope,
+        rSquared
+      ];
+    }
+  }
+
+  /// Convert boundary positions into data indices and calculate regression
+  void _calculateSlopeAndRSquared() {
+    if (dataPoints.isEmpty) return;
+    print(
+        "Chart width: $chartWidth, Left: $leftBoundary, Right: $rightBoundary");
+    // Convert boundary positions (px) to index range
+    int startIndex = ((leftBoundary / chartWidth) * dataPoints.length).floor();
+    int endIndex = ((rightBoundary / chartWidth) * dataPoints.length).ceil();
+
+    // Ensure indices are within valid range
+    startIndex = startIndex.clamp(0, dataPoints.length - 1);
+    endIndex = endIndex.clamp(0, dataPoints.length - 1);
+
+    print(
+        "Start Index: $startIndex, End Index: $endIndex, Total: ${dataPoints.length}");
+
+    // Need at least 2 points for regression
+    if (endIndex - startIndex < 1) {
+      print("Not enough data points for regression.");
+      setState(() {
+        slope = 0.0;
+        rSquared = 0.0;
+      });
+      saveParameterValues();
+      return;
+    }
+
+    // Extract subset of selected points
+    List<FlSpot> subset = dataPoints.sublist(startIndex, endIndex + 1);
+    int n = subset.length;
+
+    // Summation variables for linear regression
+    double sumX = 0.0, sumY = 0.0, sumXY = 0.0, sumX2 = 0.0, sumY2 = 0.0;
+
+    for (var point in subset) {
+      sumX += point.x;
+      sumY += point.y;
+      sumXY += point.x * point.y;
+      sumX2 += point.x * point.x;
+      sumY2 += point.y * point.y;
+    }
+
+    // Calculate slope (m)
+    double denominator = (n * sumX2) - (sumX * sumX);
+    double m =
+        (denominator != 0) ? ((n * sumXY) - (sumX * sumY)) / denominator : 0.0;
+
+    // Compute correlation coefficient (r)
+    double numerator = (n * sumXY) - (sumX * sumY);
+    double denominatorR =
+        sqrt(((n * sumX2) - (sumX * sumX)) * ((n * sumY2) - (sumY * sumY)));
+    double r = (denominatorR != 0) ? numerator / denominatorR : 0.0;
+
+    // Compute R²
+    double rSquaredCalculated = r * r;
+
+    // Update UI
+    setState(() {
+      slope = m;
+      rSquared = rSquaredCalculated;
+
+      // Define start and end points for the slope line
+      double xStart = subset.first.x;
+      double yStart = subset.first.y;
+      double xEnd = subset.last.x;
+      double yEnd = yStart + m * (xEnd - xStart);
+
+      slopeLinePoints = [
+        FlSpot(xStart, yStart),
+        FlSpot(xEnd, yEnd),
+      ];
+    });
+    saveParameterValues();
+    print("Slope: $slope, R²: $rSquared");
+  }
+
   @override
   void dispose() {
+    // Cancel the subscription when disposing
+    deviceStateSubscription?.cancel();
     connectedDevice?.disconnect();
     super.dispose();
   }
@@ -409,7 +553,6 @@ class _BLEScreenState extends State<BLEScreen> {
                               setState(() {
                                 selectedParameter = value!;
                                 dataPoints.clear();
-                                xValue = 0;
                               });
                             },
                           ),
@@ -429,6 +572,7 @@ class _BLEScreenState extends State<BLEScreen> {
                                       builder: (context) => SaveDataPopup(
                                         collectedData: collectedData,
                                         ref: ref,
+                                        r2SlopeMap: r2SlopeMap,
                                       ),
                                     );
                                   },
@@ -445,8 +589,8 @@ class _BLEScreenState extends State<BLEScreen> {
                               connectedDevice = null;
                               dataPoints.clear();
                               collectedData.clear();
-                              xValue = 0;
                               showSaveButton = false;
+                              isPlaying = false;
                             });
                           },
                         ),
@@ -454,124 +598,209 @@ class _BLEScreenState extends State<BLEScreen> {
                     ),
                   ),
                   Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Stack(
-                        children: [
-                          LineChart(
-                            LineChartData(
-                              lineBarsData: [
-                                LineChartBarData(
-                                  spots: dataPoints,
-                                  isCurved: true,
-                                  barWidth: 2,
-                                  color: Color(0xFFAEEA00),
-                                ),
-                              ],
-                              titlesData: FlTitlesData(
-                                leftTitles: AxisTitles(
-                                  sideTitles: SideTitles(
-                                    showTitles: true,
-                                    reservedSize: 40,
-                                    getTitlesWidget: (value, meta) {
-                                      return Text(
-                                        value.toStringAsFixed(2),
-                                        style: TextStyle(
-                                            fontSize: 12, color: Colors.white),
-                                      );
-                                    },
+                    child: LayoutBuilder(builder: (context, constraints) {
+                      chartWidth = constraints.maxWidth - 20;
+                      rightBoundary = rightBoundary.clamp(
+                          leftBoundary + minHandleSeparation,
+                          chartWidth - handleWidth);
+                      // }
+
+                      print(
+                          "Chart width: $chartWidth, Left: $leftBoundary, Right: $rightBoundary");
+                      return Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Stack(
+                          children: [
+                            // The line chart.
+                            Positioned.fill(
+                              child: LineChart(
+                                LineChartData(
+                                  lineBarsData: [
+                                    LineChartBarData(
+                                      spots: dataPoints,
+                                      isCurved: true,
+                                      barWidth: 2,
+                                      color: Color(0xFFAEEA00),
+                                    ),
+                                    // Slope line
+                                    LineChartBarData(
+                                      spots: slopeLinePoints,
+                                      isCurved: false,
+                                      barWidth: 2,
+                                      color: Colors.redAccent,
+                                      dashArray: [
+                                        5,
+                                        5
+                                      ], // Dashed line for visibility
+                                    ),
+                                  ],
+                                  titlesData: FlTitlesData(
+                                    leftTitles: AxisTitles(
+                                      sideTitles: SideTitles(
+                                        showTitles: true,
+                                        reservedSize: 40,
+                                        getTitlesWidget: (value, meta) {
+                                          return Text(
+                                            value.toStringAsFixed(2),
+                                            style: TextStyle(
+                                                fontSize: 12,
+                                                color: Colors.white),
+                                          );
+                                        },
+                                      ),
+                                    ),
+                                    topTitles: AxisTitles(
+                                        sideTitles:
+                                            SideTitles(showTitles: false)),
+                                    rightTitles: AxisTitles(
+                                        sideTitles:
+                                            SideTitles(showTitles: false)),
+                                    bottomTitles: AxisTitles(
+                                      sideTitles: SideTitles(
+                                        showTitles: true,
+                                        reservedSize: 24,
+                                        getTitlesWidget: (value, meta) {
+                                          return Text(value.toInt().toString(),
+                                              style: TextStyle(
+                                                  fontSize: 12,
+                                                  color: Colors.white));
+                                        },
+                                      ),
+                                    ),
                                   ),
-                                ),
-                                topTitles: AxisTitles(
-                                    sideTitles: SideTitles(showTitles: false)),
-                                rightTitles: AxisTitles(
-                                    sideTitles: SideTitles(showTitles: false)),
-                                bottomTitles: AxisTitles(
-                                  sideTitles: SideTitles(
-                                    showTitles: true,
-                                    reservedSize: 24,
-                                    getTitlesWidget: (value, meta) {
-                                      return Text(value.toInt().toString(),
-                                          style: TextStyle(
-                                              fontSize: 12,
-                                              color: Colors.white));
-                                    },
-                                  ),
+                                  gridData: FlGridData(show: true),
+                                  borderData: FlBorderData(show: true),
                                 ),
                               ),
-                              gridData: FlGridData(show: true),
-                              borderData: FlBorderData(show: true),
                             ),
-                          ),
-
-                          // Floating Legend for Latest Value
-                          Positioned(
-                            top: 20,
-                            left: 20,
-                            child: Container(
-                              padding: EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: Colors.black54,
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: Text(
-                                "${selectedParameter}: ${dataPoints.isNotEmpty ? dataPoints.last.y.toStringAsFixed(3) : "N/A"} ppm",
-                                style: TextStyle(
-                                    color: Colors.white, fontSize: 14),
+                            // Left draggable boundary handle.
+                            // Interactive selection overlay.
+                            // Wrap with IgnorePointer so it doesn't intercept gestures.
+                            Positioned.fill(
+                              child: IgnorePointer(
+                                child: CustomPaint(
+                                  painter: SelectionPainter(
+                                      leftBoundary, rightBoundary, chartWidth),
+                                ),
                               ),
                             ),
-                          ),
+                            // Floating Legend for Latest Value
+                            Positioned(
+                              top: 20,
+                              left: 20,
+                              child: Container(
+                                padding: EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: Colors.black54,
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Text(
+                                  "${selectedParameter}: ${dataPoints.isNotEmpty ? dataPoints.last.y.toStringAsFixed(3) : "N/A"} ppm",
+                                  style: TextStyle(
+                                      color: Colors.white, fontSize: 14),
+                                ),
+                              ),
+                            ),
 
-                          // Interactive selection for slope & R²
-                          // Positioned.fill(
-                          //   child: GestureDetector(
-                          //     onPanUpdate: (details) {
-                          //       // Update selected range dynamically
-                          //       setState(() {
-                          //         // Convert touch position to data index
-                          //         selectedStart = details.localPosition.dx / chartWidth * dataPoints.length;
-                          //         selectedEnd = selectedStart + 10; // Adjust range dynamically
-                          //       });
+                            // Display slope and R².
+                            Positioned(
+                              top: 60,
+                              left: 20,
+                              child: Container(
+                                padding: EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: Colors.black54,
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Text(
+                                  "Slope: ${slope.toStringAsFixed(6)} \nR²: ${rSquared.toStringAsFixed(6)}",
+                                  style: TextStyle(
+                                      color: Colors.white, fontSize: 14),
+                                ),
+                              ),
+                            ),
+                            // Left draggable boundary handle (placed on top).
+                            Positioned(
+                              left: leftBoundary - handleWidth / 2,
+                              top: 0,
+                              bottom: 0,
+                              child: GestureDetector(
+                                onPanUpdate: (details) {
+                                  setState(() {
+                                    leftBoundary =
+                                        (leftBoundary + details.delta.dx).clamp(
+                                            0.0,
+                                            rightBoundary -
+                                                minHandleSeparation);
+                                  });
+                                  // _calculateSlopeAndRSquared();
+                                  print(
+                                      "Left boundary moved to: $leftBoundary");
+                                },
+                                onPanEnd: (_) {
+                                  _calculateSlopeAndRSquared();
+                                },
+                                child: Container(
+                                  width: handleWidth,
+                                  color: Colors.white.withOpacity(0.0),
+                                ),
+                              ),
+                            ),
 
-                          //       _calculateSlopeAndRSquared();
-                          //     },
-                          //     child: IgnorePointer(
-                          //       child: CustomPaint(
-                          //         painter: SelectionPainter(selectedStart, selectedEnd, chartWidth),
-                          //       ),
-                          //     ),
-                          //   ),
-                          // ),
-
-                          // // Display slope and R²
-                          // Positioned(
-                          //   top: 60,
-                          //   left: 20,
-                          //   child: Container(
-                          //     padding: EdgeInsets.all(8),
-                          //     decoration: BoxDecoration(
-                          //       color: Colors.black54,
-                          //       borderRadius: BorderRadius.circular(10),
-                          //     ),
-                          //     child: Text(
-                          //       "Slope: ${slope.toStringAsFixed(6)} ppm/s\nR²: ${rSquared.toStringAsFixed(6)}",
-                          //       style: TextStyle(color: Colors.white, fontSize: 14),
-                          //     ),
-                          //   ),
-                          // ),
-                        ],
-                      ),
-                    ),
-                  ),
+                            // Right draggable boundary handle (placed on top).
+                            Positioned(
+                              left: rightBoundary - handleWidth / 2,
+                              top: 0,
+                              bottom: 0,
+                              child: GestureDetector(
+                                onPanUpdate: (details) {
+                                  setState(() {
+                                    rightBoundary = (rightBoundary +
+                                            details.delta.dx)
+                                        .clamp(
+                                            leftBoundary + minHandleSeparation,
+                                            chartWidth);
+                                  });
+                                  // _calculateSlopeAndRSquared();
+                                  print(
+                                      "Right boundary moved to: $rightBoundary");
+                                },
+                                onPanEnd: (_) {
+                                  _calculateSlopeAndRSquared();
+                                },
+                                child: Container(
+                                  width: handleWidth,
+                                  color: Colors.white.withOpacity(0.0),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }),
+                  )
                 ],
               ));
-    // return connectedDevice == null
-    //     ? Center(
-    //         child: ElevatedButton(
-    //           onPressed: startScan,
-    //           child: Text('Scan for Devices'),
-    //         ),
-    //       )
-    //     :
   }
+}
+
+/// A simple custom painter to draw the selection overlay.
+class SelectionPainter extends CustomPainter {
+  final double leftBoundary;
+  final double rightBoundary;
+  final double chartWidth;
+
+  SelectionPainter(this.leftBoundary, this.rightBoundary, this.chartWidth);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Paint paint = Paint()
+      ..color = Colors.white.withOpacity(0.1)
+      ..style = PaintingStyle.fill;
+    Rect rect = Rect.fromLTRB(leftBoundary, 0, rightBoundary, size.height);
+    canvas.drawRect(rect, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
 }
