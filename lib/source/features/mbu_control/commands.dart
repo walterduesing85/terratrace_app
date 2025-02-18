@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
+import 'dart:typed_data';
 
 class CommandsPopup extends StatefulWidget {
   final BluetoothDevice? connectedDevice;
@@ -31,12 +32,15 @@ class _CommandsPopupState extends State<CommandsPopup> {
       print("Device not connected.");
       return;
     }
+    // Convert int to 4-byte Uint8List
+    ByteData byteData = ByteData(4)..setInt32(0, value, Endian.little);
+    Uint8List bytes = byteData.buffer.asUint8List();
 
     for (var service in widget.services) {
       for (var characteristic in service.characteristics) {
         if (characteristic.uuid == uuid && characteristic.properties.write) {
           print("WRITING THE COMMAND");
-          await characteristic.write([value]);
+          await characteristic.write(bytes);
         }
       }
     }
