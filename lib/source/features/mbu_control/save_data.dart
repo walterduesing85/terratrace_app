@@ -2,17 +2,20 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:path_provider/path_provider.dart';
-
+// import 'package:terratrace/source/features/data/data/sand_box.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class SaveDataPopup extends StatefulWidget {
   final Map<String, List<Map<String, dynamic>>> collectedData;
   final WidgetRef ref;
+  final Map<String, List<double>> r2SlopeMap;
   const SaveDataPopup({
     required this.collectedData,
     required this.ref,
+    required this.r2SlopeMap,
     Key? key,
   }) : super(key: key);
 
@@ -76,8 +79,9 @@ class _SaveDataPopupState extends State<SaveDataPopup> {
       return;
     }
 
-    final directory = await getApplicationDocumentsDirectory();
-    final filePath = '${directory.path}/$site/${samplingPoint}_ble_data.txt';
+    // final directory = await getApplicationDocumentsDirectory();
+    Directory directory = Directory('/storage/emulated/0/Documents');
+    final filePath = '${directory.path}/${site}_${samplingPoint}_ble_data.txt';
     final file = File(filePath);
     print("FILEPATH: $filePath");
 
@@ -90,9 +94,28 @@ LONGITUDE:\t${_userLocation!.longitude}
 LATITUDE:\t${_userLocation!.latitude}
 NOTE:\t$note
 
-FLUX RECORD TRACKS
-#\tsec\tCO2\tAirHumidity\tBatteryVoltage\tAirTemp\tBarometricPressure
+PARAMETER ANALYSIS
 """;
+
+    // Adding R² and slope for each parameter in r2SlopeMap
+    widget.r2SlopeMap.forEach((param, values) {
+      if (values.length >= 4) {
+        double leftBound = values[0];
+        double rightBound = values[1];
+        double rSquared = values[2];
+        double slope = values[3];
+
+        header += "$param:\n";
+        header += "  Left Boundary: $leftBound\n";
+        header += "  Right Boundary: $rightBound\n";
+        header += "  R²: ${rSquared.toStringAsFixed(4)}\n";
+        header += "  Slope: ${slope.toStringAsFixed(4)}\n\n";
+      }
+    });
+
+    header += "FLUX RECORD TRACKS\n";
+    header +=
+        "#\tsec\tCO2\tAirHumidity\tBatteryVoltage\tAirTemp\tBarometricPressure\n";
 //  \tCH4\tVOC
 
     // Determine the maximum length of any parameter's data list
@@ -175,6 +198,122 @@ FLUX RECORD TRACKS
     Navigator.of(context).pop();
   }
 
+//   void _saveData() async {
+//     String site = siteController.text.trim();
+//     String samplingPoint = samplingPointController.text.trim();
+//     String note = noteController.text.trim();
+
+//     if (widget.collectedData.isEmpty ||
+//         _userLocation == null ||
+//         site.isEmpty ||
+//         samplingPoint.isEmpty) {
+//       print("Incomplete data");
+//       return;
+//     }
+
+//     if (await Permission.storage.request().isGranted) {
+//       Directory directory = Directory('/storage/emulated/0/Documents');
+
+//       if (!directory.existsSync()) {
+//         directory.createSync(recursive: true);
+//       }
+
+//       String filePath =
+//           '${directory.path}/${site}_${samplingPoint}_ble_dat.txt';
+//       File file = File(filePath);
+//       // await file.writeAsString('Hello from Flutter!');
+//       // Header
+//       String header = """
+// TIME:\t${DateTime.now().toString()}
+// SITE:\t$site
+// POINT:\t$samplingPoint
+// LONGITUDE:\t${_userLocation!.longitude}
+// LATITUDE:\t${_userLocation!.latitude}
+// NOTE:\t$note
+
+// FLUX RECORD TRACKS
+// #\tsec\tCO2\tAirHumidity\tBatteryVoltage\tAirTemp\tBarometricPressure
+// """;
+// //  \tCH4\tVOC
+
+//       // Determine the maximum length of any parameter's data list
+//       int maxLength = widget.collectedData.values
+//           .map((list) => list.length)
+//           .reduce((a, b) => a > b ? a : b);
+
+//       // Initialize rows
+//       List<String> rows = [];
+
+//       // Populate rows with data
+//       for (int i = 0; i < maxLength; i++) {
+//         // Calculate elapsed time in seconds
+//         double elapsedTime = i.toDouble();
+//         int point = i + 1;
+//         // Start building the row
+//         String row = "$point\t${elapsedTime.toStringAsFixed(1)}";
+
+//         // Add values for each parameter (repeat the last value if not enough data points)
+//         row += "\t${_getRepeatedValue(widget.collectedData, "CO2", i)}";
+//         // row += "\t${_getRepeatedValue(widget.collectedData, "CH4", i)}";
+//         // row += "\t${_getRepeatedValue(widget.collectedData, "VOC", i)}";
+//         row +=
+//             "\t${_getRepeatedValue(widget.collectedData, "Air Humidity", i)}";
+//         row +=
+//             "\t${_getRepeatedValue(widget.collectedData, "Battery Voltage", i)}";
+//         row +=
+//             "\t${_getRepeatedValue(widget.collectedData, "Air Temperature", i)}";
+//         row +=
+//             "\t${_getRepeatedValue(widget.collectedData, "Barometric Pressure", i)}";
+
+//         rows.add(row);
+//       }
+
+//       // Write the content to the file
+//       String content = header + rows.join("\n");
+//       await file.writeAsString(content);
+//       final _auth = FirebaseAuth.instance;
+//       User? user = _auth.currentUser;
+
+//       if (_auth.currentUser != null) {
+//         final db = FirebaseFirestore.instance;
+//         DocumentSnapshot ds = await db.collection('projects').doc(site).get();
+//         if (ds.exists == false) {
+//           db.collection('projects').doc(site).set(
+//             {
+//               'name': site,
+//               'members': {user?.uid: 'owner'},
+//             },
+//           );
+
+//           Map? projectMember;
+//           FirebaseFirestore.instance
+//               .collection('users')
+//               .doc(user?.uid)
+//               .get()
+//               .then((DocumentSnapshot documentSnapshot) {
+//             projectMember = documentSnapshot.get('projects');
+//             if (projectMember != null) {
+//               projectMember![site] = 'owner';
+//               db
+//                   .collection('users')
+//                   .doc(user?.uid)
+//                   .update({'projects': projectMember});
+//             } else {
+//               projectMember![site] = 'owner';
+//               db
+//                   .collection('users')
+//                   .doc(user?.uid)
+//                   .set({'projects': projectMember});
+//             }
+//           });
+//         }
+//       }
+//       print('File saved at: $filePath');
+//     } else {
+//       print('Storage permission denied');
+//     }
+//   }
+
   String _getRepeatedValue(
       Map<String, List<Map<String, dynamic>>> collectedData,
       String parameter,
@@ -231,7 +370,10 @@ FLUX RECORD TRACKS
           child: Text("Cancel"),
         ),
         ElevatedButton(
-          onPressed: _saveData,
+          onPressed: () {
+            _saveData();
+            // Navigator.of(context).pop();
+          },
           child: Text("Save"),
         ),
       ],
