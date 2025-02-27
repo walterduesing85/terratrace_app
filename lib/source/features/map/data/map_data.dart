@@ -15,26 +15,22 @@ class MinMaxValues {
 class MapData {
   List<double> createIntensity(MinMaxValues minMax, List<FluxData> fluxDataList,
       bool useLogNormalization) {
-    // print(
-    //   "🛠️ Normalizing intensities with Min: ${minMax.minV}, Max: ${minMax.maxV}");
-
     return fluxDataList.map((fluxData) {
       final cO2 = double.tryParse(fluxData.dataCfluxGram ?? '0.0') ?? 0.0;
       double normalized;
 
       if (useLogNormalization) {
-        // Log Normalization
+        // ✅ Log Normalization
         final logMin = log(minMax.minV + 1);
         final logMax = log(minMax.maxV + 1);
         final logC02 = log(cO2 + 1);
         normalized = ((logC02 - logMin) / (logMax - logMin)).clamp(0.0, 1.0);
       } else {
-        // Linear Min-Max Normalization (clamp ensures values stay between 0-1)
+        // ✅ Linear Normalization
         normalized =
             ((cO2 - minMax.minV) / (minMax.maxV - minMax.minV)).clamp(0.0, 1.0);
       }
 
-      //  print("⚙️ CO2: $cO2 | Normalized: $normalized");
       return normalized;
     }).toList();
   }
@@ -45,16 +41,20 @@ class MapState {
   final double zoom;
   final double radius;
   final double opacity;
-  final List<double> intensities; // ✅ Store calculated intensities
-  final MinMaxValues rangeValues; // ✅ Store range values
+  final List<double> intensities;
+  final MinMaxValues rangeValues;
+  final bool useLogNormalization;
+  final String mapStyle; // ✅ Include map style
 
   MapState({
     this.geoJson = '',
     this.zoom = 15.0,
     this.radius = 30.0,
     this.opacity = 0.75,
-    this.intensities = const [], // ✅ Default empty list
-    required this.rangeValues, // ✅ Ensure rangeValues are included
+    this.intensities = const [],
+    required this.rangeValues,
+    this.useLogNormalization = false,
+    this.mapStyle = "mapbox://styles/mapbox/streets-v12", // ✅ Default style
   });
 
   MapState copyWith({
@@ -63,7 +63,9 @@ class MapState {
     double? radius,
     double? opacity,
     List<double>? intensities,
-    MinMaxValues? rangeValues, // ✅ Allow range slider updates
+    MinMaxValues? rangeValues,
+    bool? useLogNormalization,
+    String? mapStyle, // ✅ Allow changing styles
   }) {
     return MapState(
       geoJson: geoJson ?? this.geoJson,
@@ -71,7 +73,9 @@ class MapState {
       radius: radius ?? this.radius,
       opacity: opacity ?? this.opacity,
       intensities: intensities ?? this.intensities,
-      rangeValues: rangeValues ?? this.rangeValues, // ✅ Preserve slider state
+      rangeValues: rangeValues ?? this.rangeValues,
+      useLogNormalization: useLogNormalization ?? this.useLogNormalization,
+      mapStyle: mapStyle ?? this.mapStyle, // ✅ Preserve map style
     );
   }
 }
@@ -83,7 +87,7 @@ class MapStateNotifier extends StateNotifier<MapState> {
   Future<void> initHeatmap(WidgetRef ref) async {
     final geoJson = await ref.watch(geoJsonProvider.future);
     final intensities = await ref.watch(intensityProvider.future);
-    final rangeValues = ref.read(rangeValuesProvider); // ✅ Read slider values
+    final rangeValues = ref.read(rangeValuesProvider);
 
     state = state.copyWith(
       geoJson: geoJson,
@@ -100,16 +104,27 @@ class MapStateNotifier extends StateNotifier<MapState> {
     state = state.copyWith(opacity: value);
   }
 
-  void updateRangeValues(MinMaxValues values, WidgetRef ref) async {
+  void toggleLogNormalization(WidgetRef ref) async {
+    state = state.copyWith(useLogNormalization: !state.useLogNormalization);
+    await updateGeoJson(ref);
+  }
+
+  void updateRangeValues(MinMaxValues values, WidgetRef ref) {
     state = state.copyWith(rangeValues: values);
-    await updateGeoJson(ref); // ✅ Ensure GeoJSON updates immediately
   }
 
   Future<void> updateGeoJson(WidgetRef ref) async {
     final newGeoJson = await ref.watch(geoJsonProvider.future);
     final newIntensities = await ref.watch(intensityProvider.future);
 
-    state = state.copyWith(geoJson: newGeoJson, intensities: newIntensities);
+    state = state.copyWith(
+      geoJson: newGeoJson,
+      intensities: newIntensities,
+    );
+  }
+
+  void setMapStyle(String style) {
+    state = state.copyWith(mapStyle: style);
   }
 }
 
@@ -163,9 +178,9 @@ final minMaxGramProvider = StateProvider<MinMaxValues>((ref) {
 
 // Provider for intensity values
 final intensityProvider = FutureProvider.autoDispose<List<double>>((ref) async {
-  print('📊 Generating intensity values...');
   // final minMaxValues = ref.watch(rangeValuesProvider);
-  final minMaxValues = ref.watch(minMaxGramProvider);//updating when minMaxGramProvider changes
+  final minMaxValues =
+      ref.watch(minMaxGramProvider); //updating when minMaxGramProvider changes
   final fluxDataListAsync = ref.watch(fluxDataListProvider);
   return fluxDataListAsync.maybeWhen(
     data: (dataList) => ref
@@ -176,9 +191,7 @@ final intensityProvider = FutureProvider.autoDispose<List<double>>((ref) async {
 });
 
 final geoJsonProvider = FutureProvider.autoDispose<String>((ref) async {
-  final rangeValues = ref.watch(rangeValuesProvider); // ✅ Ensure it's watched
-  print(
-      "🌍 Updating GeoJSON due to rangeValues: ${rangeValues.minV} - ${rangeValues.maxV}");
+  // final rangeValues = ref.watch(rangeValuesProvider); // ✅ Ensure it's watched
 
   final intensities = await ref.watch(intensityProvider.future);
   final fluxDataListAsync = ref.watch(fluxDataListProvider);
@@ -220,35 +233,33 @@ final geoJsonProvider = FutureProvider.autoDispose<String>((ref) async {
   );
 });
 
-final heatmapProvider = FutureProvider.autoDispose<HeatmapLayer>((ref) async {
-  print('🔥 Rebuilding Heatmap due to new GeoJSON...');
+// final heatmapProvider = FutureProvider.autoDispose<HeatmapLayer>((ref) async {
+//   final radius = ref.watch(radiusProvider);
+//   final opacity = ref.watch(layerOpacityProvider);
+//   await ref.watch(geoJsonProvider.future); // ✅ Ensures refresh
 
-  final radius = ref.watch(radiusProvider);
-  final opacity = ref.watch(layerOpacityProvider);
-  await ref.watch(geoJsonProvider.future); // ✅ Ensures refresh
-
-  return HeatmapLayer(
-    id: "heatmap-layer",
-    sourceId: "heatmap-source",
-    heatmapWeightExpression: [
-      "interpolate", ["linear"], ["get", "weight"],
-      0.1, 1.0, // Very low weight → weak effect
-      0.3, 1.0, // Low weight → slightly visible
-      0.6, 1.0, // Medium-low weight → moderate visibility
-      0.8, 1.0, // High weight → strong intensity
-      1.0, 1.0 // Maximum weight → full intensity
-    ],
-    heatmapColorExpression: [
-      "interpolate", ["linear"], ["heatmap-density"],
-      0, "rgba(0, 0, 255, 1)", // not Transparent at low density
-      0.2, "royalblue",
-      0.4, "cyan",
-      0.6, "lime",
-      0.8, "yellow",
-      1.0, "red" // High density → red
-    ],
-    heatmapRadius: radius,
-    heatmapIntensity: 4,
-    heatmapOpacity: opacity,
-  );
-});
+//   return HeatmapLayer(
+//     id: "heatmap-layer",
+//     sourceId: "heatmap-source",
+//     heatmapWeightExpression: [
+//       "interpolate", ["linear"], ["get", "weight"],
+//       0.1, 1.0, // Very low weight → weak effect
+//       0.3, 1.0, // Low weight → slightly visible
+//       0.6, 1.0, // Medium-low weight → moderate visibility
+//       0.8, 1.0, // High weight → strong intensity
+//       1.0, 1.0 // Maximum weight → full intensity
+//     ],
+//     heatmapColorExpression: [
+//       "interpolate", ["linear"], ["heatmap-density"],
+//       0, "rgba(0, 0, 255, 1)", // not Transparent at low density
+//       0.2, "royalblue",
+//       0.4, "cyan",
+//       0.6, "lime",
+//       0.8, "yellow",
+//       1.0, "red" // High density → red
+//     ],
+//     heatmapRadius: radius,
+//     heatmapIntensity: 4,
+//     heatmapOpacity: opacity,
+//   );
+// });

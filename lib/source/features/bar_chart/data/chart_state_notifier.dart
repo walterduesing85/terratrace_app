@@ -63,7 +63,7 @@ class ChartStateNotifier extends StateNotifier<ChartState> {
   }
 }
 
-// ✅ Use `autoDispose` to free resources when not in use
+// ✅ Use autoDispose to free resources when not in use
 final chartStateProvider =
     StateNotifierProvider.autoDispose<ChartStateNotifier, ChartState>((ref) {
   return ChartStateNotifier(ref);

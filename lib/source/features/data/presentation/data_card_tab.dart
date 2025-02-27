@@ -149,7 +149,6 @@ class _DataCardTabState extends ConsumerState<DataCardTab> {
                       size: 25.0,
                     ),
                     onPressed: () {
-                      print('Pressed');
                       final mapController =
                           ref.read(mapControllerProvider.notifier);
                       final target = LatLng(

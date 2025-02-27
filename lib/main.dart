@@ -2,9 +2,11 @@ import 'dart:async';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:terratrace/source/features/data/data/data_point_watcher.dart';
+
 import 'package:terratrace/source/features/project_manager/data/project_managment.dart';
 import 'package:terratrace/source/routing/app_router.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
@@ -27,6 +29,7 @@ Future<void> main() async {
       options: DefaultFirebaseOptions.currentPlatform,
     );
     FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterError;
+    await setupMapBox();
 
     // WidgetsFlutterBinding.ensureInitialized();
     // final prefs = await SharedPreferences.getInstance();
@@ -48,20 +51,25 @@ Future<void> main() async {
   });
 }
 
+Future<void> setupMapBox() async {
+  await dotenv.load(fileName: "assets/.env");
+  String? accessToken = dotenv.env['MAPBOX_ACCESS_TOKEN'];
+
+  if (accessToken == null || accessToken.isEmpty) {
+  } else {
+    MapboxOptions.setAccessToken(accessToken);
+  }
+}
+
 Future<void> requestPermissions() async {
   // final storageStatus = await Permission.storage.request();
   final locationStatus = await Permission.location.request();
   try {
     await Permission.bluetooth.request();
-  } catch (e) {
-    print(e.toString());
-  }
+  } catch (e) {}
   if (locationStatus == PermissionStatus.granted) {
-    print('Location permission granted');
   } else if (locationStatus == PermissionStatus.denied) {
-    print('Location permission denied');
   } else if (locationStatus == PermissionStatus.permanentlyDenied) {
-    print('Location permission permanently denied, opening app settings');
     openAppSettings();
   }
 
@@ -69,11 +77,8 @@ Future<void> requestPermissions() async {
   PermissionStatus storageStatus = await Permission.storage.request();
 
   if (storageStatus == PermissionStatus.granted) {
-    print('Storage permission granted');
   } else if (storageStatus == PermissionStatus.denied) {
-    print('Storage permission denied');
   } else if (storageStatus == PermissionStatus.permanentlyDenied) {
-    print('Storage permission permanently denied, opening app settings');
     openAppSettings();
     return;
   }
@@ -84,7 +89,6 @@ Future<void> requestPermissions() async {
         await Permission.manageExternalStorage.request();
 
     if (!manageStorageStatus.isGranted) {
-      print('Manage External Storage permission denied, opening app settings');
       openAppSettings();
     }
   }
@@ -93,11 +97,8 @@ Future<void> requestPermissions() async {
   if (await Permission.photos.isGranted) {
     final photosStatus = await Permission.photos.request();
     if (photosStatus == PermissionStatus.granted) {
-      print('Photos permission granted');
     } else if (photosStatus == PermissionStatus.denied) {
-      print('Photos permission denied');
     } else if (photosStatus == PermissionStatus.permanentlyDenied) {
-      print('Photos permission permanently denied, opening app settings');
       // await openAppSettings();
     }
   }
@@ -105,9 +106,7 @@ Future<void> requestPermissions() async {
   if (await Permission.mediaLibrary.isGranted) {
     final mediaLibraryStatus = await Permission.mediaLibrary.request();
     if (mediaLibraryStatus == PermissionStatus.granted) {
-      print('Media Library permission granted');
     } else if (mediaLibraryStatus == PermissionStatus.denied) {
-      print('Media Library permission denied');
     } else if (mediaLibraryStatus == PermissionStatus.permanentlyDenied) {
       print(
           'Media Library permission permanently denied, opening app settings');
@@ -170,15 +169,15 @@ class MyApp extends StatelessWidget {
       child: Consumer(
         builder: (context, ref, _) {
           // Initialize the DataPointWatcher singleton with the ref
-          final dataPointWatcher = DataPointWatcher(ref);
+          // final dataPointWatcher = DataPointWatcher(ref);
 
-          // Initialize directly here
-          if (!_initialized) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              dataPointWatcher.watchForFiles();
-            });
-            _initialized = true;
-          }
+          // // Initialize directly here
+          // if (!_initialized) {
+          //   WidgetsBinding.instance.addPostFrameCallback((_) {
+          //     dataPointWatcher.watchForFiles();
+          //   });
+          //   _initialized = true;
+          // }
 
           ref.watch(remoteProjectsCardStreamProvider2);
           return MaterialApp.router(
