@@ -191,7 +191,7 @@ final intensityProvider = FutureProvider.autoDispose<List<double>>((ref) async {
 });
 
 final geoJsonProvider = FutureProvider.autoDispose<String>((ref) async {
-  // final rangeValues = ref.watch(rangeValuesProvider); // ✅ Ensure it's watched
+  ref.watch(mapStateProvider).rangeValues; // ✅ Ensure it's watched
 
   final intensities = await ref.watch(intensityProvider.future);
   final fluxDataListAsync = ref.watch(fluxDataListProvider);

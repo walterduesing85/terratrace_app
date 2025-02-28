@@ -12,6 +12,7 @@ class FluxData {
   String? dataInstrument;
   String? dataCfluxGram;
   String? dataOrigin;
+  
 
   FluxData({
     this.dataSite,
