@@ -66,7 +66,7 @@ Future<void> requestPermissions() async {
   final locationStatus = await Permission.location.request();
   try {
     await Permission.bluetooth.request();
-  } catch (e) {}
+  } catch (e) {debugPrint(e.toString());}
   if (locationStatus == PermissionStatus.granted) {
   } else if (locationStatus == PermissionStatus.denied) {
   } else if (locationStatus == PermissionStatus.permanentlyDenied) {
@@ -116,8 +116,6 @@ Future<void> requestPermissions() async {
 }
 
 class MyApp extends StatelessWidget {
-  static bool _initialized = false;
-
   @override
   Widget build(BuildContext context) {
     // Define the color theme for the app

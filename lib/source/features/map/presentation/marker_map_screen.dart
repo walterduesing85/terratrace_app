@@ -11,6 +11,7 @@ import 'package:terratrace/source/features/data/data/map_provider.dart';
 import 'package:terratrace/source/features/map/data/map_data.dart';
 import 'package:terratrace/source/features/map/presentation/tab_data.dart';
 import 'package:terratrace/source/features/map/presentation/tab_user.dart';
+import 'package:terratrace/source/features/project_manager/data/project_managment.dart';
 
 final panelDraggableProvider = StateProvider<bool>((ref) => true);
 
@@ -48,12 +49,27 @@ class _MarkerMapScreenState extends ConsumerState<MarkerMapScreen>
     super.dispose();
   }
 
+  bool isSimulating = false; // Track simulation state
   @override
   Widget build(BuildContext context) {
     //final cameraPosition = ref.watch(initialCameraPositionProvider);
     final markers = ref.watch(markersProvider2); // Watch the markers provider
-
+    final projectManager = ref.watch(projectManagementProvider);
     return Scaffold(
+      floatingActionButton: FloatingActionButton(
+        onPressed: () async {
+          if (isSimulating) {
+            projectManager.stopFluxSimulation();
+          } else {
+            await projectManager.loadAndSortFluxData();
+            projectManager.startFluxSimulation(ref.read(projectNameProvider));
+          }
+          setState(() {
+            isSimulating = !isSimulating;
+          });
+        },
+        child: Icon(isSimulating ? Icons.stop : Icons.play_arrow),
+      ),
       drawer: CustomDrawer(),
       appBar: AppBar(
         backgroundColor: Color.fromRGBO(58, 66, 86, 1),

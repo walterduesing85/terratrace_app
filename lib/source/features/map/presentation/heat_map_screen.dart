@@ -10,11 +10,17 @@ import 'package:terratrace/source/constants/app_colors.dart';
 import 'package:terratrace/source/constants/text_styles.dart';
 import 'package:terratrace/source/features/bar_chart/prensentation/histogram_chart.dart';
 import 'package:terratrace/source/features/data/data/data_management.dart';
+import 'package:terratrace/source/features/data/data/map_provider.dart';
+import 'package:terratrace/source/features/data/domain/flux_data.dart';
+import 'package:terratrace/source/features/map/data/camera_position_notifier.dart';
 import 'package:terratrace/source/features/map/data/heat_map_notifier.dart';
 import 'package:terratrace/source/features/map/data/map_data.dart';
+import 'package:terratrace/source/features/map/presentation/floating_icon_button.dart';
 import 'package:terratrace/source/features/map/presentation/map_style_dropdown.dart';
+import 'package:terratrace/source/features/map/presentation/marker_popup_panel.dart';
 import 'package:terratrace/source/features/map/presentation/tab_data.dart';
 import 'package:terratrace/source/features/map/presentation/tab_user.dart';
+import 'package:terratrace/source/features/project_manager/data/project_managment.dart';
 
 final panelDraggableProvider = StateProvider<bool>((ref) => true);
 
@@ -33,10 +39,11 @@ class _HeatMapScreenState extends ConsumerState<HeatMapScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 2, vsync: this);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(mapStateProvider.notifier).initHeatmap(ref);
+      ref.read(cameraPositionProvider.notifier);
     });
   }
 
@@ -46,18 +53,26 @@ class _HeatMapScreenState extends ConsumerState<HeatMapScreen>
     super.dispose();
   }
 
+  String activeButton = "none"; // Tracks which button is active
+  bool isSimulating = false; // Track simulation state
+
   @override
   Widget build(BuildContext context) {
-    final mapState = ref.watch(mapStateProvider);
-    final heatmapNotifier = ref.read(heatmapProvider.notifier);
-
+    final projectManager = ref.watch(projectManagementProvider);
     return Scaffold(
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          print("🔍 Debugging heatmap layers...");
-          heatmapNotifier.updateHeatmap(mapState);
+        onPressed: () async {
+          if (isSimulating) {
+            projectManager.stopFluxSimulation();
+          } else {
+            await projectManager.loadAndSortFluxData();
+            projectManager.startFluxSimulation(ref.read(projectNameProvider));
+          }
+          setState(() {
+            isSimulating = !isSimulating;
+          });
         },
-        child: const Icon(Icons.refresh),
+        child: Icon(isSimulating ? Icons.stop : Icons.play_arrow),
       ),
       drawer: CustomDrawer(),
       appBar: AppBar(
@@ -69,7 +84,47 @@ class _HeatMapScreenState extends ConsumerState<HeatMapScreen>
         minHeight: 60,
         color: Colors.transparent,
         panelBuilder: _buildPanelContent,
-        body: _buildMap(ref),
+        body: Stack(children: [
+          _buildMap(ref),
+          Positioned(
+            top: 50,
+            left: 15,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                FloatingIconButton(
+                    icon: Icons.my_location,
+                    label: "User Position",
+                    isActive: activeButton == "ownPosition",
+                    onTap: () {
+                      ref
+                          .read(cameraPositionProvider.notifier)
+                          .toggleCameraMode("ownPosition");
+                      setState(() => activeButton =
+                          activeButton == "ownPosition"
+                              ? "none"
+                              : "ownPosition");
+                    }),
+                const SizedBox(height: 10), // Space between icons
+                FloatingIconButton(
+                  icon: Icons.place,
+                  label: "Last Data Point",
+                  isActive: activeButton == "latestPoint",
+                  onTap: () {
+                    ref
+                        .read(cameraPositionProvider.notifier)
+                        .toggleCameraMode("latestPoint");
+                    setState(() => activeButton =
+                        activeButton == "latestPoint" ? "none" : "latestPoint");
+                  },
+                ),
+              ],
+            ),
+          ),
+
+          /// ✅ Add the marker popup panel here
+          MarkerPopupPanel(),
+        ]),
       ),
     );
   }
@@ -80,7 +135,7 @@ class _HeatMapScreenState extends ConsumerState<HeatMapScreen>
         _buildPanelHandle(),
         Expanded(
           child: DefaultTabController(
-            length: 3,
+            length: 2,
             child: Column(
               children: [
                 TabBar(
@@ -92,7 +147,6 @@ class _HeatMapScreenState extends ConsumerState<HeatMapScreen>
                   tabs: const [
                     Tab(text: 'Map Settings'),
                     Tab(text: 'Data'),
-                    Tab(text: 'User'),
                   ],
                 ),
                 Expanded(
@@ -101,7 +155,6 @@ class _HeatMapScreenState extends ConsumerState<HeatMapScreen>
                     children: [
                       _buildMapSettingsTab(context, ref),
                       TabData(),
-                      TabUser(),
                     ],
                   ),
                 ),
@@ -148,10 +201,13 @@ class _HeatMapScreenState extends ConsumerState<HeatMapScreen>
                     label: 'Point Radius',
                     value: ref.watch(radiusProvider),
                     min: 1,
-                    max: 30,
+                    max: 15,
                     onChanged: (newValue) {
                       ref.read(radiusProvider.notifier).state = newValue;
                       ref.read(mapStateProvider.notifier).setRadius(newValue);
+                      ref
+                          .read(heatmapProvider.notifier)
+                          .updateHeatmapLayer(ref.read(heatmapLayerProvider));
                     },
                   ),
                 ),
@@ -166,6 +222,9 @@ class _HeatMapScreenState extends ConsumerState<HeatMapScreen>
                     onChanged: (newValue) {
                       ref.read(layerOpacityProvider.notifier).state = newValue;
                       ref.read(mapStateProvider.notifier).setOpacity(newValue);
+                      ref
+                          .read(heatmapProvider.notifier)
+                          .updateHeatmapLayer(ref.read(heatmapLayerProvider));
                     },
                   ),
                 ),
@@ -193,7 +252,8 @@ class _HeatMapScreenState extends ConsumerState<HeatMapScreen>
                 rangeValues.maxV.toStringAsFixed(2),
               ),
               onChanged: (RangeValues values) async {
-                print("🎚 Range slider updated: $values");
+                print(
+                    "🎚 Range slider updated: ${values.start} - ${values.end}");
 
                 final minMaxGram = ref.watch(minMaxGramProvider);
 
@@ -209,21 +269,30 @@ class _HeatMapScreenState extends ConsumerState<HeatMapScreen>
 
                 final minMaxValues = MinMaxValues(minV: newMin, maxV: newMax);
 
+                print(
+                    "🟢 New Min/Max Values: ${minMaxValues.minV} : ${minMaxValues.maxV}");
+
                 // ✅ First, update the state
                 ref.read(rangeValuesProvider.notifier).state = minMaxValues;
+                print(
+                    "🟢 rangeValuesProvider updated: ${ref.read(rangeValuesProvider)}");
+
+                // ✅ Then update the map state
                 ref
                     .read(mapStateProvider.notifier)
                     .updateRangeValues(minMaxValues, ref);
 
-                // ✅ Force heatmap update after change
+                // ✅ Finally, update the heatmap
+                print("🔥 Calling updateHeatmapLayer()...");
                 ref
                     .read(heatmapProvider.notifier)
-                    .updateHeatmap(ref.read(mapStateProvider));
+                    .updateHeatmapLayer(ref.read(heatmapLayerProvider));
               },
             ),
             Row(
-              mainAxisAlignment: MainAxisAlignment
-                  .spaceEvenly, // ✅ Evenly distributes the columns
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              crossAxisAlignment:
+                  CrossAxisAlignment.start, // ✅ Evenly distributes the columns
               children: [
                 Expanded(
                   child: Column(
@@ -275,23 +344,9 @@ class _HeatMapScreenState extends ConsumerState<HeatMapScreen>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text("Data type", style: kMapSetting),
-                      MapStyleDropdown(
-                        onStyleChanged: (value) {
-                          print('HELLO HELLO MapStyleDropdown: $value');
-                          ref
-                              .read(mapStateProvider.notifier)
-                              .setMapStyle(value);
-
-                          // ✅ Ensure the map itself updates
-                          final mapboxController = ref
-                              .read(heatmapProvider.notifier)
-                              .getMapboxController();
-                          if (mapboxController != null) {
-                            mapboxController.loadStyleURI(value);
-                          }
-                        },
-                      ),
+                      Text("Data type:", style: kMapSetting),
+                      SizedBox(height: 10),
+                      Text("Methane", style: kMapSetting),
                     ],
                   ),
                 ),
@@ -332,37 +387,32 @@ class _HeatMapScreenState extends ConsumerState<HeatMapScreen>
   }
 
   Widget _buildMap(WidgetRef ref) {
+    final cameraOptions = ref.watch(cameraPositionProvider);
+    final heatmapLayer =
+        ref.watch(heatmapLayerProvider); // 🔥 Listen for UI updates
+
     return mp.MapWidget(
       styleUri: ref.watch(mapStateProvider).mapStyle,
-      onMapCreated: (mapboxMap) {
+      onMapCreated: (mapboxMap) async {
         print("🗺️ Mapbox map created. Initializing...");
+        final heatmapNotifier = ref.read(heatmapProvider.notifier);
 
-        // ✅ Set the controller inside the HeatmapProvider
-        ref.read(heatmapProvider.notifier).setMapboxController(mapboxMap);
+        // ✅ Set the Mapbox controller
+        heatmapNotifier.setMapboxController(mapboxMap);
+        mapboxMap.setCamera(cameraOptions);
 
-        // ✅ Ensure camera is set up correctly
-        mapboxMap.setCamera(
-          mp.CameraOptions(
-            zoom: 13,
-            center: mp.Point(
-              coordinates: mp.Position(12.46811, 50.20735),
-            ),
-          ),
-        );
+        // ✅ Ensure heatmap source is initialized
+        await heatmapNotifier.initHeatmap(); // ✅ Use correct method name
 
-        // ✅ Trigger heatmap update
-        final mapState = ref.read(mapStateProvider);
-        ref.read(heatmapProvider.notifier).updateHeatmap(mapState);
+        // ✅ Then apply the heatmap layer
+        print("🔄 Applying heatmap layer...");
+        final style = mapboxMap.style;
+        await style.addLayer(heatmapLayer);
       },
       onStyleLoadedListener: (styleData) {
-        print("🎨 Map style fully loaded. Ensuring heatmap is displayed...");
+        print("🎨 Map style loaded. Reapplying heatmap...");
 
-        //final mapState = ref.read(mapStateProvider);
-        Future.delayed(Duration(milliseconds: 500), () {
-          ref
-              .read(heatmapProvider.notifier)
-              .updateHeatmap(ref.read(mapStateProvider));
-        });
+        // ✅ Ensure heatmap updates correctly
       },
     );
   }

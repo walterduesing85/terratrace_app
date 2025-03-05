@@ -1,218 +1,216 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' as mp;
-import 'dart:convert';
+import 'package:terratrace/source/features/data/data/data_management.dart';
+import 'package:terratrace/source/features/data/domain/flux_data.dart';
 import 'map_data.dart';
 
 class HeatmapNotifier extends StateNotifier<void> {
   HeatmapNotifier(this.ref) : super(null) {
-    // ✅ Listen for changes in map state and update the heatmap
-    ref.listen<MapState>(mapStateProvider, (previous, next) {
-      if (_shouldUpdate(previous, next)) {
-        print("🔥 Map state changed, updating heatmap...");
-        updateHeatmap(next);
-      }
+    // ✅ Ensure the heatmap is initialized properly
+    initHeatmap();
+
+    // ✅ Listen for changes in flux data to update the heatmap source
+    ref.listen<AsyncValue<List<FluxData>>>(fluxDataListProvider, (prev, next) {
+      next.when(
+        data: (fluxDataList) async {
+          print("🔥 Flux data updated (${fluxDataList.length} points)");
+          await updateHeatmapSource(fluxDataList);
+        },
+        loading: () => print("⏳ Flux data is loading..."),
+        error: (err, stack) => print("❌ Error loading flux data: $err"),
+      );
     });
   }
 
   final Ref ref;
   mp.MapboxMap? _mapboxMapController;
-  Timer? _debounce;
 
-  /// ✅ Returns the Mapbox controller if available
-  mp.MapboxMap? getMapboxController() {
-    if (_mapboxMapController == null) {
-      print("🚨 ERROR: Mapbox controller is null!");
+  /// ✅ Initialize the heatmap when the provider is first created
+  Future<void> initHeatmap() async {
+    print("🔥 Initializing heatmap...");
+    final fluxDataList = ref.read(fluxDataListProvider).maybeWhen(
+          data: (data) =>
+              data.cast<FluxData>(), // ✅ Explicitly cast to List<FluxData>
+          orElse: () => <FluxData>[], // ✅ Ensure the list type is correct
+        );
+
+    if (fluxDataList.isNotEmpty) {
+      await updateHeatmapSource(fluxDataList);
     }
-    return _mapboxMapController;
-  }
-
-  /// ✅ Prevents unnecessary updates
-  bool _shouldUpdate(MapState? prev, MapState next) {
-    if (prev == null) return true;
-    return prev.radius != next.radius ||
-        prev.opacity != next.opacity ||
-        prev.rangeValues != next.rangeValues ||
-        prev.geoJson != next.geoJson;
   }
 
   void setMapboxController(mp.MapboxMap controller) {
     _mapboxMapController = controller;
   }
 
-  /// ✅ Updates both **source** and **layer**
-  void updateHeatmap(MapState mapState) {
-    _debounce?.cancel();
-    _debounce = Timer(const Duration(milliseconds: 300), () async {
-      print("🔥 Debounced heatmap update triggered...");
-      await _updateHeatmapSource(mapState);
-      await _updateHeatmapLayer(mapState);
-    });
+  /// ✅ Get the current Mapbox controller
+  mp.MapboxMap? getMapboxController() {
+    return _mapboxMapController;
   }
 
-  /// ✅ Ensures the **heatmap source** is correctly updated
-  Future<void> _updateHeatmapSource(MapState mapState) async {
-    if (_mapboxMapController == null) {
-      print("🚨 ERROR: Mapbox controller is null!");
-      return;
-    }
+  Future<void> updateHeatmapSource(List<FluxData> fluxDataList) async {
+    if (_mapboxMapController == null) return;
 
     final style = _mapboxMapController!.style;
-    final sources = await style.getStyleSources();
-    final hasHeatmapSource = sources.any((s) => s?.id == "heatmap-source");
-    final List<mp.Feature> features = _parseGeoJsonFeatures(mapState.geoJson);
-    if (!hasHeatmapSource) {
-      print("🆕 Adding heatmap source...");
-      await style.addSource(mp.GeoJsonSource(
-        id: "heatmap-source",
-        data: mapState.geoJson,
-      ));
-    } else {
-      print("♻️ Updating existing heatmap source...");
+    final hasHeatmapSource =
+        (await style.getStyleSources()).any((s) => s?.id == "heatmap-source");
+    final layers = await style.getStyleLayers();
+    final hasHeatmapLayer = layers.any((l) => l?.id == "heatmap-layer");
 
-      if (features.isNotEmpty) {
-        await style.updateGeoJSONSourceFeatures(
-          "heatmap-source",
-          "features",
-          features,
-        );
-      } else {
-        print("❌ Error parsing GeoJSON features");
+    final geoJsonString = _convertFluxDataToGeoJSON(fluxDataList);
+
+    if (hasHeatmapSource) {
+      await style.setStyleSourceProperties(
+          "heatmap-source", json.encode({"data": json.decode(geoJsonString)}));
+    } else {
+      await style.addSource(
+          mp.GeoJsonSource(id: "heatmap-source", data: geoJsonString));
+      if (hasHeatmapLayer == false) {
+        print("🔥 Adding heatmap layer... from UpdateSOurce");
+        updateHeatmapLayer(ref.read(heatmapLayerProvider));
       }
     }
   }
 
-
-  Future<void> _updateHeatmapLayer(MapState mapState) async {
+  Future<void> updateHeatmapLayer(heatmapLayer) async {
     if (_mapboxMapController == null) {
-      print("🚨 ERROR: Mapbox controller is null! Heatmap update aborted.");
+      print("🚨 ERROR: MapboxMapController is NULL! Cannot update heatmap.");
       return;
     }
+
+    if (_mapboxMapController == null) return;
 
     final style = _mapboxMapController!.style;
     final layers = await style.getStyleLayers();
     final hasHeatmapLayer = layers.any((l) => l?.id == "heatmap-layer");
 
-    print("🛠 Heatmap update triggered!");
-    print("🎛 Radius: ${mapState.radius}, Opacity: ${mapState.opacity}");
-    print("🎚 Range Values: ${mapState.rangeValues}");
-
-    final globalMinMax = ref.watch(minMaxGramProvider);
-    MinMaxValues normalizedRange = normalizeMinMax(mapState.rangeValues,
-        globalMinMax.minV, globalMinMax.maxV); // Normalize range values
-    final dynamicExpression = generateDynamicHeatmapWeightExpression(
-        normalizedRange.minV, normalizedRange.maxV);
-
-    print("🧐 New Heatmap Weight Expression: $dynamicExpression");
-
-    final heatmapLayer = mp.HeatmapLayer(
-      id: "heatmap-layer",
-      sourceId: "heatmap-source",
-      heatmapWeightExpression: dynamicExpression,
-      heatmapColorExpression: [
-        "interpolate",
-        ["linear"],
-        ["heatmap-density"],
-        0,
-        "rgba(0, 0, 255, 0)",
-        0.2,
-        "royalblue",
-        0.4,
-        "cyan",
-        0.6,
-        "lime",
-        0.8,
-        "yellow",
-        1.0,
-        "red"
-      ],
-      heatmapRadius: mapState.radius,
-      heatmapOpacity: mapState.opacity,
-    );
-
     if (hasHeatmapLayer) {
-      print("🔄 Updating existing heatmap layer...");
       await style.updateLayer(heatmapLayer);
+      print("🔥 Updated heatmap layer YEAHHH");
     } else {
-      print("🆕 Adding new heatmap layer...");
       await style.addLayer(heatmapLayer);
     }
-
-    print("✅ Heatmap successfully updated!");
-  }
-
-//Method to generate dynamic heatmap weight expression
-  List<Object> generateDynamicHeatmapWeightExpression(
-      double minWeight, double maxWeight) {
-    // Ensure minWeight < maxWeight, otherwise adjust
-    if (minWeight >= maxWeight) {
-      maxWeight = minWeight + 0.01; // Prevents identical values
-    }
-
-    return [
-      "interpolate", ["linear"],
-
-      // Use heatmap-weight based directly on "weight" property
-      [
-        "coalesce",
-        ["get", "weight"],
-        1
-      ], // Fallback to 1 if weight is missing
-
-      minWeight, 0.5, // Minimum weight → low intensity
-      (minWeight + maxWeight) / 2, 2, // Mid-range weight → moderate intensity
-      maxWeight, 10 // Maximum weight → highest intensity
-    ];
-  }
-
-  //Method to normalize the min and max values to be used in dynamic heatmap weight expression
-  MinMaxValues normalizeMinMax(
-      MinMaxValues input, double globalMin, double globalMax) {
-    if (globalMax == globalMin) {
-      return MinMaxValues(minV: 0, maxV: 1);
-    }
-
-    // Ensure input values are within valid range
-    double adjustedMin = input.minV.clamp(globalMin, globalMax);
-    double adjustedMax = input.maxV.clamp(globalMin, globalMax);
-
-    // Normalize using range slider values
-    double normalizedMin = (adjustedMin - globalMin) / (globalMax - globalMin);
-    double normalizedMax = (adjustedMax - globalMin) / (globalMax - globalMin);
-
-    // Ensure there's always a valid range
-    if ((normalizedMax - normalizedMin).abs() < 0.01) {
-      normalizedMax = (normalizedMin + 0.01).clamp(0.0, 1.0);
-    }
-
-    return MinMaxValues(
-      minV: normalizedMin,
-      maxV: normalizedMax,
-    );
-  }
-
-  List<mp.Feature> _parseGeoJsonFeatures(String geoJsonString) {
-    try {
-      final geoJsonMap = jsonDecode(geoJsonString);
-      if (geoJsonMap['features'] is List) {
-        return (geoJsonMap['features'] as List).map((feature) {
-          return mp.Feature(
-            geometry: mp.GeoJSONObject.fromJson(feature['geometry'])
-                as mp.GeometryObject,
-            id: feature['properties']?['id'] ??
-                "feature-${DateTime.now().millisecondsSinceEpoch}",
-            properties: feature['properties'] ?? {},
-          );
-        }).toList();
-      }
-    } catch (e) {
-      print("❌ Error parsing GeoJSON: $e");
-    }
-    return [];
   }
 }
 
-// ✅ Register the provider
 final heatmapProvider = StateNotifierProvider<HeatmapNotifier, void>((ref) {
   return HeatmapNotifier(ref);
 });
+
+/// ✅ **Provider for HeatmapNotifier**
+final heatmapLayerProvider = Provider<mp.HeatmapLayer>((ref) {
+  final mapState = ref.watch(mapStateProvider);
+  final globalMinMax = ref.watch(minMaxGramProvider);
+
+  final normalizedRange = normalizeMinMax(
+    mapState.rangeValues,
+    globalMinMax.minV,
+    globalMinMax.maxV,
+  );
+
+  print(
+      "🟢 HeatmapLayerProvider updated: radius=${mapState.radius}, opacity=${mapState.opacity}, rangeValues=${mapState.rangeValues}");
+
+  return mp.HeatmapLayer(
+    id: "heatmap-layer",
+    sourceId: "heatmap-source",
+    heatmapWeightExpression: generateDynamicHeatmapWeightExpression(
+        normalizedRange.minV, normalizedRange.maxV),
+    heatmapColorExpression: [
+      "interpolate",
+      ["linear"],
+      ["heatmap-density"],
+      0,
+      "rgba(0, 0, 255, 0)",
+      0.2,
+      "royalblue",
+      0.4,
+      "cyan",
+      0.6,
+      "lime",
+      0.8,
+      "yellow",
+      1.0,
+      "red"
+    ],
+    heatmapRadius: mapState.radius,
+    heatmapOpacity: mapState.opacity,
+  );
+});
+
+//Method to generate dynamic heatmap weight expression
+List<Object> generateDynamicHeatmapWeightExpression(
+    double minWeight, double maxWeight) {
+  if (minWeight >= maxWeight) {
+    maxWeight = minWeight + 0.01; // Prevents identical values
+  }
+
+  print("🔍 Generating Weight Expression with: min=$minWeight, max=$maxWeight");
+
+  final expression = [
+    "interpolate",
+    ["linear"],
+    [
+      "coalesce",
+      ["get", "weight"],
+      1.0
+    ],
+    minWeight, 0.2, // 🔥 Start with **visible low intensity**
+    (minWeight + maxWeight) / 2, 5.0, // 🔥 Increase the middle intensity
+    maxWeight, 10.0 // 🔥 Make the highest intensity much stronger
+  ];
+
+  print("🔥 Final Generated Heatmap Weight Expression: $expression");
+  return expression;
+}
+
+MinMaxValues normalizeMinMax(
+    MinMaxValues input, double globalMin, double globalMax) {
+  if (globalMax == globalMin) {
+    return MinMaxValues(minV: 1, maxV: 10); // Prevents division by zero
+  }
+
+  // ✅ Scale up normalization to ensure values don't collapse near zero
+  double scalingFactor = 50.0;
+
+  double adjustedMin = input.minV.clamp(globalMin, globalMax);
+  double adjustedMax = input.maxV.clamp(globalMin, globalMax);
+
+  double normalizedMin = ((adjustedMin - globalMin) / (globalMax - globalMin)) * scalingFactor;
+  double normalizedMax = ((adjustedMax - globalMin) / (globalMax - globalMin)) * scalingFactor;
+
+  // Ensure a valid range
+  if ((normalizedMax - normalizedMin).abs() < 1.0) {
+    normalizedMax = (normalizedMin + 1.0).clamp(1.0, scalingFactor);
+  }
+
+  print("🔍 Normalized Min/Max: $normalizedMin - $normalizedMax");
+
+  return MinMaxValues(
+    minV: normalizedMin,
+    maxV: normalizedMax,
+  );
+}
+
+
+/// ✅ Converts `FluxDataList` to GeoJSON format
+String _convertFluxDataToGeoJSON(List<FluxData> fluxDataList) {
+  final features = fluxDataList.map((fluxData) {
+    final lat = double.tryParse(fluxData.dataLat ?? '0.0') ?? 0.0;
+    final lng = double.tryParse(fluxData.dataLong ?? '0.0') ?? 0.0;
+    final weight = double.tryParse(fluxData.dataCfluxGram ?? '0.0') ?? 1.0;
+
+    return {
+      "type": "Feature",
+      "properties": {"weight": weight},
+      "geometry": {
+        "type": "Point",
+        "coordinates": [lng, lat]
+      }
+    };
+  }).toList();
+
+  return json.encode({"type": "FeatureCollection", "features": features});
+}

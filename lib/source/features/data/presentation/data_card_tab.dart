@@ -8,6 +8,7 @@ import 'package:terratrace/source/constants/constants.dart';
 import 'package:terratrace/source/features/data/data/data_management.dart';
 import 'package:terratrace/source/features/data/data/map_provider.dart';
 import 'package:terratrace/source/features/data/domain/flux_data.dart';
+import 'package:terratrace/source/features/map/data/camera_position_notifier.dart';
 
 import 'package:terratrace/source/routing/app_router.dart';
 
@@ -103,13 +104,13 @@ class _DataCardTabState extends ConsumerState<DataCardTab> {
                   child: MaterialButton(
                     onLongPress: () => showEditDialog(context, widget.fluxData),
                     onPressed: () {
-                      final mapController =
-                          ref.read(mapControllerProvider.notifier);
-                      final target = LatLng(
-                          double.parse(widget.fluxData.dataLat!),
-                          double.parse(widget.fluxData.dataLong!));
-                      mapController.moveCamera(target);
-                      ref.read(cameraPositionProvider) == target;
+                      //   final mapController =
+                      //       ref.read(mapControllerProvider.notifier);
+                      //   final target = LatLng(
+                      //       double.parse(widget.fluxData.dataLat!),
+                      //       double.parse(widget.fluxData.dataLong!));
+                      //   mapController.moveCamera(target);
+                      //   ref.read(cameraPositionProvider) == target;
                     },
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -149,13 +150,13 @@ class _DataCardTabState extends ConsumerState<DataCardTab> {
                       size: 25.0,
                     ),
                     onPressed: () {
-                      final mapController =
-                          ref.read(mapControllerProvider.notifier);
-                      final target = LatLng(
-                          double.parse(widget.fluxData.dataLat!),
-                          double.parse(widget.fluxData.dataLong!));
-                      mapController.moveCamera(target);
-                      ref.read(cameraPositionProvider) == target;
+                      // final mapController =
+                      //     ref.read(mapControllerProvider.notifier);
+                      // final target = LatLng(
+                      //     double.parse(widget.fluxData.dataLat!),
+                      //     double.parse(widget.fluxData.dataLong!));
+                      // mapController.moveCamera(target);
+                      // ref.read(cameraPositionProvider) == target;
                     },
                   ),
                 ),

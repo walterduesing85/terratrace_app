@@ -59,8 +59,9 @@ dependencies:
   shared_preferences: ^2.3.5
   syncfusion_flutter_charts: ^28.1.39
   sliding_up_panel: ^2.0.0+1
-  mapbox_maps_flutter: ^2.5.2
+  mapbox_maps_flutter: ^2.6.1
   flutter_dotenv: ^5.2.1
+  intl: ^0.20.2
   # flutter_map_marker_popup: ^7.0.0
   # flutter_reactive_ble: ^5.4.0
 
@@ -95,6 +96,8 @@ flutter:
   assets:
   - images/
   - assets/.env
+  - assets/black-dot.png
+  - assets/flux_data.csv
 
   fonts:
   - family: Barlow

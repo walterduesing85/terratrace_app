@@ -1,7 +1,10 @@
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:csv/csv.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import 'package:terratrace/source/features/authentication/authentication_managment.dart';
 import 'package:terratrace/source/features/data/domain/flux_data.dart';
 import 'package:terratrace/source/features/project_manager/domain/project.dart';
@@ -11,6 +14,96 @@ import 'package:terratrace/source/features/user/domain/user_managment.dart';
 class ProjectManagement {
   final projectCollection = FirebaseFirestore.instance.collection('projects');
   final userCollection = FirebaseFirestore.instance.collection('users');
+
+  Timer? _simulationTimer;
+  List<FluxData> _sortedFluxData = [];
+  int _currentIndex = 0;
+
+  /// **Load and parse CSV, then sort data by date**
+  Future<void> loadAndSortFluxData() async {
+    final csvData = await rootBundle.loadString("assets/flux_data.csv");
+    final List<List<dynamic>> csvTable =
+        const CsvToListConverter().convert(csvData);
+
+    // Remove header row
+    csvTable.removeAt(0);
+
+    // Parse rows into `FluxData`
+    _sortedFluxData = csvTable
+        .map((row) => FluxData(
+              dataSite: row[0].toString(),
+              dataLat: row[1].toString(),
+              dataLong: row[2].toString(),
+              dataTemp: row[3].toString(),
+              dataPress: row[4].toString(),
+              dataCflux: row[5].toString(),
+              dataDate: row[9].toString(),
+              dataNote: row[7].toString(),
+              dataInstrument: row[8].toString(),
+              dataCfluxGram: row[10].toString(),
+              dataOrigin: "Simulated",
+              dataKey: DateTime.now()
+                  .millisecondsSinceEpoch
+                  .toString(), // Unique key
+            ))
+        .toList();
+
+    // **Sort by date (oldest first)**
+    DateFormat dateFormat = DateFormat("dd-MM-yyyy HH:mm:s");
+    _sortedFluxData.sort((a, b) {
+      DateTime dateA = dateFormat.parse(a.dataDate!);
+      DateTime dateB = dateFormat.parse(b.dataDate!);
+      return dateA.compareTo(dateB);
+    });
+
+    _currentIndex = 0;
+  }
+
+  /// **Simulate real-time flux data injection to Firestore**
+  void startFluxSimulation(String projectName) {
+    print(
+        "Starting simulation... and sorted data length is ${_sortedFluxData.length}");
+    _simulationTimer?.cancel(); // Cancel existing simulation if running
+
+    _simulationTimer =
+        Timer.periodic(const Duration(seconds: 5), (timer) async {
+      if (_currentIndex < _sortedFluxData.length) {
+        await addFluxDataToFirebase(
+            projectName, _sortedFluxData[_currentIndex]);
+        _currentIndex++;
+      } else {
+        timer.cancel(); // Stop when all data has been uploaded
+      }
+    });
+  }
+
+  /// **Stop the simulation**
+  void stopFluxSimulation() {
+    _simulationTimer?.cancel();
+  }
+
+  /// **Add individual flux data points to Firebase**
+  Future<void> addFluxDataToFirebase(String projectName, FluxData data) async {
+    try {
+      await projectCollection.doc(projectName).collection('data').doc().set({
+        'dataSite': data.dataSite,
+        'dataLong': data.dataLong,
+        'dataLat': data.dataLat,
+        'dataTemp': data.dataTemp,
+        'dataPress': data.dataPress,
+        'dataCflux': data.dataCflux,
+        'dataDate': data.dataDate,
+        'dataNote': data.dataNote,
+        'dataSoilTemp': "null",
+        'dataInstrument': data.dataInstrument,
+        'dataCfluxGram': data.dataCfluxGram,
+        'dataOrigin': data.dataOrigin,
+        'dataKey': data.dataKey,
+      });
+    } catch (e) {
+      debugPrint('Error adding flux data: $e');
+    }
+  }
 
   // Stream for Projects
   Stream<List<Project>> get projectsStream {

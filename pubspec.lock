@@ -545,13 +545,13 @@ packages:
     source: hosted
     version: "3.0.1"
   intl:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: intl
-      sha256: "00f33b908655e606b86d2ade4710a231b802eec6f11e87e4ea3783fd72077a50"
+      sha256: "3df61194eb431efc39c4ceba583b95633a403f46c9fd341e550ce0bfa50e9aa5"
       url: "https://pub.dev"
     source: hosted
-    version: "0.20.1"
+    version: "0.20.2"
   json_annotation:
     dependency: transitive
     description:
@@ -628,10 +628,10 @@ packages:
     dependency: "direct main"
     description:
       name: mapbox_maps_flutter
-      sha256: "4329aea7adbc306e508679426a4c46b78b9bb2b9db0e8402bb2072f577e38b8d"
+      sha256: aac364e225dc49a42c712f1089d39ebbe6b53d5c7a88957c2702b03cd29e5b4f
       url: "https://pub.dev"
     source: hosted
-    version: "2.5.2"
+    version: "2.6.1"
   matcher:
     dependency: transitive
     description:

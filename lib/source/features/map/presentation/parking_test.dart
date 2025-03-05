@@ -601,23 +601,23 @@ final showOnPositionProvider = StateProvider<bool>((ref) => false);
 
 
 
-  // Future<void> _setupPositionTracking() async {
-  //   gl.LocationSettings locationSettings = gl.LocationSettings(
-  //       accuracy: gl.LocationAccuracy.high, distanceFilter: 1);
-  //   userPositionStream?.cancel();
-  //   userPositionStream =
-  //       gl.Geolocator.getPositionStream(locationSettings: locationSettings)
-  //           .listen((gl.Position? position) {
-  //     if (position != null && mapboxMapController != null) {
-  //       mapboxMapController?.setCamera(
-  //         mp.CameraOptions(
-  //             zoom: 13,
-  //             center: mp.Point(coordinates: mp.Position(12.46811, 50.20735))),
-  //         // mp.Position(position.longitude, position.latitude))),
-  //       );
-  //     }
-  //   });
-  // }
+  Future<void> _setupPositionTracking() async {
+    gl.LocationSettings locationSettings = gl.LocationSettings(
+        accuracy: gl.LocationAccuracy.high, distanceFilter: 1);
+    userPositionStream?.cancel();
+    userPositionStream =
+        gl.Geolocator.getPositionStream(locationSettings: locationSettings)
+            .listen((gl.Position? position) {
+      if (position != null && mapboxMapController != null) {
+        mapboxMapController?.setCamera(
+          mp.CameraOptions(
+              zoom: 13,
+              center: mp.Point(coordinates: mp.Position(12.46811, 50.20735))),
+          // mp.Position(position.longitude, position.latitude))),
+        );
+      }
+    });
+  }
 //  Future<void> _updateHeatmapLayer(WidgetRef ref, MapState mapState) async {
 //     if (mapboxMapController == null) {
 //       print("🚨 ERROR: MapboxMap Controller is NULL! Aborting heatmap update.");

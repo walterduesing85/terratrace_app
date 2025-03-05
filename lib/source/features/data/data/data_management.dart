@@ -1,9 +1,11 @@
 import 'dart:async';
-
+import 'package:csv/csv.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:intl/intl.dart';
 
 //import 'package:hive/hive.dart';
 
@@ -82,25 +84,6 @@ final fluxDataListProvider = StreamProvider<List<FluxData>>((ref) async* {
   }
 });
 
-class FluxDataNotifier extends StateNotifier<List<FluxData>> {
-  FluxDataNotifier() : super([]);
-
-  void setFluxData(List<FluxData> fluxData) {
-    state = fluxData;
-  }
-
-  void addFluxData(FluxData fluxData) {
-    Future.delayed(Duration(milliseconds: 100), () {
-      state = [...state, fluxData];
-    });
-  }
-}
-
-final fluxDataNotifierProvider =
-    StateNotifierProvider<FluxDataNotifier, List<FluxData>>((ref) {
-  return FluxDataNotifier();
-});
-
 final listLengthProvider = Provider.autoDispose<int>((ref) {
   final dataListAsyncValue = ref.watch(fluxDataListProvider);
 
@@ -111,6 +94,7 @@ final listLengthProvider = Provider.autoDispose<int>((ref) {
   );
 });
 
+//draws a marker omn the mao  when selected in Data List
 final selectedFluxDataProvider =
     StateNotifierProvider<SelectedFluxDataNotifier, List<FluxData>>((ref) {
   return SelectedFluxDataNotifier();

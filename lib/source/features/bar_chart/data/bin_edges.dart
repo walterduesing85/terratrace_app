@@ -64,7 +64,6 @@ class BinEdges {
 
   List<BinData> makeBinData() {
     List<double> bins = makeBinEdges();
-    double binSize = (maxValue - minValue) / numEdges;
 
     List<BinData> binData = List.generate(numEdges, (i) {
       if (i >= bins.length - 1) {
