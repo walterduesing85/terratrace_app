@@ -42,7 +42,7 @@ class _HeatMapScreenState extends ConsumerState<HeatMapScreen>
     _tabController = TabController(length: 2, vsync: this);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(mapStateProvider.notifier).initHeatmap(ref);
+      ref.read(mapStateProvider.notifier).initHeatmap;
       ref.read(cameraPositionProvider.notifier);
     });
   }
@@ -388,31 +388,31 @@ class _HeatMapScreenState extends ConsumerState<HeatMapScreen>
 
   Widget _buildMap(WidgetRef ref) {
     final cameraOptions = ref.watch(cameraPositionProvider);
-    final heatmapLayer =
-        ref.watch(heatmapLayerProvider); // 🔥 Listen for UI updates
+    final mapStyle = ref.watch(mapStateProvider).mapStyle;
 
     return mp.MapWidget(
-      styleUri: ref.watch(mapStateProvider).mapStyle,
-      onMapCreated: (mapboxMap) async {
+      styleUri: mapStyle,
+      onMapCreated: (mapboxMap) {
+        mapboxMap.location.updateSettings(
+            mp.LocationComponentSettings(enabled: true, pulsingEnabled: true));
         print("🗺️ Mapbox map created. Initializing...");
-        final heatmapNotifier = ref.read(heatmapProvider.notifier);
 
-        // ✅ Set the Mapbox controller
-        heatmapNotifier.setMapboxController(mapboxMap);
+        // ✅ Set the controller without calling anything that triggers updates
+        ref.read(heatmapProvider.notifier).setMapboxController(mapboxMap);
+
+        // ✅ Set initial camera position
         mapboxMap.setCamera(cameraOptions);
-
-        // ✅ Ensure heatmap source is initialized
-        await heatmapNotifier.initHeatmap(); // ✅ Use correct method name
-
-        // ✅ Then apply the heatmap layer
-        print("🔄 Applying heatmap layer...");
-        final style = mapboxMap.style;
-        await style.addLayer(heatmapLayer);
       },
       onStyleLoadedListener: (styleData) {
         print("🎨 Map style loaded. Reapplying heatmap...");
 
-        // ✅ Ensure heatmap updates correctly
+        // ✅ Apply heatmap **AFTER** style loads
+        ref
+            .read(heatmapProvider.notifier)
+            .updateHeatmapLayer(ref.read(heatmapLayerProvider));
+
+        // ✅ Initialize heatmap **AFTER** style loads
+        ref.read(heatmapProvider.notifier).initHeatmap();
       },
     );
   }

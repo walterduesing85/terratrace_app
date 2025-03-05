@@ -20,7 +20,6 @@ class MinMaxValues {
 }
 
 class MapData {
-  Timer? _debounce;
   List<double> createIntensity(MinMaxValues minMax, List<FluxData> fluxDataList,
       bool useLogNormalization) {
     return fluxDataList.map((fluxData) {
@@ -41,70 +40,69 @@ class MapData {
     }).toList();
   }
 
-  Future<void> updateMarkerLayer(
-      MapboxMap mapboxMap, List<FluxData> fluxDataList, WidgetRef ref) async {
-    print("📍 updateMarkerLayer() called with ${fluxDataList.length} markers.");
+  Future<void> initializeMarkerLayer(
+      MapboxMap mapboxMap, List<FluxData> fluxDataList, Ref ref) async {
+    print("📍 Initializing marker layer with ${fluxDataList.length} points.");
 
-    if (mapboxMap == null) {
-      print("🚨 ERROR: Mapbox controller is NULL! Markers cannot be added.");
-      return;
-    }
-
-    // ✅ Create or reuse the PointAnnotationManager
     final pointAnnotationManager =
         await mapboxMap.annotations.createPointAnnotationManager();
-
-    // ✅ Remove previous annotations before adding new ones (prevents duplicates)
     await pointAnnotationManager.deleteAll();
 
     if (fluxDataList.isNotEmpty) {
-      // ✅ Load marker icon from assets
-      final ByteData bytes =
-          await rootBundle.load('assets/black-dot.png'); // Ensure this exists
+      final ByteData bytes = await rootBundle.load('assets/black-dot.png');
       final Uint8List imageData = bytes.buffer.asUint8List();
 
-      print("✅ Adding ${fluxDataList.length} markers...");
+      List<PointAnnotationOptions> pointAnnotations = fluxDataList.map((data) {
+        final lat = double.tryParse(data.dataLat ?? '') ?? 0.0;
+        final lng = double.tryParse(data.dataLong ?? '') ?? 0.0;
 
-      // ✅ Convert FluxData into Mapbox PointAnnotations
-      List<PointAnnotationOptions> pointAnnotations = [];
-
-      for (var data in fluxDataList) {
-        final double latitude = double.tryParse(data.dataLat ?? '') ?? 0.0;
-        final double longitude = double.tryParse(data.dataLong ?? '') ?? 0.0;
-
-        print("🛰️ Adding marker at LAT: $latitude, LNG: $longitude");
-
-        final PointAnnotationOptions pointAnnotationOptions =
-            PointAnnotationOptions(
-          geometry: Point(coordinates: Position(longitude, latitude)),
-          image: imageData, // ✅ Custom marker image
-          iconSize: 0.08, // ✅ Adjust size as needed
+        return PointAnnotationOptions(
+          geometry: Point(coordinates: Position(lng, lat)),
+          image: imageData,
+          iconSize: 0.08,
         );
+      }).toList();
 
-        pointAnnotations.add(pointAnnotationOptions);
-      }
-
-      // ✅ Create multiple annotations at once
       await pointAnnotationManager.createMulti(pointAnnotations);
 
-      // ✅ Pass `ref` to CustomPointAnnotationClickListener
       pointAnnotationManager.addOnPointAnnotationClickListener(
         CustomPointAnnotationClickListener(fluxDataList, ref),
       );
+    }
+  }
 
-      print("✅ All markers added successfully with tap support!");
-    } else {
-      print("⚠️ No flux data available for markers.");
+  Future<void> addNewMarker(
+      MapboxMap mapboxMap, List<FluxData> newPoints, Ref ref) async {
+    print("📍 Adding ${newPoints.length} new markers.");
+
+    final pointAnnotationManager =
+        await mapboxMap.annotations.createPointAnnotationManager();
+
+    if (newPoints.isNotEmpty) {
+      final ByteData bytes = await rootBundle.load('assets/black-dot.png');
+      final Uint8List imageData = bytes.buffer.asUint8List();
+
+      List<PointAnnotationOptions> pointAnnotations = newPoints.map((data) {
+        final lat = double.tryParse(data.dataLat ?? '') ?? 0.0;
+        final lng = double.tryParse(data.dataLong ?? '') ?? 0.0;
+
+        return PointAnnotationOptions(
+          geometry: Point(coordinates: Position(lng, lat)),
+          image: imageData,
+          iconSize: 0.08,
+        );
+      }).toList();
+
+      await pointAnnotationManager.createMulti(pointAnnotations);
     }
   }
 }
 
 /// ✅ Custom class to handle marker taps
-
 class CustomPointAnnotationClickListener
     extends OnPointAnnotationClickListener {
   final List<FluxData> fluxDataList;
-  final WidgetRef ref; // Riverpod reference
+  final Ref ref; // ✅ Use `Ref` instead of `WidgetRef`
 
   CustomPointAnnotationClickListener(this.fluxDataList, this.ref);
 
@@ -112,7 +110,6 @@ class CustomPointAnnotationClickListener
   void onPointAnnotationClick(PointAnnotation annotation) {
     print("📍 Marker tapped: ${annotation.geometry}");
 
-    // 🎯 Find the matching FluxData entry
     final tappedFluxData = fluxDataList.firstWhere(
       (data) {
         final lat = double.tryParse(data.dataLat ?? '') ?? 0.0;
@@ -122,7 +119,7 @@ class CustomPointAnnotationClickListener
       orElse: () => FluxData(dataLat: "0.0", dataLong: "0.0"),
     );
 
-    // ✅ Send data to Riverpod provider
+    // ✅ Pass `Ref` instead of `WidgetRef`
     ref.read(markerPopupProvider.notifier).addPopup(tappedFluxData);
   }
 }
@@ -189,62 +186,50 @@ class MapStateNotifier extends StateNotifier<MapState> {
     // ✅ Listen for changes in `fluxDataListProvider` to update the heatmap
     ref.listen<AsyncValue<List<FluxData>>>(fluxDataListProvider, (prev, next) {
       next.when(
-        data: (fluxDataList) {
+        data: (fluxDataList) async {
           print("🔥 Flux data updated (${fluxDataList.length} points)");
 
-          Future.microtask(() async {
-            print("🔍 Updating map state with new flux data...");
-            await _updateMapStateWithFluxData(fluxDataList);
-          });
+          final mapboxMap =
+              ref.read(heatmapProvider.notifier).getMapboxController();
+          if (mapboxMap == null) {
+            print("⚠️ Mapbox controller is NULL. Skipping marker updates.");
+            return;
+          }
+
+          // ✅ If no previous data, initialize markers
+          if (prev == null || prev is! AsyncData<List<FluxData>>) {
+            print("📍 First-time marker initialization.");
+            await ref
+                .read(mapDataProvider)
+                .initializeMarkerLayer(mapboxMap, fluxDataList, ref);
+            return;
+          }
+
+          // ✅ Detect new points & add only them
+          final oldList = prev.value;
+          final newPoints =
+              fluxDataList.where((point) => !oldList.contains(point)).toList();
+          if (newPoints.isNotEmpty) {
+            print("🆕 Adding new points: ${newPoints.length}");
+            await ref
+                .read(mapDataProvider)
+                .addNewMarker(mapboxMap, newPoints, ref);
+          }
+
+          // ✅ Only update heatmap source, no need to refresh entire heatmap
+          print("🔄 Updating heatmap source...");
+          await ref
+              .read(heatmapProvider.notifier)
+              .updateHeatmapSource(fluxDataList);
         },
         loading: () => print("⏳ Flux data is loading..."),
         error: (err, stack) => print("❌ Error loading flux data: $err"),
       );
     });
-
-    // ✅ Listen for changes in `geoJsonProvider` to trigger heatmap update
-    ref.listen<AsyncValue<String>>(geoJsonProvider, (_, next) {
-      next.when(
-        data: (geoJson) {
-          print("🔥 geoJson updated, refreshing heatmap...");
-          _updateHeatmap();
-        },
-        loading: () => print("⏳ geoJson is loading..."),
-        error: (err, stack) => print("❌ Error updating geoJson: $err"),
-      );
-    });
   }
 
-  Future<void> _updateMapStateWithFluxData(List<FluxData> fluxDataList) async {
-    final geoJson = await ref.read(geoJsonProvider.future);
-    final intensities = await ref.read(intensityProvider.future);
-    // ✅ Update markers when initializing map
-    final mapboxMap = ref.read(heatmapProvider.notifier).getMapboxController();
-    if (mapboxMap != null) {
-      ref
-          .read(mapDataProvider)
-          .updateMarkerLayer(mapboxMap, fluxDataList, ref as WidgetRef);
-    } else {
-      print("⚠️ Mapbox controller is NULL during initialization.");
-    }
-
-    state = state.copyWith(
-      geoJson: geoJson,
-      intensities: intensities,
-      fluxDataList: List.from(fluxDataList), // ✅ Always create a new list
-    );
-
-    _updateHeatmap();
-  }
-
-  /// ✅ Triggers heatmap update
-  void _updateHeatmap() {
-    print("🔥 Updating heatmap...");
-    ref.read(heatmapProvider.notifier).updateHeatmapLayer(state);
-  }
-
-  /// ✅ Initializes the heatmap using available flux data
-  Future<void> initHeatmap(WidgetRef ref) async {
+  /// ✅ Initializes the heatmap using available flux data and add markers
+  Future<void> initHeatmap(Ref ref) async {
     final geoJson = await ref.watch(geoJsonProvider.future);
     final intensities = await ref.watch(intensityProvider.future);
     final rangeValues = ref.read(rangeValuesProvider);
@@ -262,16 +247,22 @@ class MapStateNotifier extends StateNotifier<MapState> {
       rangeValues: rangeValues,
       fluxDataList: fluxDataList, // ✅ Now correctly typed
     );
+
     // ✅ Update markers when initializing map
     final mapboxMap = ref.read(heatmapProvider.notifier).getMapboxController();
     if (mapboxMap != null) {
-      ref.read(mapDataProvider).updateMarkerLayer(mapboxMap, fluxDataList, ref);
+      ref
+          .read(mapDataProvider)
+          .initializeMarkerLayer(mapboxMap, fluxDataList, ref);
+  
     } else {
       print("⚠️ Mapbox controller is NULL during initialization.");
     }
 
     // ✅ Trigger heatmap update
-    // ref.read(heatmapProvider.notifier).updateHeatmapLayer(state);
+    ref
+        .read(heatmapProvider.notifier)
+        .updateHeatmapLayer(ref.read(heatmapLayerProvider));
   }
 
   /// ✅ UI Functions to modify `MapState`
@@ -300,9 +291,6 @@ class MapStateNotifier extends StateNotifier<MapState> {
       geoJson: newGeoJson,
       intensities: newIntensities,
     );
-
-    // ✅ Trigger heatmap update
-    ref.read(heatmapProvider.notifier).updateHeatmapLayer(state);
   }
 
   void setMapStyle(String style) {
@@ -336,9 +324,9 @@ final rangeValuesProvider = StateProvider<MinMaxValues>((ref) {
 
 final mapDataProvider = Provider<MapData>((ref) => MapData());
 
-// Provider for min and max CO2 values
 final minMaxGramProvider = StateProvider<MinMaxValues>((ref) {
   final fluxDataListAsync = ref.watch(fluxDataListProvider);
+
   return fluxDataListAsync.maybeWhen(
     data: (dataList) {
       if (dataList.isEmpty) {
@@ -350,9 +338,17 @@ final minMaxGramProvider = StateProvider<MinMaxValues>((ref) {
               double.tryParse(fluxData.dataCfluxGram ?? '0.0') ?? 0.0)
           .toList();
 
+      if (cO2List.length == 1) {
+        final singleValue = cO2List.first;
+        return MinMaxValues(
+          minV: singleValue,
+          maxV: singleValue + 1.0, // ✅ Ensures valid range
+        );
+      }
+
       return MinMaxValues(
-        minV: cO2List.reduce((a, b) => a < b ? a : b), // Min value
-        maxV: cO2List.reduce((a, b) => a > b ? a : b), // Max value
+        minV: cO2List.reduce(min), // Min value
+        maxV: cO2List.reduce(max), // Max value
       );
     },
     orElse: () =>

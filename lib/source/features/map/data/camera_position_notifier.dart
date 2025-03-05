@@ -100,8 +100,12 @@ final cameraPositionProvider =
 );
 
 final latestDataPointProvider = Provider<FluxData?>((ref) {
-  return ref.watch(fluxDataListProvider).maybeWhen(
-        data: (dataList) => dataList.isNotEmpty ? dataList.last : null,
-        orElse: () => null,
+  final dataList = ref.watch(fluxDataListProvider).maybeWhen(
+        data: (data) => List.from(data),
+        orElse: () => [],
       );
+
+  print(
+      "📍 Latest Data Provider Updated: ${dataList.isNotEmpty ? dataList.last : 'No data'}");
+  return dataList.isNotEmpty ? dataList.last : null;
 });
