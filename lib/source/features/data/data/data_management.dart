@@ -1,32 +1,20 @@
-import 'dart:async';
-import 'package:csv/csv.dart';
-import 'package:flutter/services.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter_map/flutter_map.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:latlong2/latlong.dart';
-import 'package:intl/intl.dart';
-
-//import 'package:hive/hive.dart';
-
 import 'package:terratrace/source/features/data/domain/flux_data.dart';
 import 'package:terratrace/source/features/project_manager/data/project_managment.dart';
 
-final projectNameProvider =
-    StateNotifierProvider<ProjectNameValueNotifier, String>(
-        (ref) => ProjectNameValueNotifier());
 
-class ProjectNameValueNotifier extends StateNotifier<String> {
-  ProjectNameValueNotifier() : super('');
+// class ProjectNameValueNotifier extends StateNotifier<String> {
+//   ProjectNameValueNotifier() : super('');
 
-  setProjectName(String value) {
-    state = value;
-  }
+//   setProjectName(String value) {
+//     state = value;
+//   }
 
-  void clearProjectName() {
-    state = '';
-  }
-}
+//   void clearProjectName() {
+//     state = '';
+//   }
+// }
 
 class SearchValueNotifier extends StateNotifier<String> {
   SearchValueNotifier() : super('');
@@ -63,7 +51,7 @@ class SortData {
 }
 
 final fluxDataListProvider = StreamProvider<List<FluxData>>((ref) async* {
-  final projectManager = ref.watch(projectManagementProvider);
+  final projectManager = ref.watch(projectManagementProvider.notifier);
   final project = ref.watch(projectNameProvider);
   final searchValue = ref.watch(searchValueProvider);
 
@@ -94,7 +82,7 @@ final listLengthProvider = Provider.autoDispose<int>((ref) {
   );
 });
 
-//draws a marker omn the mao  when selected in Data List
+//draws a marker on the map  when selected in Data List
 final selectedFluxDataProvider =
     StateNotifierProvider<SelectedFluxDataNotifier, List<FluxData>>((ref) {
   return SelectedFluxDataNotifier();
@@ -106,7 +94,9 @@ class SelectedFluxDataNotifier extends StateNotifier<List<FluxData>> {
   void toggleFluxData(FluxData fluxData) {
     if (state.contains(fluxData)) {
       state = state.where((data) => data != fluxData).toList();
+
     } else {
+            print("new Point added");
       state = [...state, fluxData];
     }
   }
@@ -116,42 +106,42 @@ class SelectedFluxDataNotifier extends StateNotifier<List<FluxData>> {
   }
 }
 
-final markersProvider2 = Provider<Set<Marker>>((ref) {
-  final selectedData = ref.watch(selectedFluxDataProvider);
-  return selectedData
-      .map((data) => Marker(
-            point: LatLng(
-              double.parse(data.dataLat!),
-              double.parse(data.dataLong!),
-            ),
-            width: 80,
-            height: 80,
-            child: GestureDetector(
-              // onTap: () => _showInfoWindow(, data),
-              child: Icon(
-                Icons.location_on,
-                color: Colors.red,
-                size: 40.0,
-              ),
-            ),
-          ))
-      .toSet();
-});
+// final markersProvider2 = Provider<Set<Marker>>((ref) {
+//   final selectedData = ref.watch(selectedFluxDataProvider);
+//   return selectedData
+//       .map((data) => Marker(
+//             point: LatLng(
+//               double.parse(data.dataLat!),
+//               double.parse(data.dataLong!),
+//             ),
+//             width: 80,
+//             height: 80,
+//             child: GestureDetector(
+//               // onTap: () => _showInfoWindow(, data),
+//               child: Icon(
+//                 Icons.location_on,
+//                 color: Colors.red,
+//                 size: 40.0,
+//               ),
+//             ),
+//           ))
+//       .toSet();
+// });
 
-void _showInfoWindow(BuildContext context, FluxData data) {
-  showDialog(
-    context: context,
-    builder: (ctx) => AlertDialog(
-      title: Text(data.dataSite ?? 'No Title'),
-      content: Text(data.dataCfluxGram ?? 'No Content'),
-      actions: <Widget>[
-        TextButton(
-          child: Text('Close'),
-          onPressed: () {
-            Navigator.of(ctx).pop();
-          },
-        ),
-      ],
-    ),
-  );
-}
+// void _showInfoWindow(BuildContext context, FluxData data) {
+//   showDialog(
+//     context: context,
+//     builder: (ctx) => AlertDialog(
+//       title: Text(data.dataSite ?? 'No Title'),
+//       content: Text(data.dataCfluxGram ?? 'No Content'),
+//       actions: <Widget>[
+//         TextButton(
+//           child: Text('Close'),
+//           onPressed: () {
+//             Navigator.of(ctx).pop();
+//           },
+//         ),
+//       ],
+//     ),
+//   );
+// }

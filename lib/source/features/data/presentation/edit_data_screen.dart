@@ -63,7 +63,7 @@ class _EditFluxDataScreenState extends ConsumerState<EditDataScreen> {
                 onPressed: () async {
                   if (_formKey.currentState!.validate()) {
                     final projectManagement =
-                        ref.read(projectManagementProvider);
+                        ref.read(projectManagementProvider.notifier);
 
                     await projectManagement.updateFluxData(
                         widget.projectName,

@@ -1,41 +1,100 @@
 import 'dart:async';
-import 'dart:math';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart' as gl;
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' as mp;
 import 'package:terratrace/source/features/data/data/data_management.dart';
 import 'package:terratrace/source/features/data/domain/flux_data.dart';
+import 'package:terratrace/source/features/map/data/active_button_notifier.dart';
 import 'package:terratrace/source/features/map/data/heat_map_notifier.dart';
 
-class CameraPositionNotifier extends StateNotifier<mp.CameraOptions> {
+/// 🎯 CameraState model
+class CameraState {
+  final mp.CameraOptions cameraOptions;
+  final String mode; // "none", "latestPoint", "ownPosition"
+
+  CameraState({required this.cameraOptions, this.mode = "none"});
+
+  CameraState copyWith({mp.CameraOptions? cameraOptions, String? mode}) {
+    return CameraState(
+      cameraOptions: cameraOptions ?? this.cameraOptions,
+      mode: mode ?? this.mode,
+    );
+  }
+}
+
+class CameraPositionNotifier extends StateNotifier<CameraState> {
   final Ref ref;
   StreamSubscription<gl.Position>? userPositionStream;
-  String cameraMode = "none"; // ✅ "latestPoint", "ownPosition", or "none"
 
   CameraPositionNotifier(this.ref)
-      : super(mp.CameraOptions(
-          center: mp.Point(
-              coordinates: mp.Position(13.4050, 52.5200)), // Default: Berlin
-          zoom: 13,
-        )) {
-    // ✅ Listen for changes in the latest data point
+      : super(CameraState(
+        cameraOptions: _createCameraOptions(lat: 38.7993, lng: -122.8469),
+        mode: 'none',
+      )) {
+    _listenToDataUpdates();
+    _listenToUserLocation();
+  }
+
+  void flyToLocation(double longitude, double latitude) {
+    final newPosition = _createCameraOptions(lat: latitude, lng: longitude);
+    state = state.copyWith(cameraOptions: newPosition);
+    _mapboxMapController?.flyTo(
+        newPosition, mp.MapAnimationOptions(duration: 2000));
+
+    // Deactivate tracking modes
+    state = state.copyWith(mode: 'none');
+    // Update active button state
+    ref.read(activeButtonProvider.notifier).setActiveButton('none');
+  }
+  /// ✅ **Manually initialize camera position (Called from `initState()`)**
+  /// ✅ **Initialize camera once data is available**
+  void initializeCamera() {
+    final latestPoint = ref.read(latestDataPointProvider);
+
+    if (latestPoint != null) {
+      print("📍 Initializing camera to latest data point.");
+      _flyToLocation(
+        double.tryParse(latestPoint.dataLong ?? '-122.8469') ?? -122.8469,
+        double.tryParse(latestPoint.dataLat ?? '38.7993') ?? 38.7993,
+      );
+    } else {
+      print("🟢 Waiting for data before setting initial camera...");
+      _waitForDataAndSetCamera();
+    }
+  }
+
+  /// 🔄 **Wait until `latestDataPointProvider` has data**
+  void _waitForDataAndSetCamera() {
     ref.listen<FluxData?>(latestDataPointProvider, (prev, latestPoint) {
-      if (cameraMode == "latestPoint" && latestPoint != null) {
+      if (latestPoint != null) {
+        print("✅ Data is available! Setting camera to latest point...");
         _flyToLocation(
-          double.tryParse(latestPoint.dataLong ?? '13.4050') ?? 13.4050,
-          double.tryParse(latestPoint.dataLat ?? '52.5200') ?? 52.5200,
+          double.tryParse(latestPoint.dataLong ?? '-122.8469') ?? -122.8469,
+          double.tryParse(latestPoint.dataLat ?? '38.7993') ?? 38.7993,
         );
       }
     });
+  }
 
-    // ✅ Listen for changes in the user's position
+  void _listenToDataUpdates() {
+    ref.listen<FluxData?>(latestDataPointProvider, (prev, latestPoint) {
+      if (state.mode == "latestPoint" && latestPoint != null) {
+        _flyToLocation(
+          double.tryParse(latestPoint.dataLong ?? '-122.8469') ?? -122.8469,
+          double.tryParse(latestPoint.dataLat ?? '38.7993') ?? 38.7993,
+        );
+      }
+    });
+  }
+
+  void _listenToUserLocation() {
     userPositionStream = gl.Geolocator.getPositionStream(
       locationSettings: gl.LocationSettings(
         accuracy: gl.LocationAccuracy.high,
         distanceFilter: 1,
       ),
     ).listen((gl.Position? position) {
-      if (cameraMode == "ownPosition" && position != null) {
+      if (state.mode == "ownPosition" && position != null) {
         _flyToLocation(position.longitude, position.latitude);
       }
     });
@@ -43,39 +102,33 @@ class CameraPositionNotifier extends StateNotifier<mp.CameraOptions> {
 
   /// 🚀 Move the camera to a specified location smoothly
   void _flyToLocation(double longitude, double latitude) {
-    final newPosition = mp.CameraOptions(
-      center: mp.Point(coordinates: mp.Position(longitude, latitude)),
-      zoom: 13,
-    );
-
-    state = newPosition;
+    final newPosition = _createCameraOptions(lat: latitude, lng: longitude);
+    state = state.copyWith(cameraOptions: newPosition);
     _mapboxMapController?.flyTo(
         newPosition, mp.MapAnimationOptions(duration: 2000));
   }
 
-  /// 🎯 **Toggle camera mode** (latest data point, own position, or manual)
+  /// **📌 Toggle camera mode**
   void toggleCameraMode(String mode) {
-    if (cameraMode == mode) {
-      // ✅ If the same button is tapped again, turn off tracking
-      cameraMode = "none";
+    if (state.mode == mode) {
+      state = state.copyWith(mode: "none");
       print("🛑 Camera tracking disabled.");
-    } else {
-      // ✅ Enable tracking for the selected mode
-      cameraMode = mode;
-      print("🔄 Camera mode set to: $cameraMode");
+      return;
+    }
 
-      // ✅ Move to the correct position immediately
-      if (mode == "latestPoint") {
-        final latestPoint = ref.read(latestDataPointProvider);
-        if (latestPoint != null) {
-          _flyToLocation(
-            double.tryParse(latestPoint.dataLong ?? '13.4050') ?? 13.4050,
-            double.tryParse(latestPoint.dataLat ?? '52.5200') ?? 52.5200,
-          );
-        }
-      } else if (mode == "ownPosition") {
-        _moveToOwnPosition();
+    state = state.copyWith(mode: mode);
+    print("🔄 Camera mode set to: ${state.mode}");
+
+    if (mode == "latestPoint") {
+      final latestPoint = ref.read(latestDataPointProvider);
+      if (latestPoint != null) {
+        _flyToLocation(
+          double.tryParse(latestPoint.dataLong ?? '-122.8469') ?? -122.8469,
+          double.tryParse(latestPoint.dataLat ?? '38.7993') ?? 38.7993,
+        );
       }
+    } else if (mode == "ownPosition") {
+      _moveToOwnPosition();
     }
   }
 
@@ -89,23 +142,34 @@ class CameraPositionNotifier extends StateNotifier<mp.CameraOptions> {
     }
   }
 
+  /// ✅ Helper function to create camera options
+  static mp.CameraOptions _createCameraOptions({
+    required double lat,
+    required double lng,
+  }) {
+    return mp.CameraOptions(
+      center: mp.Point(coordinates: mp.Position(lng, lat)),
+      zoom: 13,
+    );
+  }
+
   mp.MapboxMap? get _mapboxMapController =>
       ref.read(heatmapProvider.notifier).getMapboxController();
 }
 
 /// 📌 **Register Provider for CameraPositionNotifier**
 final cameraPositionProvider =
-    StateNotifierProvider<CameraPositionNotifier, mp.CameraOptions>(
+    StateNotifierProvider<CameraPositionNotifier, CameraState>(
   (ref) => CameraPositionNotifier(ref),
 );
 
+/// **📌 Get the latest data point**
 final latestDataPointProvider = Provider<FluxData?>((ref) {
   final dataList = ref.watch(fluxDataListProvider).maybeWhen(
         data: (data) => List.from(data),
         orElse: () => [],
       );
 
-  print(
-      "📍 Latest Data Provider Updated: ${dataList.isNotEmpty ? dataList.last : 'No data'}");
   return dataList.isNotEmpty ? dataList.last : null;
 });
+

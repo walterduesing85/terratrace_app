@@ -98,6 +98,7 @@ flutter:
   - assets/.env
   - assets/black-dot.png
   - assets/flux_data.csv
+  - assets/marker_tt.png
 
   fonts:
   - family: Barlow

@@ -3,12 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:terratrace/source/common_widgets/async_value_widget.dart';
 import 'package:terratrace/source/features/authentication/authentication_managment.dart';
 import 'package:terratrace/source/features/project_manager/data/project_managment.dart';
+import 'package:terratrace/source/features/project_manager/presentation/project_card_drawer.dart';
 
 import 'package:terratrace/source/features/project_manager/presentation/remote_project_card.dart';
 import 'sign_in_form.dart'; // Import the SignInForm widget
 
 class RemoteProjectsTab extends ConsumerWidget {
-  const RemoteProjectsTab({Key? key}) : super(key: key);
+  const RemoteProjectsTab({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -19,12 +20,12 @@ class RemoteProjectsTab extends ConsumerWidget {
         if (user == null) {
           return SignInForm(); // Show the SignInForm when not signed in
         } else {
-          return AsyncValueWidget<List<RemoteProjectCard>>(
-            value: ref.watch(remoteProjectsCardStreamProvider2),
-            data: (remoteProjectCards) => ListView.builder(
-              itemCount: remoteProjectCards.length,
+          return AsyncValueWidget<List<ProjectCardDrawer>>(
+            value: ref.watch(projectCardStreamProvider),
+            data: (projectCards) => ListView.builder(
+              itemCount: projectCards.length,
               itemBuilder: (context, index) {
-                return remoteProjectCards[index];
+                return projectCards[index];
               },
             ),
           );

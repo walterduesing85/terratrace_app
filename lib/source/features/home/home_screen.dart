@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:terratrace/source/common_widgets/rounded_button.dart';
 import 'package:terratrace/source/features/data/data/data_management.dart';
+import 'package:terratrace/source/features/project_manager/data/project_managment.dart';
 import 'package:terratrace/source/routing/app_router.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -33,9 +34,8 @@ class _HomeScrenState extends State<HomeScreen> {
                         buttonColor: const Color.fromRGBO(64, 75, 96, 1),
                         buttonText: 'Create new project',
                         goTo: () {
-
                           ref
-                              .read(projectNameProvider.notifier)
+                              .read(projectManagementProvider.notifier)
                               .setProjectName('');
 
                           context

@@ -6,110 +6,18 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:terratrace/source/features/authentication/authentication_managment.dart';
-import 'package:terratrace/source/features/data/data/data_management.dart';
 import 'package:terratrace/source/features/data/domain/flux_data.dart';
-
 import 'package:terratrace/source/features/project_manager/domain/project.dart';
-import 'package:terratrace/source/features/project_manager/presentation/project_card_drawer.dart';
 import 'package:terratrace/source/features/project_manager/presentation/remote_project_card.dart';
 import 'package:terratrace/source/features/user/domain/user_managment.dart';
 
-class ProjectState {
-  final String projectName;
-  final List<FluxData> fluxDataList;
-
-  ProjectState({required this.projectName, required this.fluxDataList});
-
-  ProjectState copyWith({String? projectName, List<FluxData>? fluxDataList}) {
-    return ProjectState(
-      projectName: projectName ?? this.projectName,
-      fluxDataList: fluxDataList ?? this.fluxDataList,
-    );
-  }
-
-  ProjectState clear() {
-    return ProjectState(projectName: "", fluxDataList: []);
-  }
-}
-
-class ProjectManagementNotifier extends StateNotifier<ProjectState> {
-  ProjectManagementNotifier(this.ref)
-      : super(ProjectState(projectName: "", fluxDataList: []));
-
-  final Ref ref;
+class ProjectManagement {
   final projectCollection = FirebaseFirestore.instance.collection('projects');
   final userCollection = FirebaseFirestore.instance.collection('users');
 
   Timer? _simulationTimer;
   List<FluxData> _sortedFluxData = [];
   int _currentIndex = 0;
-
-  setProjectName(String value) {
-    state = state.copyWith(
-        projectName:
-            value); // ✅ Correct: Update `projectName` within `ProjectState`
-  }
-
-  void clearProjectName() {
-    state = state.copyWith(
-        projectName: ""); // ✅ Correct: Clear project name within `ProjectState`
-  }
-
-  /// **📂 Load project data from Firestore**
-  Future<void> loadProject(String projectName) async {
-    print("📂 Loading project: $projectName");
-
-    final snapshot =
-        await projectCollection.doc(projectName).collection('data').get();
-
-    final newFluxData = snapshot.docs.map((doc) {
-      return FluxData(
-        dataSite: doc['dataSite'],
-        dataLong: doc['dataLong'],
-        dataLat: doc['dataLat'],
-        dataPress: doc['dataPress'],
-        dataTemp: doc['dataTemp'],
-        dataDate: doc['dataDate'],
-        dataNote: doc['dataNote'] ?? 'none',
-        dataInstrument: doc['dataInstrument'],
-        dataCflux: doc['dataCflux'],
-        dataSoilTemp: doc['dataSoilTemp'] ?? 'none',
-        dataCfluxGram: doc['dataCfluxGram'],
-        dataOrigin: doc['dataOrigin'],
-        dataKey: doc['dataKey'],
-      );
-    }).toList();
-
-    // ✅ Update state with loaded data
-    state = state.copyWith(fluxDataList: newFluxData);
-
-    print(
-        "✅ Project loaded: ${state.projectName} with ${newFluxData.length} data points.");
-  }
-
-  /// **▶️ Start Flux Data Simulation**
-  void startFluxSimulation() async {
-    if (state.projectName.isEmpty) {
-      print("🚨 ERROR: Cannot start simulation without a project name!");
-      return;
-    }
-
-    await loadAndSortFluxData();
-    print("▶️ Starting simulation for ${state.projectName}...");
-
-    _simulationTimer?.cancel(); // Cancel any existing simulation
-
-    _simulationTimer =
-        Timer.periodic(const Duration(seconds: 5), (timer) async {
-      if (_currentIndex < _sortedFluxData.length) {
-        await addFluxDataToFirebase(
-            state.projectName, _sortedFluxData[_currentIndex]);
-        _currentIndex++;
-      } else {
-        timer.cancel(); // Stop when all data has been uploaded
-      }
-    });
-  }
 
   /// **Load and parse CSV, then sort data by date**
   Future<void> loadAndSortFluxData() async {
@@ -151,7 +59,25 @@ class ProjectManagementNotifier extends StateNotifier<ProjectState> {
     _currentIndex = 0;
   }
 
-  /// **⏹ Stop Flux Data Simulation**
+  /// **Simulate real-time flux data injection to Firestore**
+  void startFluxSimulation(String projectName) {
+    print(
+        "Starting simulation... and sorted data length is ${_sortedFluxData.length}");
+    _simulationTimer?.cancel(); // Cancel existing simulation if running
+
+    _simulationTimer =
+        Timer.periodic(const Duration(seconds: 5), (timer) async {
+      if (_currentIndex < _sortedFluxData.length) {
+        await addFluxDataToFirebase(
+            projectName, _sortedFluxData[_currentIndex]);
+        _currentIndex++;
+      } else {
+        timer.cancel(); // Stop when all data has been uploaded
+      }
+    });
+  }
+
+  /// **Stop the simulation**
   void stopFluxSimulation() {
     _simulationTimer?.cancel();
   }
@@ -176,64 +102,6 @@ class ProjectManagementNotifier extends StateNotifier<ProjectState> {
       });
     } catch (e) {
       debugPrint('Error adding flux data: $e');
-    }
-  }
-
-  /// **🗑 Delete a Project**
-  Future<void> deleteFireStoreProject(
-      String projectName, BuildContext context) async {
-    try {
-      final projectDoc = await projectCollection.doc(projectName).get();
-
-      if (!projectDoc.exists) {
-        throw Exception("Project does not exist.");
-      }
-
-      final projectData = projectDoc.data();
-      final members = projectData?['members'] ?? {}; // Get project members
-
-      // Start a batch operation to delete references efficiently
-      final batch = FirebaseFirestore.instance.batch();
-
-      // Remove project reference from each user's "projects" field
-      for (String userId in members.keys) {
-        final userDocRef =
-            FirebaseFirestore.instance.collection('users').doc(userId);
-        batch.update(userDocRef, {
-          'projects.$projectName': FieldValue.delete(),
-        });
-      }
-
-      // Delete the project document
-      batch.delete(projectCollection.doc(projectName));
-
-      // Commit batch operation
-      await batch.commit();
-    } catch (e) {
-      _showErrorDialog(context, e.toString());
-    }
-  }
-
-  /// **🛠 Update Flux Data in Firestore**
-  Future<void> updateFluxData(String projectName, String dataKey,
-      Map<String, dynamic> updatedFields) async {
-    try {
-      await projectCollection
-          .doc(projectName)
-          .collection('data')
-          .doc(dataKey)
-          .update(updatedFields);
-    } catch (e) {
-      debugPrint('Error updating FluxData: $e');
-    }
-  }
-
-  /// **📂 Create a new Firestore Project**
-  Future<void> createFireStoreProject(String projectName) async {
-    try {
-      await projectCollection.doc(projectName).set({});
-    } catch (e) {
-      debugPrint('Error creating project: $e');
     }
   }
 
@@ -302,6 +170,61 @@ class ProjectManagementNotifier extends StateNotifier<ProjectState> {
     });
   }
 
+  Future<void> createFireStoreProject(String projectName) async {
+    try {
+      await projectCollection.doc(projectName).set({});
+    } catch (e) {
+      debugPrint('Error creating project: $e');
+    }
+  }
+
+  Future<void> deleteFireStoreProject(
+      String projectName, BuildContext context) async {
+    try {
+      final projectDoc = await projectCollection.doc(projectName).get();
+
+      if (!projectDoc.exists) {
+        throw Exception("Project does not exist.");
+      }
+
+      final projectData = projectDoc.data();
+      final members = projectData?['members'] ?? {}; // Get project members
+
+      // Start a batch operation to delete references efficiently
+      final batch = FirebaseFirestore.instance.batch();
+
+      // Remove project reference from each user's "projects" field
+      for (String userId in members.keys) {
+        final userDocRef =
+            FirebaseFirestore.instance.collection('users').doc(userId);
+        batch.update(userDocRef, {
+          'projects.$projectName': FieldValue.delete(),
+        });
+      }
+
+      // Delete the project document
+      batch.delete(projectCollection.doc(projectName));
+
+      // Commit batch operation
+      await batch.commit();
+    } catch (e) {
+      _showErrorDialog(context, e.toString());
+    }
+  }
+
+  Future<void> updateFluxData(String projectName, String dataKey,
+      Map<String, dynamic> updatedFields) async {
+    try {
+      await projectCollection
+          .doc(projectName)
+          .collection('data')
+          .doc(dataKey)
+          .update(updatedFields);
+    } catch (e) {
+      debugPrint('Error updating FluxData: $e');
+    }
+  }
+
   void _showErrorDialog(BuildContext context, String errorMessage) {
     showDialog(
       context: context,
@@ -319,21 +242,19 @@ class ProjectManagementNotifier extends StateNotifier<ProjectState> {
   }
 }
 
-/// ✅ **Provider for `ProjectManagementNotifier`**
-final projectManagementProvider =
-    StateNotifierProvider<ProjectManagementNotifier, ProjectState>((ref) {
-  return ProjectManagementNotifier(ref);
+final projectManagementProvider = Provider<ProjectManagement>((ref) {
+  return ProjectManagement();
 });
 
-final projectNameProvider = Provider<String>((ref) {
+
+final remoteProjectStreamProvider =
+    StreamProvider.autoDispose<List<Project>>((ref) {
   final projectManagement = ref.watch(projectManagementProvider);
-  return projectManagement.projectName;
+  return projectManagement.projectsStream;
 });
-
-
-final projectCardStreamProvider =
-    StreamProvider.autoDispose<List<ProjectCardDrawer>>((ref) {
-  final projectManagement = ref.watch(projectManagementProvider.notifier);
+final remoteProjectsCardStreamProvider2 =
+    StreamProvider.autoDispose<List<RemoteProjectCard>>((ref) {
+  final projectManagement = ref.watch(projectManagementProvider);
   final userAsync = ref.watch(currentUserStateProvider);
 
   return userAsync.when(
@@ -353,7 +274,7 @@ final projectCardStreamProvider =
                   ? const Icon(Icons.how_to_reg, color: Colors.blue)
                   : const Icon(Icons.person, color: Colors.grey);
 
-          return ProjectCardDrawer(
+          return RemoteProjectCard(
             project: project.name ?? 'Unnamed Project',
             membershipStatus: membershipStatus,
           );
@@ -367,3 +288,4 @@ final projectCardStreamProvider =
     },
   );
 });
+

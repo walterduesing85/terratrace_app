@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-
-import 'package:terratrace/source/features/data/data/data_management.dart';
 import 'package:terratrace/source/features/project_manager/data/project_managment.dart';
-
 import 'package:terratrace/source/routing/app_router.dart';
 
 class RemoteProjectCard extends StatelessWidget {
@@ -52,7 +49,7 @@ class RemoteProjectCard extends StatelessWidget {
                       ),
                       onPressed: () async {
                         ref
-                            .watch(projectManagementProvider)
+                            .watch(projectManagementProvider.notifier)
                             .deleteFireStoreProject(project, context);
                       },
                     ),
@@ -76,7 +73,7 @@ class RemoteProjectCard extends StatelessWidget {
                     if (membershipStatus.icon == Icons.how_to_reg ||
                         membershipStatus.icon == Icons.card_membership) {
                       await ref
-                          .read(projectNameProvider.notifier)
+                          .read(projectManagementProvider.notifier)
                           .setProjectName(project);
 
                       context.pushNamed(AppRoute.mapScreen.name);

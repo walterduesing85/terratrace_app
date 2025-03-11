@@ -4,7 +4,7 @@ import 'dart:math';
 
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
+import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' as mp;
 import 'package:terratrace/source/features/data/data/data_management.dart';
 import 'package:terratrace/source/features/map/data/heat_map_notifier.dart';
 
@@ -39,82 +39,26 @@ class MapData {
       return normalized;
     }).toList();
   }
-
-  Future<void> initializeMarkerLayer(
-      MapboxMap mapboxMap, List<FluxData> fluxDataList, Ref ref) async {
-    print("📍 Initializing marker layer with ${fluxDataList.length} points.");
-
-    final pointAnnotationManager =
-        await mapboxMap.annotations.createPointAnnotationManager();
-    await pointAnnotationManager.deleteAll();
-
-    if (fluxDataList.isNotEmpty) {
-      final ByteData bytes = await rootBundle.load('assets/black-dot.png');
-      final Uint8List imageData = bytes.buffer.asUint8List();
-
-      List<PointAnnotationOptions> pointAnnotations = fluxDataList.map((data) {
-        final lat = double.tryParse(data.dataLat ?? '') ?? 0.0;
-        final lng = double.tryParse(data.dataLong ?? '') ?? 0.0;
-
-        return PointAnnotationOptions(
-          geometry: Point(coordinates: Position(lng, lat)),
-          image: imageData,
-          iconSize: 0.08,
-        );
-      }).toList();
-
-      await pointAnnotationManager.createMulti(pointAnnotations);
-
-      pointAnnotationManager.addOnPointAnnotationClickListener(
-        CustomPointAnnotationClickListener(fluxDataList, ref),
-      );
-    }
-  }
-
-  Future<void> addNewMarker(
-      MapboxMap mapboxMap, List<FluxData> newPoints, Ref ref) async {
-    print("📍 Adding ${newPoints.length} new markers.");
-
-    final pointAnnotationManager =
-        await mapboxMap.annotations.createPointAnnotationManager();
-
-    if (newPoints.isNotEmpty) {
-      final ByteData bytes = await rootBundle.load('assets/black-dot.png');
-      final Uint8List imageData = bytes.buffer.asUint8List();
-
-      List<PointAnnotationOptions> pointAnnotations = newPoints.map((data) {
-        final lat = double.tryParse(data.dataLat ?? '') ?? 0.0;
-        final lng = double.tryParse(data.dataLong ?? '') ?? 0.0;
-
-        return PointAnnotationOptions(
-          geometry: Point(coordinates: Position(lng, lat)),
-          image: imageData,
-          iconSize: 0.08,
-        );
-      }).toList();
-
-      await pointAnnotationManager.createMulti(pointAnnotations);
-    }
-  }
 }
 
 /// ✅ Custom class to handle marker taps
 class CustomPointAnnotationClickListener
-    extends OnPointAnnotationClickListener {
+    extends mp.OnPointAnnotationClickListener {
   final List<FluxData> fluxDataList;
   final Ref ref; // ✅ Use `Ref` instead of `WidgetRef`
 
   CustomPointAnnotationClickListener(this.fluxDataList, this.ref);
 
   @override
-  void onPointAnnotationClick(PointAnnotation annotation) {
+  void onPointAnnotationClick(mp.PointAnnotation annotation) {
     print("📍 Marker tapped: ${annotation.geometry}");
 
     final tappedFluxData = fluxDataList.firstWhere(
       (data) {
         final lat = double.tryParse(data.dataLat ?? '') ?? 0.0;
         final lng = double.tryParse(data.dataLong ?? '') ?? 0.0;
-        return annotation.geometry == Point(coordinates: Position(lng, lat));
+        return annotation.geometry ==
+            mp.Point(coordinates: mp.Position(lng, lat));
       },
       orElse: () => FluxData(dataLat: "0.0", dataLong: "0.0"),
     );
@@ -181,88 +125,76 @@ class MapState {
 class MapStateNotifier extends StateNotifier<MapState> {
   final Ref ref;
 
+  mp.PointAnnotationManager? _selectedAnnotationManager;
+
   MapStateNotifier(this.ref)
       : super(MapState(rangeValues: MinMaxValues(minV: 0.0, maxV: 1.0))) {
-    // ✅ Listen for changes in `fluxDataListProvider` to update the heatmap
-    ref.listen<AsyncValue<List<FluxData>>>(fluxDataListProvider, (prev, next) {
-      next.when(
-        data: (fluxDataList) async {
-          print("🔥 Flux data updated (${fluxDataList.length} points)");
+    // ✅ Listen for changes to the selected data
 
-          final mapboxMap =
-              ref.read(heatmapProvider.notifier).getMapboxController();
-          if (mapboxMap == null) {
-            print("⚠️ Mapbox controller is NULL. Skipping marker updates.");
-            return;
-          }
-
-          // ✅ If no previous data, initialize markers
-          if (prev == null || prev is! AsyncData<List<FluxData>>) {
-            print("📍 First-time marker initialization.");
-            await ref
-                .read(mapDataProvider)
-                .initializeMarkerLayer(mapboxMap, fluxDataList, ref);
-            return;
-          }
-
-          // ✅ Detect new points & add only them
-          final oldList = prev.value;
-          final newPoints =
-              fluxDataList.where((point) => !oldList.contains(point)).toList();
-          if (newPoints.isNotEmpty) {
-            print("🆕 Adding new points: ${newPoints.length}");
-            await ref
-                .read(mapDataProvider)
-                .addNewMarker(mapboxMap, newPoints, ref);
-          }
-
-          // ✅ Only update heatmap source, no need to refresh entire heatmap
-          print("🔄 Updating heatmap source...");
-          await ref
-              .read(heatmapProvider.notifier)
-              .updateHeatmapSource(fluxDataList);
-        },
-        loading: () => print("⏳ Flux data is loading..."),
-        error: (err, stack) => print("❌ Error loading flux data: $err"),
-      );
+    ref.listen<List<FluxData>>(selectedFluxDataProvider, (prev, next) async {
+      print("📍 Selected FluxData updated: ${next.length} points");
+      await updateSelectedAnnotations();
     });
   }
 
-  /// ✅ Initializes the heatmap using available flux data and add markers
-  Future<void> initHeatmap(Ref ref) async {
-    final geoJson = await ref.watch(geoJsonProvider.future);
-    final intensities = await ref.watch(intensityProvider.future);
-    final rangeValues = ref.read(rangeValuesProvider);
+  final List<mp.PointAnnotation> selectedAnnotations = [];
 
-    // ✅ Ensure correct type casting to `List<FluxData>`
-    final List<FluxData> fluxDataList =
-        ref.read(fluxDataListProvider).maybeWhen(
-              data: (data) => data.cast<FluxData>(), // Explicit cast
-              orElse: () => [],
-            );
+  Future<void> updateSelectedAnnotations() async {
+    print("📍 Updating Selected Annotations...");
 
-    state = state.copyWith(
-      geoJson: geoJson,
-      intensities: intensities,
-      rangeValues: rangeValues,
-      fluxDataList: fluxDataList, // ✅ Now correctly typed
-    );
+    final selectedData = ref.read(selectedFluxDataProvider);
 
-    // ✅ Update markers when initializing map
+    // ✅ Get Mapbox controller
     final mapboxMap = ref.read(heatmapProvider.notifier).getMapboxController();
-    if (mapboxMap != null) {
-      ref
-          .read(mapDataProvider)
-          .initializeMarkerLayer(mapboxMap, fluxDataList, ref);
-  
-    } else {
-      print("⚠️ Mapbox controller is NULL during initialization.");
+    if (mapboxMap == null) {
+      print("⚠️ Mapbox controller is NULL. Cannot update annotations.");
+      return;
     }
 
-    // ✅ Trigger heatmap update
-    ref
-        .read(heatmapProvider.notifier)
-        .updateHeatmapLayer(ref.read(heatmapLayerProvider));
+    // ✅ Create (or reuse) the annotation manager for selected annotations
+    if (_selectedAnnotationManager == null) {
+      _selectedAnnotationManager =
+          await mapboxMap.annotations.createPointAnnotationManager();
+      print("✅ Created new SelectedAnnotationManager.");
+    }
+
+    if (_selectedAnnotationManager == null) {
+      print("🚨 ERROR: Failed to initialize SelectedAnnotationManager!");
+      return;
+    }
+
+    // ✅ Clear previous selected annotations using deleteAll()
+    print("🗑 Removing previous selected annotations...");
+    await _selectedAnnotationManager!.deleteAll();
+    selectedAnnotations.clear();
+
+    if (selectedData.isNotEmpty) {
+      print("🖼 Loading marker icon for selected data...");
+      final ByteData bytes = await rootBundle.load('assets/marker_tt.png');
+      final Uint8List imageData = bytes.buffer.asUint8List();
+
+      print("📍 Creating annotations for ${selectedData.length} points...");
+      List<mp.PointAnnotationOptions> annotationOptions =
+          selectedData.map((data) {
+        final lat = double.tryParse(data.dataLat ?? '') ?? 0.0;
+        final lng = double.tryParse(data.dataLong ?? '') ?? 0.0;
+
+        return mp.PointAnnotationOptions(
+            geometry: mp.Point(coordinates: mp.Position(lng, lat)),
+            image: imageData,
+            iconSize: 1.0,
+            iconAnchor: mp.IconAnchor.BOTTOM);
+      }).toList();
+
+      // ✅ Remove null values before adding new annotations
+      final newAnnotations =
+          await _selectedAnnotationManager!.createMulti(annotationOptions);
+      selectedAnnotations
+          .addAll(newAnnotations.whereType<mp.PointAnnotation>());
+    }
+
+    print(
+        "✅ Selected Annotations updated: ${selectedAnnotations.length} points");
   }
 
   /// ✅ UI Functions to modify `MapState`

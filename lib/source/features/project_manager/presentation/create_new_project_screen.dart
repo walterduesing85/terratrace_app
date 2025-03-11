@@ -5,8 +5,6 @@ import 'package:go_router/go_router.dart';
 import 'package:terratrace/source/common_widgets/custom_appbar.dart';
 import 'package:terratrace/source/constants/constants.dart';
 import 'package:terratrace/source/features/authentication/authentication_managment.dart';
-import 'package:terratrace/source/features/data/data/data_management.dart';
-
 import 'package:terratrace/source/features/project_manager/data/project_managment.dart';
 import 'package:terratrace/source/features/project_manager/domain/create_new_project.dart';
 import 'package:terratrace/source/routing/app_router.dart';
@@ -87,7 +85,7 @@ class ProjectQuestions extends ConsumerWidget {
                       user,
                     );
                 ref
-                    .watch(projectManagementProvider)
+                    .watch(projectManagementProvider.notifier)
                     .getFluxDataStream(projectName);
                 // ✅ Prevents using context if the widget is unmounted
                 if (!context.mounted) return;
@@ -109,7 +107,7 @@ class ProjectNameQuestion extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return TextField(
       onChanged: (value) {
-        ref.read(projectNameProvider.notifier).setProjectName(value);
+        ref.read(projectManagementProvider.notifier).setProjectName(value);
       },
       onSubmitted: (value) {
         ref.read(currentQuestionProvider.notifier).state++;

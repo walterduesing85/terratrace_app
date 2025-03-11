@@ -1,7 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rflutter_alert/rflutter_alert.dart';
 import 'package:terratrace/source/constants/constants.dart';
+import 'package:terratrace/source/features/authentication/authentication_managment.dart';
+import 'package:terratrace/source/features/user/domain/user_managment.dart';
 
 class UserCard extends StatefulWidget {
   const UserCard({
@@ -73,7 +76,6 @@ class _UserCardState extends State<UserCard> {
       if (docSnapshot.exists) {
         final projectMembers = docSnapshot.get('members') as Map;
         projectMembers[widget.userID] = 'collaborator';
-
         await projectRef.update({'members': projectMembers});
         widget.userProjects![widget.projectName] = 'collaborator';
         await userRef.update({'projects': widget.userProjects});
@@ -89,7 +91,8 @@ class _UserCardState extends State<UserCard> {
       color: Colors.black45,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: Colors.white, width: 0.8), // **Thin white border**
+        side: BorderSide(
+            color: Colors.white, width: 0.8), // **Thin white border**
       ),
       margin: EdgeInsets.symmetric(vertical: 6, horizontal: 12),
       elevation: 4, // **Slight elevation for a "floating" effect**
@@ -112,7 +115,8 @@ class _UserCardState extends State<UserCard> {
                     widget.userName,
                     style: kUserCardHeadeTextStyle.copyWith(
                       fontSize: 14,
-                      color: Colors.white, // **Ensures visibility on dark background**
+                      color: Colors
+                          .white, // **Ensures visibility on dark background**
                     ),
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -120,7 +124,8 @@ class _UserCardState extends State<UserCard> {
                     widget.userMail,
                     style: kUserCardSubtitleTextStyle.copyWith(
                       fontSize: 12,
-                      color: Colors.white70, // **Slightly dimmed for better contrast**
+                      color: Colors
+                          .white70, // **Slightly dimmed for better contrast**
                     ),
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -129,9 +134,36 @@ class _UserCardState extends State<UserCard> {
             ),
 
             /// **➕ Add User Button**
-            IconButton(
-              icon: Icon(Icons.add, color: Colors.white, size: 20),
-              onPressed: () => _addUserToProject(context),
+            Consumer(
+              builder: (context, ref, child) {
+                final currentUserAsync = ref.watch(currentUserStateProvider);
+
+                return currentUserAsync.when(
+                  data: (currentUser) {
+                    if (currentUser == null) {
+                      return const SizedBox(); // Handle case where user is not logged in
+                    }
+
+                    return MaterialButton(
+                      child: Icon(
+                        Icons.add,
+                        color: Colors.blueGrey,
+                        size: 30,
+                      ),
+                      onPressed: () async {
+                        await _addUserToProject(context);
+                        await ref.read(userProvider).addCollaborator(
+                              currentUser.uid, // Correct way to access userID
+                              widget.userID,
+                            );
+                      },
+                    );
+                  },
+                  loading: () =>
+                      CircularProgressIndicator(), // Show a loader while fetching user
+                  error: (error, stack) => Text("Error loading user"),
+                );
+              },
             ),
           ],
         ),

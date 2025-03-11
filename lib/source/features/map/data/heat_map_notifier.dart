@@ -1,5 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
+import 'dart:ui';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' as mp;
 import 'package:terratrace/source/features/data/data/data_management.dart';
@@ -9,7 +12,7 @@ import 'map_data.dart';
 class HeatmapNotifier extends StateNotifier<void> {
   HeatmapNotifier(this.ref) : super(null) {
     // ✅ Ensure the heatmap is initialized properly
-    initHeatmap();
+    // initHeatmap();
 
     // ✅ Listen for changes in flux data to update the heatmap source
     ref.listen<AsyncValue<List<FluxData>>>(fluxDataListProvider, (prev, next) {
@@ -17,6 +20,7 @@ class HeatmapNotifier extends StateNotifier<void> {
         data: (fluxDataList) async {
           print("🔥 Flux data updated (${fluxDataList.length} points)");
           await updateHeatmapSource(fluxDataList);
+          await updateMarkerLayer();
         },
         loading: () => print("⏳ Flux data is loading..."),
         error: (err, stack) => print("❌ Error loading flux data: $err"),
@@ -26,23 +30,39 @@ class HeatmapNotifier extends StateNotifier<void> {
 
   final Ref ref;
   mp.MapboxMap? _mapboxMapController;
-
-  /// ✅ Initialize the heatmap when the provider is first created
-  Future<void> initHeatmap() async {
-    print("🔥 Initializing heatmap...");
-    final fluxDataList = ref.read(fluxDataListProvider).maybeWhen(
-          data: (data) =>
-              data.cast<FluxData>(), // ✅ Explicitly cast to List<FluxData>
-          orElse: () => <FluxData>[], // ✅ Ensure the list type is correct
-        );
-
-    if (fluxDataList.isNotEmpty) {
-      await updateHeatmapSource(fluxDataList);
-    }
-  }
+  mp.PointAnnotationManager? _pointAnnotationManager;
+  mp.PointAnnotationManager? _selectedAnnotationManager;
 
   void setMapboxController(mp.MapboxMap controller) {
     _mapboxMapController = controller;
+  }
+
+  void disposeNotifier() {
+    print("🗑 Disposing HeatmapNotifier...");
+
+    if (_pointAnnotationManager != null) {
+      try {
+        print("🗑 Removing all base markers...");
+        _pointAnnotationManager!.deleteAll();
+      } catch (e) {
+        print("⚠️ Error disposing PointAnnotationManager: $e");
+      } finally {
+        _pointAnnotationManager = null;
+      }
+    }
+
+    if (_selectedAnnotationManager != null) {
+      try {
+        print("🗑 Removing all selected annotations...");
+        _selectedAnnotationManager!.deleteAll();
+      } catch (e) {
+        print("⚠️ Error disposing SelectedAnnotationManager: $e");
+      } finally {
+        _selectedAnnotationManager = null;
+      }
+    }
+
+    _mapboxMapController = null;
   }
 
   /// ✅ Get the current Mapbox controller
@@ -50,53 +70,212 @@ class HeatmapNotifier extends StateNotifier<void> {
     return _mapboxMapController;
   }
 
-  Future<void> updateHeatmapSource(List<FluxData> fluxDataList) async {
+  /// ✅ Initializes the heatmap using available flux data and add markers
+  Future<void> initHeatmap() async {
+    print("🔥 Initializing heatmap...");
+
+    // ✅ Ensure Mapbox controller is available
+    final mapboxMap = ref.read(heatmapProvider.notifier).getMapboxController();
+    if (mapboxMap == null) {
+      print("⚠️ Mapbox controller is NULL during initialization.");
+      return;
+    }
+
+    // ✅ Step 1: First, update the heatmap layer
+    print("🟢 Updating heatmap layer FIRST...");
+    await updateHeatmapLayer(ref.read(heatmapLayerProvider));
+  }
+
+  Future<void> updateHeatmapSource(fluxDataList) async {
     if (_mapboxMapController == null) return;
 
     final style = _mapboxMapController!.style;
+
+    // ✅ Check if the heatmap source already exists
     final hasHeatmapSource =
         (await style.getStyleSources()).any((s) => s?.id == "heatmap-source");
-    final layers = await style.getStyleLayers();
-    final hasHeatmapLayer = layers.any((l) => l?.id == "heatmap-layer");
 
     final geoJsonString = _convertFluxDataToGeoJSON(fluxDataList);
 
     if (hasHeatmapSource) {
+      // ✅ Update existing source instead of adding a new one
       await style.setStyleSourceProperties(
           "heatmap-source", json.encode({"data": json.decode(geoJsonString)}));
+      print("🔥 Updated existing heatmap source.");
     } else {
+      // ✅ Add the source only if it does NOT exist
       await style.addSource(
           mp.GeoJsonSource(id: "heatmap-source", data: geoJsonString));
-      if (hasHeatmapLayer == false) {
-        print("🔥 Adding heatmap layer... from UpdateSOurce");
-        updateHeatmapLayer(ref.read(heatmapLayerProvider));
-      }
+      print("🔥 Added new heatmap source.");
+    }
+
+    // ✅ Ensure heatmap layer exists
+    final layers = await style.getStyleLayers();
+    final hasHeatmapLayer = layers.any((l) => l?.id == "heatmap-layer");
+
+    if (!hasHeatmapLayer) {
+      print("🔥 Adding heatmap layer...");
+      updateHeatmapLayer(ref.read(heatmapLayerProvider));
     }
   }
 
-  Future<void> updateHeatmapLayer(heatmapLayer) async {
+  Future<void> updateHeatmapLayer(mp.HeatmapLayer heatmapLayer) async {
     if (_mapboxMapController == null) {
       print("🚨 ERROR: MapboxMapController is NULL! Cannot update heatmap.");
       return;
     }
 
+    final style = _mapboxMapController!.style;
+    final layers = await style.getStyleLayers();
+
+    final hasHeatmapLayer = layers.any((l) => l?.id == 'heatmap-layer');
+
+    // ✅ Ensure the custom image is only added once
+    if (!layers.any((l) => l?.id == 'marker-icon')) {
+      await addCustomImage(_mapboxMapController!);
+    }
+
+    // ✅ Ensure the heatmap layer exists
+    if (!hasHeatmapLayer) {
+      await style.addLayer(heatmapLayer);
+      print("🔥 Added heatmap layer.");
+    } else {
+      await style.updateLayer(heatmapLayer);
+      print("🔥 Updated heatmap layer.");
+    }
+
+    // ✅ Move marker layer below the heatmap layer
+    final markerLayerIndex = layers.indexWhere((l) => l?.id == 'marker-layer');
+    final heatmapLayerIndex =
+        layers.indexWhere((l) => l?.id == 'heatmap-layer');
+
+    if (markerLayerIndex > heatmapLayerIndex) {
+      print("📍 Moving marker layer below heatmap layer...");
+      await style.moveStyleLayer(
+          'marker-layer', mp.LayerPosition(below: 'heatmap-layer'));
+    }
+  }
+
+  Future<void> updateMarkerLayer() async {
+    if (_mapboxMapController == null) {
+      print("🚨 ERROR: MapboxMapController is NULL! Cannot update heatmap.");
+      return;
+    }
+    final style = _mapboxMapController!.style;
+    final layers = await style.getStyleLayers();
+
+    final hasMarkerLayer = layers.any((l) => l?.id == 'marker-layer');
+
+    // ✅ Ensure the custom image is only added once
+    if (!layers.any((l) => l?.id == 'marker-icon')) {
+      await addCustomImage(_mapboxMapController!);
+    }
+
+    // ✅ Define the marker layer
+    final markerLayer = mp.SymbolLayer(
+      id: 'marker-layer',
+      sourceId: 'heatmap-source', // Ensure this matches your existing source ID
+      iconImage: 'marker-icon', // The ID of the image added to the style
+      iconSize: 0.01, // Adjust the size as needed
+    );
+
+    // ✅ Ensure the marker layer exists
+    if (!hasMarkerLayer) {
+      await style.addLayer(markerLayer);
+      print("📍 Added marker layer.");
+    } else {
+      await style.updateLayer(markerLayer);
+      print("📍 Updated marker layer.");
+    }
+
+    // ✅ Move marker layer below the heatmap layer
+    final markerLayerIndex = layers.indexWhere((l) => l?.id == 'marker-layer');
+    final heatmapLayerIndex =
+        layers.indexWhere((l) => l?.id == 'heatmap-layer');
+
+    if (markerLayerIndex > heatmapLayerIndex) {
+      print("📍 Moving marker layer below heatmap layer...");
+      await style.moveStyleLayer(
+          'marker-layer', mp.LayerPosition(below: 'heatmap-layer'));
+    }
+  }
+
+  Future<void> clearHeatmapLayer() async {
     if (_mapboxMapController == null) return;
 
     final style = _mapboxMapController!.style;
-    final layers = await style.getStyleLayers();
-    final hasHeatmapLayer = layers.any((l) => l?.id == "heatmap-layer");
 
-    if (hasHeatmapLayer) {
-      await style.updateLayer(heatmapLayer);
-      print("🔥 Updated heatmap layer YEAHHH");
-    } else {
-      await style.addLayer(heatmapLayer);
+    // ✅ Remove heatmap layer & source
+    final layers = await style.getStyleLayers();
+    if (layers.any((l) => l?.id == "heatmap-layer")) {
+      await style.removeStyleLayer("heatmap-layer");
+      print("🔥 Removed heatmap layer.");
+    }
+    if (layers.any((l) => l?.id == "marker-layer")) {
+      await style.removeStyleLayer("marker-layer");
+      print("📍 Removed marker layer.");
+    }
+
+    final sources = await style.getStyleSources();
+    if (sources.any((s) => s?.id == "heatmap-source")) {
+      await style.removeStyleSource("heatmap-source");
+      print("🔥 Removed heatmap source.");
+    }
+
+    // ✅ Clear all point annotations
+    if (_selectedAnnotationManager != null) {
+      await _selectedAnnotationManager!.deleteAll();
+      print("🗑 Cleared all selected annotations.");
+    }
+    if (_pointAnnotationManager != null) {
+      await _pointAnnotationManager!.deleteAll();
+      print("🗑 Cleared all point annotations.");
+    }
+  }
+
+  Future<void> addCustomImage(mp.MapboxMap mapboxMap) async {
+    try {
+      // Load the image from assets
+      final ByteData byteData = await rootBundle.load('assets/black-dot.png');
+      final Uint8List imageData = byteData.buffer.asUint8List();
+
+      // Decode the image to get actual width and height
+      final codec = await instantiateImageCodec(imageData);
+      final frame = await codec.getNextFrame();
+      final int imageWidth = frame.image.width;
+      final int imageHeight = frame.image.height;
+
+      // Add the image to the style
+      await mapboxMap.style.addStyleImage(
+        'marker-icon', // Unique ID for the image
+        1, // Scale factor
+        mp.MbxImage(
+          width: imageWidth,
+          height: imageHeight,
+          data: imageData,
+        ),
+        false, // SDF (set true if using signed distance fields)
+        [], // No horizontal stretching
+        [], // No vertical stretching
+        null, // No specific content region
+      );
+
+      print("✅ Custom image 'marker-icon' added to Mapbox style.");
+    } catch (e) {
+      print("🚨 ERROR adding custom image: $e");
     }
   }
 }
 
 final heatmapProvider = StateNotifierProvider<HeatmapNotifier, void>((ref) {
-  return HeatmapNotifier(ref);
+  final notifier = HeatmapNotifier(ref);
+
+  ref.onDispose(() {
+    print("🗑 Disposing HeatmapNotifier manually...");
+    notifier.disposeNotifier();
+  });
+
+  return notifier;
 });
 
 /// ✅ **Provider for HeatmapNotifier**
@@ -178,8 +357,10 @@ MinMaxValues normalizeMinMax(
   double adjustedMin = input.minV.clamp(globalMin, globalMax);
   double adjustedMax = input.maxV.clamp(globalMin, globalMax);
 
-  double normalizedMin = ((adjustedMin - globalMin) / (globalMax - globalMin)) * scalingFactor;
-  double normalizedMax = ((adjustedMax - globalMin) / (globalMax - globalMin)) * scalingFactor;
+  double normalizedMin =
+      ((adjustedMin - globalMin) / (globalMax - globalMin)) * scalingFactor;
+  double normalizedMax =
+      ((adjustedMax - globalMin) / (globalMax - globalMin)) * scalingFactor;
 
   // Ensure a valid range
   if ((normalizedMax - normalizedMin).abs() < 1.0) {
@@ -193,7 +374,6 @@ MinMaxValues normalizeMinMax(
     maxV: normalizedMax,
   );
 }
-
 
 /// ✅ Converts `FluxDataList` to GeoJSON format
 String _convertFluxDataToGeoJSON(List<FluxData> fluxDataList) {

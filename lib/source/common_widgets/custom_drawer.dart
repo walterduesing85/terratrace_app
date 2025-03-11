@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:rflutter_alert/rflutter_alert.dart';
 import 'package:terratrace/source/common_widgets/signin_register_popup.dart';
 import 'package:terratrace/source/constants/constants.dart';
 import 'package:terratrace/source/constants/text_styles.dart';
 import 'package:terratrace/source/features/authentication/authentication_managment.dart';
-import 'package:terratrace/source/features/data/data/data_export.dart';
-import 'package:terratrace/source/features/data/data/data_management.dart';
-import 'package:terratrace/source/features/map/presentation/tab_user.dart';
+import 'package:terratrace/source/features/user/presentation/tab_user.dart';
+import 'package:terratrace/source/features/project_manager/data/project_managment.dart';
+import 'package:terratrace/source/features/project_manager/presentation/remote_projects_tab.dart';
 import 'package:terratrace/source/routing/app_router.dart';
 
 class CustomDrawer extends ConsumerStatefulWidget {
@@ -127,24 +126,8 @@ class _CustomDrawerState extends ConsumerState<CustomDrawer>
                     ),
 
                     /// **📂 Projects Tab**
-                    ListView(
-                      children: [
-                        ListTile(
-                          title: Text('All Projects', style: kDrawerTextStyle),
-                          trailing: Icon(Icons.ballot_outlined,
-                              color: kGreenFluxColor),
-                          onTap: () =>
-                              context.pushNamed(AppRoute.projectmanager.name),
-                        ),
-                        ListTile(
-                          title: Text('New Project', style: kDrawerTextStyle),
-                          trailing: Icon(Icons.add_box_outlined,
-                              color: kGreenFluxColor),
-                          onTap: () => context
-                              .pushNamed(AppRoute.createNewProjectScreen.name),
-                        ),
-                      ],
-                    ),
+
+                    RemoteProjectsTab(),
 
                     /// **👥 Users Tab**
                     TabUser(),

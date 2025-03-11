@@ -66,7 +66,9 @@ Future<void> requestPermissions() async {
   final locationStatus = await Permission.location.request();
   try {
     await Permission.bluetooth.request();
-  } catch (e) {debugPrint(e.toString());}
+  } catch (e) {
+    debugPrint(e.toString());
+  }
   if (locationStatus == PermissionStatus.granted) {
   } else if (locationStatus == PermissionStatus.denied) {
   } else if (locationStatus == PermissionStatus.permanentlyDenied) {
@@ -177,7 +179,7 @@ class MyApp extends StatelessWidget {
           //   _initialized = true;
           // }
 
-          ref.watch(remoteProjectsCardStreamProvider2);
+          //  ref.watch(ProjectCardStreamProvider);
           return MaterialApp.router(
             routerConfig: goRouter,
             debugShowCheckedModeBanner: false,

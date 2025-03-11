@@ -10,8 +10,8 @@ import 'package:terratrace/source/constants/app_colors.dart';
 import 'package:terratrace/source/constants/text_styles.dart';
 import 'package:terratrace/source/features/bar_chart/prensentation/histogram_chart.dart';
 import 'package:terratrace/source/features/data/data/data_management.dart';
-import 'package:terratrace/source/features/data/data/map_provider.dart';
-import 'package:terratrace/source/features/data/domain/flux_data.dart';
+import 'package:terratrace/source/features/map/data/active_button_notifier.dart';
+
 import 'package:terratrace/source/features/map/data/camera_position_notifier.dart';
 import 'package:terratrace/source/features/map/data/heat_map_notifier.dart';
 import 'package:terratrace/source/features/map/data/map_data.dart';
@@ -19,7 +19,7 @@ import 'package:terratrace/source/features/map/presentation/floating_icon_button
 import 'package:terratrace/source/features/map/presentation/map_style_dropdown.dart';
 import 'package:terratrace/source/features/map/presentation/marker_popup_panel.dart';
 import 'package:terratrace/source/features/map/presentation/tab_data.dart';
-import 'package:terratrace/source/features/map/presentation/tab_user.dart';
+
 import 'package:terratrace/source/features/project_manager/data/project_managment.dart';
 
 final panelDraggableProvider = StateProvider<bool>((ref) => true);
@@ -42,89 +42,94 @@ class _HeatMapScreenState extends ConsumerState<HeatMapScreen>
     _tabController = TabController(length: 2, vsync: this);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(mapStateProvider.notifier).initHeatmap;
-      ref.read(cameraPositionProvider.notifier);
+      ref.read(heatmapProvider.notifier).initHeatmap();
+      ref.read(cameraPositionProvider.notifier).initializeCamera();
     });
   }
 
   @override
   void dispose() {
     _tabController.dispose();
+    // ✅ Manually dispose heatmapProvider when leaving
+    ref.read(heatmapProvider.notifier).disposeNotifier();
+
     super.dispose();
   }
 
-  String activeButton = "none"; // Tracks which button is active
   bool isSimulating = false; // Track simulation state
 
   @override
   Widget build(BuildContext context) {
-    final projectManager = ref.watch(projectManagementProvider);
-    return Scaffold(
-      floatingActionButton: FloatingActionButton(
-        onPressed: () async {
-          if (isSimulating) {
-            projectManager.stopFluxSimulation();
-          } else {
-            await projectManager.loadAndSortFluxData();
-            projectManager.startFluxSimulation(ref.read(projectNameProvider));
-          }
-          setState(() {
-            isSimulating = !isSimulating;
-          });
-        },
-        child: Icon(isSimulating ? Icons.stop : Icons.play_arrow),
-      ),
-      drawer: CustomDrawer(),
-      appBar: AppBar(
-        backgroundColor: const Color.fromRGBO(58, 66, 86, 1),
-        title: CustomAppBar(title: ref.read(projectNameProvider)),
-      ),
-      body: SlidingUpPanel(
-        controller: _panelController,
-        minHeight: 60,
-        color: Colors.transparent,
-        panelBuilder: _buildPanelContent,
-        body: Stack(children: [
-          _buildMap(ref),
-          Positioned(
-            top: 50,
-            left: 15,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                FloatingIconButton(
-                    icon: Icons.my_location,
-                    label: "User Position",
-                    isActive: activeButton == "ownPosition",
+    final activeButton = ref.watch(activeButtonProvider);
+    final projectManager = ref.watch(projectManagementProvider.notifier);
+    return PopScope(
+      canPop: false,
+      child: Scaffold(
+        floatingActionButton: FloatingActionButton(
+          onPressed: () async {
+            if (isSimulating) {
+              projectManager.stopFluxSimulation();
+            } else {
+              projectManager.startFluxSimulation();
+            }
+            setState(() {
+              isSimulating = !isSimulating;
+            });
+          },
+          child: Icon(isSimulating ? Icons.stop : Icons.play_arrow),
+        ),
+        drawer: CustomDrawer(),
+        appBar: AppBar(
+          backgroundColor: const Color.fromRGBO(58, 66, 86, 1),
+          title: CustomAppBar(title: ref.read(projectNameProvider)),
+        ),
+        body: SlidingUpPanel(
+          controller: _panelController,
+          minHeight: 60,
+          color: Colors.transparent,
+          panelBuilder: _buildPanelContent,
+          body: Stack(children: [
+            _buildMap(ref),
+            Positioned(
+              top: 50,
+              left: 15,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  FloatingIconButton(
+                      icon: Icons.my_location,
+                      label: "User Position",
+                      isActive: activeButton == "ownPosition",
+                      onTap: () {
+                        ref
+                            .read(cameraPositionProvider.notifier)
+                            .toggleCameraMode('ownPosition');
+                        ref
+                            .read(activeButtonProvider.notifier)
+                            .setActiveButton('ownPosition');
+                      }),
+                  const SizedBox(height: 10), // Space between icons
+                  FloatingIconButton(
+                    icon: Icons.place,
+                    label: "Last Data Point",
+                    isActive: activeButton == "latestPoint",
                     onTap: () {
                       ref
                           .read(cameraPositionProvider.notifier)
-                          .toggleCameraMode("ownPosition");
-                      setState(() => activeButton =
-                          activeButton == "ownPosition"
-                              ? "none"
-                              : "ownPosition");
-                    }),
-                const SizedBox(height: 10), // Space between icons
-                FloatingIconButton(
-                  icon: Icons.place,
-                  label: "Last Data Point",
-                  isActive: activeButton == "latestPoint",
-                  onTap: () {
-                    ref
-                        .read(cameraPositionProvider.notifier)
-                        .toggleCameraMode("latestPoint");
-                    setState(() => activeButton =
-                        activeButton == "latestPoint" ? "none" : "latestPoint");
-                  },
-                ),
-              ],
+                          .toggleCameraMode('latestPoint');
+                      ref
+                          .read(activeButtonProvider.notifier)
+                          .setActiveButton('latestPoint');
+                    },
+                  ),
+                ],
+              ),
             ),
-          ),
 
-          /// ✅ Add the marker popup panel here
-          MarkerPopupPanel(),
-        ]),
+            /// ✅ Add the marker popup panel here
+            MarkerPopupPanel(),
+          ]),
+        ),
       ),
     );
   }
@@ -387,7 +392,7 @@ class _HeatMapScreenState extends ConsumerState<HeatMapScreen>
   }
 
   Widget _buildMap(WidgetRef ref) {
-    final cameraOptions = ref.watch(cameraPositionProvider);
+    final cameraOptions = ref.watch(cameraPositionProvider).cameraOptions;
     final mapStyle = ref.watch(mapStateProvider).mapStyle;
 
     return mp.MapWidget(
@@ -403,16 +408,26 @@ class _HeatMapScreenState extends ConsumerState<HeatMapScreen>
         // ✅ Set initial camera position
         mapboxMap.setCamera(cameraOptions);
       },
-      onStyleLoadedListener: (styleData) {
-        print("🎨 Map style loaded. Reapplying heatmap...");
+      onStyleLoadedListener: (styleData) async {
+        print("🎨 Map style loaded. Initializing heatmap...");
+        await ref.read(heatmapProvider.notifier).initHeatmap();
 
-        // ✅ Apply heatmap **AFTER** style loads
-        ref
-            .read(heatmapProvider.notifier)
-            .updateHeatmapLayer(ref.read(heatmapLayerProvider));
-
-        // ✅ Initialize heatmap **AFTER** style loads
-        ref.read(heatmapProvider.notifier).initHeatmap();
+        print("📍 Ensuring annotations are updated...");
+        await ref.read(mapStateProvider.notifier).updateSelectedAnnotations();
+        ref.read(fluxDataListProvider).when(
+              data: (fluxDataList) async {
+                print("Flux data updated (${fluxDataList.length} points)");
+                ref
+                    .read(heatmapProvider.notifier)
+                    .updateHeatmapSource(fluxDataList);
+                ref.read(heatmapProvider.notifier).updateMarkerLayer();
+                ref
+                    .read(heatmapProvider.notifier)
+                    .updateHeatmapLayer(ref.read(heatmapLayerProvider));
+              },
+              loading: () => print("Flux data is loading..."),
+              error: (err, stack) => print("Error loading flux data: $err"),
+            );
       },
     );
   }
