@@ -257,7 +257,7 @@ final rangeValuesProvider = StateProvider<MinMaxValues>((ref) {
 final mapDataProvider = Provider<MapData>((ref) => MapData());
 
 final minMaxGramProvider = StateProvider<MinMaxValues>((ref) {
-  final fluxDataListAsync = ref.watch(fluxDataListProvider);
+  final fluxDataListAsync = ref.watch(selectedDataSetProvider);
 
   return fluxDataListAsync.maybeWhen(
     data: (dataList) {
@@ -266,8 +266,7 @@ final minMaxGramProvider = StateProvider<MinMaxValues>((ref) {
       }
 
       final cO2List = dataList
-          .map((fluxData) =>
-              double.tryParse(fluxData.dataCfluxGram ?? '0.0') ?? 0.0)
+          .map((fluxData) => double.tryParse(fluxData ?? '0.0') ?? 0.0)
           .toList();
 
       if (cO2List.length == 1) {

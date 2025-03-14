@@ -1,20 +1,58 @@
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:terratrace/source/features/data/domain/flux_data.dart';
 import 'package:terratrace/source/features/project_manager/data/project_managment.dart';
 
+/// **1️⃣ Select the Flux Type (Dropdown-controlled)**
+class SelectedFluxTypeNotifier extends StateNotifier<String> {
+  SelectedFluxTypeNotifier() : super("CO2"); // Default selection
+  void setFluxType(String fluxType) {
+    state = fluxType;
+  }
+}
 
-// class ProjectNameValueNotifier extends StateNotifier<String> {
-//   ProjectNameValueNotifier() : super('');
+final selectedFluxTypeProvider =
+    StateNotifierProvider<SelectedFluxTypeNotifier, String>((ref) {
+  return SelectedFluxTypeNotifier();
+});
 
-//   setProjectName(String value) {
-//     state = value;
-//   }
+final selectedDataSetProvider =
+    StreamProvider.autoDispose<List<String>>((ref) async* {
+  final fluxDataList = ref.watch(fluxDataListProvider); // Full dataset
+  final selectedFluxType =
+      ref.watch(selectedFluxTypeProvider); // Selected flux type
 
-//   void clearProjectName() {
-//     state = '';
-//   }
-// }
+  // ✅ Handle loading & error state
+  if (fluxDataList.isLoading) {
+    print("🚀 selectedDataSetProvider is waiting for data...");
+    yield [];
+    return;
+  }
+  if (fluxDataList.hasError) {
+    print("❌ ERROR in selectedDataSetProvider: ${fluxDataList.error}");
+    yield [];
+    return;
+  }
+
+  final dataList = fluxDataList.value ?? [];
+  print('🔥 selectedDataSetProvider - Found ${dataList.length} items');
+
+  // ✅ Filter the dataset only when needed
+  final filteredData = dataList.map((fluxData) {
+    switch (selectedFluxType) {
+      case "Methane":
+        return fluxData.dataCh4fluxGram ?? "0.0";
+      case "VOC":
+        return fluxData.dataVocfluxGram ?? "0.0";
+      case "H2O":
+        return fluxData.dataH2ofluxGram ?? "0.0";
+      default: // CO₂ by default
+        return fluxData.dataCfluxGram ?? "0.0";
+    }
+  }).toList();
+
+  print("✅ Selected dataset updated with ${filteredData.length} values.");
+  yield filteredData; // Emit only when data actually changes
+});
 
 class SearchValueNotifier extends StateNotifier<String> {
   SearchValueNotifier() : super('');
@@ -94,9 +132,8 @@ class SelectedFluxDataNotifier extends StateNotifier<List<FluxData>> {
   void toggleFluxData(FluxData fluxData) {
     if (state.contains(fluxData)) {
       state = state.where((data) => data != fluxData).toList();
-
     } else {
-            print("new Point added");
+      print("new Point added");
       state = [...state, fluxData];
     }
   }

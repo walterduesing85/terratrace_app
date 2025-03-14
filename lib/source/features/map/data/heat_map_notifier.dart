@@ -9,22 +9,29 @@ import 'package:terratrace/source/features/data/data/data_management.dart';
 import 'package:terratrace/source/features/data/domain/flux_data.dart';
 import 'map_data.dart';
 
+final isStyleLoadedProvider = StateProvider<bool>((ref) => false);
+
 class HeatmapNotifier extends StateNotifier<void> {
   HeatmapNotifier(this.ref) : super(null) {
-    // ✅ Ensure the heatmap is initialized properly
-    // initHeatmap();
-
-    // ✅ Listen for changes in flux data to update the heatmap source
+    // Listen for changes in flux data
     ref.listen<AsyncValue<List<FluxData>>>(fluxDataListProvider, (prev, next) {
-      next.when(
-        data: (fluxDataList) async {
-          print("🔥 Flux data updated (${fluxDataList.length} points)");
-          await updateHeatmapSource(fluxDataList);
-          await updateMarkerLayer();
-        },
-        loading: () => print("⏳ Flux data is loading..."),
-        error: (err, stack) => print("❌ Error loading flux data: $err"),
-      );
+      // Ensure that the style has been loaded before executing the heatmap updates
+      final isStyleLoaded = ref.read(isStyleLoadedProvider);
+
+      if (isStyleLoaded) {
+        Future.delayed(Duration(milliseconds: 500), () {
+          print("🔥 Style is loaded. Updating heatmap...");
+          next.when(
+            data: (fluxDataList) async {
+              print("🔥 Flux data updated (${fluxDataList.length} points)");
+              await updateHeatmapSource(fluxDataList);
+              await updateMarkerLayer();
+            },
+            loading: () => print("⏳ Flux data is loading..."),
+            error: (err, stack) => print("❌ Error loading flux data: $err"),
+          );
+        });
+      }
     });
   }
 
@@ -71,20 +78,25 @@ class HeatmapNotifier extends StateNotifier<void> {
   }
 
   /// ✅ Initializes the heatmap using available flux data and add markers
-  Future<void> initHeatmap() async {
-    print("🔥 Initializing heatmap...");
+  // Future<void> initHeatmap() async {
+  //   print("🔥 Initializing heatmap...");
 
-    // ✅ Ensure Mapbox controller is available
-    final mapboxMap = ref.read(heatmapProvider.notifier).getMapboxController();
-    if (mapboxMap == null) {
-      print("⚠️ Mapbox controller is NULL during initialization.");
-      return;
-    }
+  //   // ✅ Ensure Mapbox controller is available
+  //   final mapboxMap = ref.read(heatmapProvider.notifier).getMapboxController();
 
-    // ✅ Step 1: First, update the heatmap layer
-    print("🟢 Updating heatmap layer FIRST...");
-    await updateHeatmapLayer(ref.read(heatmapLayerProvider));
-  }
+  //   // Wait until the map controller is not null
+  //   if (mapboxMap == null) {
+  //     print("⚠️ Mapbox controller is NULL during initialization. Retrying...");
+
+  //     // Retry after a short delay, you can also set a timeout to stop retrying after a certain time
+  //     await Future.delayed(Duration(seconds: 1));
+  //     return initHeatmap(); // Retry initialization
+  //   }
+
+  //   // ✅ Step 1: First, update the heatmap layer
+  //   print("🟢 Updating heatmap layer FIRST...");
+  //   await updateHeatmapLayer(ref.read(heatmapLayerProvider));
+  // }
 
   Future<void> updateHeatmapSource(fluxDataList) async {
     if (_mapboxMapController == null) return;

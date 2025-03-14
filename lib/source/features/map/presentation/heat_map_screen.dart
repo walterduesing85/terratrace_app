@@ -10,12 +10,14 @@ import 'package:terratrace/source/constants/app_colors.dart';
 import 'package:terratrace/source/constants/text_styles.dart';
 import 'package:terratrace/source/features/bar_chart/prensentation/histogram_chart.dart';
 import 'package:terratrace/source/features/data/data/data_management.dart';
+import 'package:terratrace/source/features/data/domain/flux_data.dart';
 import 'package:terratrace/source/features/map/data/active_button_notifier.dart';
 
 import 'package:terratrace/source/features/map/data/camera_position_notifier.dart';
 import 'package:terratrace/source/features/map/data/heat_map_notifier.dart';
 import 'package:terratrace/source/features/map/data/map_data.dart';
 import 'package:terratrace/source/features/map/presentation/floating_icon_button.dart';
+import 'package:terratrace/source/features/map/presentation/flux_type_dropdown.dart';
 import 'package:terratrace/source/features/map/presentation/map_style_dropdown.dart';
 import 'package:terratrace/source/features/map/presentation/marker_popup_panel.dart';
 import 'package:terratrace/source/features/map/presentation/tab_data.dart';
@@ -42,7 +44,7 @@ class _HeatMapScreenState extends ConsumerState<HeatMapScreen>
     _tabController = TabController(length: 2, vsync: this);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(heatmapProvider.notifier).initHeatmap();
+      //ref.read(heatmapProvider.notifier).initHeatmap();
       ref.read(cameraPositionProvider.notifier).initializeCamera();
     });
   }
@@ -247,10 +249,13 @@ class _HeatMapScreenState extends ConsumerState<HeatMapScreen>
                           log(ref.watch(minMaxGramProvider).maxV + 1),
                     )
                   : RangeValues(rangeValues.minV, rangeValues.maxV),
-              min: useLogNormalization ? 0.0 : 0,
-              max: useLogNormalization
-                  ? 1.0
-                  : ref.watch(minMaxGramProvider).maxV,
+              min: useLogNormalization
+                  ? 0.0
+                  : ref
+                      .read(minMaxGramProvider)
+                      .minV, // Ensure min is set to 0 or actual data min
+              max:
+                  useLogNormalization ? 1.0 : ref.read(minMaxGramProvider).maxV,
               divisions: 100,
               labels: RangeLabels(
                 rangeValues.minV.toStringAsFixed(2),
@@ -262,15 +267,18 @@ class _HeatMapScreenState extends ConsumerState<HeatMapScreen>
 
                 final minMaxGram = ref.watch(minMaxGramProvider);
 
+                // If using log normalization, we need to reverse the transformation to get the actual values.
                 double newMin = useLogNormalization
-                    ? (exp(values.start * log(minMaxGram.maxV + 1)) - 1)
-                        .clamp(0.0, minMaxGram.maxV)
-                    : values.start.clamp(0.0, minMaxGram.maxV);
+                    ? (exp(values.start * log(minMaxGram.maxV + 1)) - 1).clamp(
+                        minMaxGram.minV,
+                        minMaxGram.maxV) // Keep min clamped to the data's min
+                    : values.start.clamp(minMaxGram.minV, minMaxGram.maxV);
 
                 double newMax = useLogNormalization
-                    ? (exp(values.end * log(minMaxGram.maxV + 1)) - 1)
-                        .clamp(0.0, minMaxGram.maxV)
-                    : values.end.clamp(0.0, minMaxGram.maxV);
+                    ? (exp(values.end * log(minMaxGram.maxV + 1)) - 1).clamp(
+                        minMaxGram.minV,
+                        minMaxGram.maxV) // Keep max within data's max
+                    : values.end.clamp(minMaxGram.minV, minMaxGram.maxV);
 
                 final minMaxValues = MinMaxValues(minV: newMin, maxV: newMax);
 
@@ -350,8 +358,7 @@ class _HeatMapScreenState extends ConsumerState<HeatMapScreen>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text("Data type:", style: kMapSetting),
-                      SizedBox(height: 10),
-                      Text("Methane", style: kMapSetting),
+                      FluxTypeDropdown()
                     ],
                   ),
                 ),
@@ -408,13 +415,13 @@ class _HeatMapScreenState extends ConsumerState<HeatMapScreen>
         // ✅ Set initial camera position
         mapboxMap.setCamera(cameraOptions);
       },
-      onStyleLoadedListener: (styleData) async {
+      onStyleDataLoadedListener: (styleData) async {
         print("🎨 Map style loaded. Initializing heatmap...");
-        await ref.read(heatmapProvider.notifier).initHeatmap();
+        // await ref.read(heatmapProvider.notifier).initHeatmap();
 
         print("📍 Ensuring annotations are updated...");
         await ref.read(mapStateProvider.notifier).updateSelectedAnnotations();
-        ref.read(fluxDataListProvider).when(
+        ref.watch(fluxDataListProvider).when(
               data: (fluxDataList) async {
                 print("Flux data updated (${fluxDataList.length} points)");
                 ref
@@ -428,6 +435,29 @@ class _HeatMapScreenState extends ConsumerState<HeatMapScreen>
               loading: () => print("Flux data is loading..."),
               error: (err, stack) => print("Error loading flux data: $err"),
             );
+
+        // Set the style-loaded state to true
+        ref.read(isStyleLoadedProvider.notifier).state = true;
+      },
+      onStyleLoadedListener: (styleData) async {
+        print("🎨 Map style loaded. Initializing heatmap...");
+      //  await ref.read(heatmapProvider.notifier).initHeatmap();
+        ref.read(fluxDataListProvider).maybeWhen(
+              data: (fluxDataList) async {
+                print("Flux data updated (${fluxDataList.length} points)");
+                ref
+                    .read(heatmapProvider.notifier)
+                    .updateHeatmapSource(fluxDataList);
+                ref.read(heatmapProvider.notifier).updateMarkerLayer();
+                ref
+                    .read(heatmapProvider.notifier)
+                    .updateHeatmapLayer(ref.read(heatmapLayerProvider));
+              },
+              orElse: () => print("Flux data is loading..."),
+            );
+
+        print("📍 Ensuring annotations are updated...");
+        await ref.read(mapStateProvider.notifier).updateSelectedAnnotations();
       },
     );
   }

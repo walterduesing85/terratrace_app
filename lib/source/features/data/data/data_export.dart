@@ -54,7 +54,6 @@ class DataExport {
       rows.add(fluxDataList[k].dataInstrument!);
       rows.add(fluxDataList[k].dataDate!);
       rows.add(fluxDataList[k].dataCfluxGram!);
-      rows.add(fluxDataList[k].dataOrigin!);
 
       fluxListData.add(rows);
     }

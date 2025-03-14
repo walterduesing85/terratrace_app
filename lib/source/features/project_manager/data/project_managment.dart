@@ -64,6 +64,7 @@ class ProjectManagementNotifier extends StateNotifier<ProjectState> {
 
     final newFluxData = snapshot.docs.map((doc) {
       return FluxData(
+        dataMbus: doc['dataMbus'],
         dataSite: doc['dataSite'],
         dataLong: doc['dataLong'],
         dataLat: doc['dataLat'],
@@ -73,9 +74,11 @@ class ProjectManagementNotifier extends StateNotifier<ProjectState> {
         dataNote: doc['dataNote'] ?? 'none',
         dataInstrument: doc['dataInstrument'],
         dataCflux: doc['dataCflux'],
+        dataVocfluxGram: doc['dataVocfluxGram'],
+        dataCh4fluxGram: doc['dataCh4fluxGram'],
+        dataH2ofluxGram: doc['dataH2ofluxGram'],
         dataSoilTemp: doc['dataSoilTemp'] ?? 'none',
         dataCfluxGram: doc['dataCfluxGram'],
-        dataOrigin: doc['dataOrigin'],
         dataKey: doc['dataKey'],
       );
     }).toList();
@@ -99,8 +102,10 @@ class ProjectManagementNotifier extends StateNotifier<ProjectState> {
 
     _simulationTimer?.cancel(); // Cancel any existing simulation
 
+    print("✅ Flux data loaded and sorted: ${_sortedFluxData.length} points.");
+
     _simulationTimer =
-        Timer.periodic(const Duration(seconds: 5), (timer) async {
+        Timer.periodic(const Duration(seconds: 1), (timer) async {
       if (_currentIndex < _sortedFluxData.length) {
         await addFluxDataToFirebase(
             state.projectName, _sortedFluxData[_currentIndex]);
@@ -111,44 +116,88 @@ class ProjectManagementNotifier extends StateNotifier<ProjectState> {
     });
   }
 
+//Parse scientific notation
+
+  double parseScientificNotation(String value) {
+    try {
+      return double.parse(value.replaceAll(",", ".")); // Convert to decimal
+    } catch (e) {
+      print("🚨 ERROR parsing scientific notation: $value");
+      return 0.0; // Default fallback
+    }
+  }
+
   /// **Load and parse CSV, then sort data by date**
+
   Future<void> loadAndSortFluxData() async {
-    final csvData = await rootBundle.loadString("assets/flux_data.csv");
-    final List<List<dynamic>> csvTable =
-        const CsvToListConverter().convert(csvData);
+    print("📂 Loading and sorting flux data...");
 
-    // Remove header row
-    csvTable.removeAt(0);
+    try {
+      final csvData =
+          await rootBundle.loadString("assets/extracted_flux_data.csv");
+      print(
+          "✅ CSV loaded successfully. First 500 chars:\n${csvData.substring(0, 500)}");
 
-    // Parse rows into `FluxData`
-    _sortedFluxData = csvTable
-        .map((row) => FluxData(
-              dataSite: row[0].toString(),
-              dataLat: row[1].toString(),
-              dataLong: row[2].toString(),
-              dataTemp: row[3].toString(),
-              dataPress: row[4].toString(),
-              dataCflux: row[5].toString(),
-              dataDate: row[9].toString(),
-              dataNote: row[7].toString(),
-              dataInstrument: row[8].toString(),
-              dataCfluxGram: row[10].toString(),
-              dataOrigin: "Simulated",
-              dataKey: DateTime.now()
-                  .millisecondsSinceEpoch
-                  .toString(), // Unique key
-            ))
-        .toList();
+      final List<List<dynamic>> csvTable = const CsvToListConverter(
+        eol: "\n",
+      ).convert(csvData);
 
-    // **Sort by date (oldest first)**
-    DateFormat dateFormat = DateFormat("dd-MM-yyyy HH:mm:s");
-    _sortedFluxData.sort((a, b) {
-      DateTime dateA = dateFormat.parse(a.dataDate!);
-      DateTime dateB = dateFormat.parse(b.dataDate!);
-      return dateA.compareTo(dateB);
-    });
+      if (csvTable.isEmpty || csvTable.length == 1) {
+        print("🚨 ERROR: CSV file is empty or contains only headers.");
+        return;
+      }
 
-    _currentIndex = 0;
+      print("✅ CSV successfully parsed with ${csvTable.length} rows.");
+
+      // Extract headers
+      final headers = csvTable.first;
+      csvTable.removeAt(0); // Remove header row
+
+      // Ensure each row has enough columns
+      _sortedFluxData = csvTable.map((row) {
+        while (row.length < headers.length) {
+          row.add("N/A"); // Fill missing columns
+        }
+
+        return FluxData(
+          dataInstrument: row[0].toString(), // INSTRUMENT S/N
+          dataDate: row[1].toString(), // TIME
+          dataSite: row[2].toString(), // SITE
+          dataPoint: row[3].toString(), // POINT
+          dataLong: row[4].toString(), // LONGITUDE
+          dataLat: row[5].toString(), // LATITUDE
+          dataLocationAccuracy: row[6].toString(), // POSITION_ERROR (m)
+
+          dataTemp: row[9].toString(), // TEMPERATURE (°C)
+          dataPress: row[10].toString(), // PRESSURE (HPa)
+
+
+          dataCflux: row[14].toString(), // FLUX (ppm/sec)
+          dataCfluxGram: row[14].toString(), // FLUX (moles/m²/d)
+          dataCo2RSquared: row[17].toString(), // R²
+          dataCh4fluxGram: row[17].toString(),
+          dataVocfluxGram: row[18].toString(),
+          dataH2ofluxGram: row[19].toString(),
+          dataKey:
+              DateTime.now().millisecondsSinceEpoch.toString(), // Unique key
+        );
+      }).toList();
+
+      print(
+          "✅ Flux data parsed successfully with ${_sortedFluxData.length} points.");
+
+      // **Sort by date (oldest first)**
+      DateFormat dateFormat = DateFormat("dd-MM-yyyy HH:mm:ss");
+      _sortedFluxData.sort((a, b) {
+        DateTime dateA = dateFormat.parse(a.dataDate!);
+        DateTime dateB = dateFormat.parse(b.dataDate!);
+        return dateA.compareTo(dateB);
+      });
+
+      _currentIndex = 0;
+    } catch (e) {
+      print("🚨 ERROR loading CSV: $e");
+    }
   }
 
   /// **⏹ Stop Flux Data Simulation**
@@ -166,12 +215,14 @@ class ProjectManagementNotifier extends StateNotifier<ProjectState> {
         'dataTemp': data.dataTemp,
         'dataPress': data.dataPress,
         'dataCflux': data.dataCflux,
+        'dataVocfluxGram': data.dataVocfluxGram,
+        'dataCh4fluxGram': data.dataCh4fluxGram,
+        'dataH2ofluxGram': data.dataH2ofluxGram,
         'dataDate': data.dataDate,
         'dataNote': data.dataNote,
         'dataSoilTemp': "null",
         'dataInstrument': data.dataInstrument,
         'dataCfluxGram': data.dataCfluxGram,
-        'dataOrigin': data.dataOrigin,
         'dataKey': data.dataKey,
       });
     } catch (e) {
@@ -284,9 +335,11 @@ class ProjectManagementNotifier extends StateNotifier<ProjectState> {
           dataNote: doc['dataNote'] ?? 'none',
           dataInstrument: doc['dataInstrument'],
           dataCflux: doc['dataCflux'],
+          dataVocfluxGram: doc['dataVocfluxGram'],
+          dataCh4fluxGram: doc['dataCh4fluxGram'],
+          dataH2ofluxGram: doc['dataH2ofluxGram'],
           dataSoilTemp: doc['dataSoilTemp'] ?? 'none',
           dataCfluxGram: doc['dataCfluxGram'],
-          dataOrigin: doc['dataOrigin'],
           dataKey: doc['dataKey'],
         );
       }).toList();
@@ -329,7 +382,6 @@ final projectNameProvider = Provider<String>((ref) {
   final projectManagement = ref.watch(projectManagementProvider);
   return projectManagement.projectName;
 });
-
 
 final projectCardStreamProvider =
     StreamProvider.autoDispose<List<ProjectCardDrawer>>((ref) {
