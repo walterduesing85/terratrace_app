@@ -50,7 +50,7 @@ class _MarkerMapScreenState extends ConsumerState<MarkerMapScreen>
 
   @override
   Widget build(BuildContext context) {
-    final cameraPosition = ref.watch(initialCameraPositionProvider);
+    //final cameraPosition = ref.watch(initialCameraPositionProvider);
     final markers = ref.watch(markersProvider2); // Watch the markers provider
 
     return Scaffold(
@@ -128,7 +128,7 @@ class _MarkerMapScreenState extends ConsumerState<MarkerMapScreen>
             FlutterMap(
               mapController: mapController,
               options: MapOptions(
-                initialCenter: cameraPosition,
+                //initialCenter: cameraPosition,
                 initialZoom: 14.0,
                 onMapReady: () {
                   ref

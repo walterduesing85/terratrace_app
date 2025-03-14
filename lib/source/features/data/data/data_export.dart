@@ -46,15 +46,14 @@ class DataExport {
       rows.add(fluxDataList[k].dataSite!);
       rows.add(fluxDataList[k].dataLat!);
       rows.add(fluxDataList[k].dataLong!);
-      rows.add(fluxDataList[k].dataTemp!);
-      rows.add(fluxDataList[k].dataPress!);
+      // rows.add(fluxDataList[k].dataTemp!);
+      // rows.add(fluxDataList[k].dataPress!);
       rows.add(fluxDataList[k].dataCflux!);
-      rows.add(fluxDataList[k].dataSoilTemp!);
+      // rows.add(fluxDataList[k].dataSoilTemp!);
       rows.add(fluxDataList[k].dataNote!);
       rows.add(fluxDataList[k].dataInstrument!);
       rows.add(fluxDataList[k].dataDate!);
       rows.add(fluxDataList[k].dataCfluxGram!);
-      rows.add(fluxDataList[k].dataOrigin!);
 
       fluxListData.add(rows);
     }

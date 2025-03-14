@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -5,16 +6,17 @@ import 'package:terratrace/source/common_widgets/custom_appbar.dart';
 import 'package:terratrace/source/constants/constants.dart';
 import 'package:terratrace/source/features/authentication/authentication_managment.dart';
 import 'package:terratrace/source/features/data/data/data_management.dart';
-import 'package:terratrace/source/features/data/data/sand_box.dart';
+
 import 'package:terratrace/source/features/project_manager/data/project_managment.dart';
 import 'package:terratrace/source/features/project_manager/domain/create_new_project.dart';
 import 'package:terratrace/source/routing/app_router.dart';
+
 import 'sign_in_form.dart';
 
 final currentQuestionProvider = StateProvider<int>((ref) => 0);
 
 class CreateNewProjectScreen extends ConsumerWidget {
-  const CreateNewProjectScreen({Key? key}) : super(key: key);
+  const CreateNewProjectScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -34,14 +36,16 @@ class CreateNewProjectScreen extends ConsumerWidget {
             if (user == null) {
               return SignInForm(); // Show the SignInForm when not signed in
             } else {
-              return SingleChildScrollView(
-                child: Center(
+              return Center(
+                child: SingleChildScrollView(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       ProjectSummary(),
-                      ProjectQuestions(),
+                      ProjectQuestions(
+                        user: user,
+                      ),
                     ],
                   ),
                 ),
@@ -55,73 +59,40 @@ class CreateNewProjectScreen extends ConsumerWidget {
 }
 
 class ProjectQuestions extends ConsumerWidget {
-  const ProjectQuestions({Key? key}) : super(key: key);
+  final User user;
+  const ProjectQuestions({super.key, required this.user});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final currentQuestion = ref.watch(currentQuestionProvider);
-    print("AAAA!!!: $currentQuestion");
+
     return Padding(
       padding: const EdgeInsets.all(8.0),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           if (currentQuestion == 0) ProjectNameQuestion(),
-          if (currentQuestion == 1) BrowseFilesQuestion(),
-          if (currentQuestion == 2)
+          if (currentQuestion == 1)
             ElevatedButton(
               onPressed: () async {
                 final projectName = ref.read(projectNameProvider);
-                print(projectName);
-                final browseFiles = ref.read(browseFilesProvider);
-                print(browseFiles);
-                ref
-                    .read(contextProvider.notifier)
-                    .setContext(context); // Set context here
-                final currentUserAsyncValue =
-                    ref.watch(currentUserStateProvider);
 
-                if (currentUserAsyncValue is AsyncLoading) {
-                  debugPrint('Current user is loading...');
-                  return; // Optionally handle the loading state
-                }
-
-                if (currentUserAsyncValue is AsyncError) {
-                  debugPrint(
-                      'Error retrieving current user: ${currentUserAsyncValue.error}');
-                  return; // Optionally handle the error state
-                }
-
-                final currentUser = currentUserAsyncValue.value;
-
-                if (currentUser == null) {
-                  debugPrint('No user is signed in.');
-                  return; // Handle the case when no user is signed in
-                }
-                print(currentUser);
-                ref.read(currentQuestionProvider.notifier).state = 0;
                 await ref
                     .watch(createNewRemoteProjectProvider)
                     .createNewEmptyProject(
                       projectName,
                       context,
-                      currentUser,
+                      user,
                     );
                 ref
                     .watch(projectManagementProvider)
                     .getFluxDataStream(projectName);
-
-                if (browseFiles) {
-                  await ref.read(sandBoxProvider).browseAllFiles(projectName);
-                  ref
-                      .watch(projectManagementProvider)
-                      .getFluxDataStream(projectName);
-
-                  // Handle loading state if necessary
-                  CircularProgressIndicator();
-                  context.pushNamed(AppRoute.home.name);
-                }
+                // ✅ Prevents using context if the widget is unmounted
+                if (!context.mounted) return;
+                context.pushNamed(AppRoute.mapScreen.name);
+                ref.read(currentQuestionProvider.notifier).state = 0;
               },
               child: const Text('Create Project'),
             ),
@@ -132,6 +103,8 @@ class ProjectQuestions extends ConsumerWidget {
 }
 
 class ProjectNameQuestion extends ConsumerWidget {
+  const ProjectNameQuestion({super.key});
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return TextField(
@@ -157,64 +130,15 @@ class ProjectNameQuestion extends ConsumerWidget {
   }
 }
 
-class BrowseFilesQuestion extends ConsumerWidget {
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Text(
-            'Browse files?',
-            style: TextStyle(
-              fontSize: 20,
-              color: Color.fromRGBO(180, 211, 175, 0.93),
-            ),
-          ),
-          Switch(
-            value: ref.watch(browseFilesProvider),
-            onChanged: (value) {
-              ref.read(browseFilesProvider.notifier).state = value;
-            },
-          ),
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Text(
-              'If you have TextManager files already saved in the Flux Manager folder that you would like to add to this project, enable this option. Otherwise, TerraTrace will only add new FluxManager files to your project.',
-              style: TextStyle(
-                fontSize: 15,
-                color: Color.fromRGBO(180, 211, 175, 0.93),
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ),
-          GestureDetector(
-            onTap: () {
-              ref.read(currentQuestionProvider.notifier).state++;
-            },
-            child: Icon(
-              Icons.arrow_forward,
-              color: const Color.fromRGBO(180, 211, 175, 0.93),
-              size: 100,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class ProjectSummary extends ConsumerWidget {
-  const ProjectSummary({Key? key}) : super(key: key);
+  const ProjectSummary({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final projectName = ref.watch(projectNameProvider);
 
-    final browseFiles = ref.watch(browseFilesProvider);
-
     // Display the summary only if the project name is not empty
-    if (ref.watch(currentQuestionProvider) != 2) {
+    if (ref.watch(currentQuestionProvider) != 1) {
       return Container();
     }
 
@@ -228,13 +152,6 @@ class ProjectSummary extends ConsumerWidget {
             const SizedBox(height: 8),
             Text(
               'Project name: $projectName',
-              style: const TextStyle(
-                fontSize: 18,
-                color: Color.fromRGBO(180, 211, 175, 0.93),
-              ),
-            ),
-            Text(
-              'Browse Files: ${browseFiles ? "Yes" : "No"}',
               style: const TextStyle(
                 fontSize: 18,
                 color: Color.fromRGBO(180, 211, 175, 0.93),

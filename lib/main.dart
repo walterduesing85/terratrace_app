@@ -4,11 +4,12 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:terratrace/source/features/data/data/data_point_watcher.dart';
 import 'package:terratrace/source/features/project_manager/data/project_managment.dart';
 import 'package:terratrace/source/routing/app_router.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'firebase_options.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
 // import 'package:file_picker/file_picker.dart';
 // import 'package:shared_preferences/shared_preferences.dart';
 // import 'package:flutter_blue_plus/flutter_blue_plus.dart';
@@ -27,19 +28,7 @@ Future<void> main() async {
       options: DefaultFirebaseOptions.currentPlatform,
     );
     FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterError;
-
-    // WidgetsFlutterBinding.ensureInitialized();
-    // final prefs = await SharedPreferences.getInstance();
-    // List<String> savedDevices = prefs.getStringList('savedDevices') ?? [];
-
-    // for (var deviceId in savedDevices) {
-    //   BluetoothDevice device = BluetoothDevice.fromId(deviceId);
-    //   try {
-    //     await device.connect(autoConnect: true);
-    //   } catch (e) {
-    //     print('Failed to auto-connect to $deviceId: $e');
-    //   }
-    // }
+    await setupMapBox();
 
     // Run the app in the same zone
     runApp(ProviderScope(child: MyApp()));
@@ -48,8 +37,20 @@ Future<void> main() async {
   });
 }
 
+Future<void> setupMapBox() async {
+  await dotenv.load(fileName: "assets/.env");
+  String? accessToken = dotenv.env['MAPBOX_ACCESS_TOKEN'];
+
+  if (accessToken == null || accessToken.isEmpty) {
+    print("❌ ERROR: Mapbox API key is missing or invalid");
+  } else {
+    print("✅ Mapbox API Key Loaded: $accessToken");
+    MapboxOptions.setAccessToken(accessToken);
+  }
+}
+
 Future<void> requestPermissions() async {
-  final storageStatus = await Permission.storage.request();
+  // final storageStatus = await Permission.storage.request();
   final locationStatus = await Permission.location.request();
   try {
     await Permission.bluetooth.request();
@@ -64,6 +65,10 @@ Future<void> requestPermissions() async {
     print('Location permission permanently denied, opening app settings');
     openAppSettings();
   }
+
+  // Request basic storage permission
+  PermissionStatus storageStatus = await Permission.storage.request();
+
   if (storageStatus == PermissionStatus.granted) {
     print('Storage permission granted');
   } else if (storageStatus == PermissionStatus.denied) {
@@ -71,12 +76,14 @@ Future<void> requestPermissions() async {
   } else if (storageStatus == PermissionStatus.permanentlyDenied) {
     print('Storage permission permanently denied, opening app settings');
     openAppSettings();
+    return;
   }
 
+  // Check if we need MANAGE_EXTERNAL_STORAGE (for Android 11+)
   if (await Permission.manageExternalStorage.isDenied) {
-    // Request MANAGE_EXTERNAL_STORAGE for Android 11+
-    final manageStorageStatus =
+    PermissionStatus manageStorageStatus =
         await Permission.manageExternalStorage.request();
+
     if (!manageStorageStatus.isGranted) {
       print('Manage External Storage permission denied, opening app settings');
       openAppSettings();
@@ -92,7 +99,7 @@ Future<void> requestPermissions() async {
       print('Photos permission denied');
     } else if (photosStatus == PermissionStatus.permanentlyDenied) {
       print('Photos permission permanently denied, opening app settings');
-      await openAppSettings();
+      // await openAppSettings();
     }
   }
 
@@ -105,7 +112,7 @@ Future<void> requestPermissions() async {
     } else if (mediaLibraryStatus == PermissionStatus.permanentlyDenied) {
       print(
           'Media Library permission permanently denied, opening app settings');
-      await openAppSettings();
+      // await openAppSettings();
     }
   }
 }
@@ -163,17 +170,6 @@ class MyApp extends StatelessWidget {
     return ProviderScope(
       child: Consumer(
         builder: (context, ref, _) {
-          // Initialize the DataPointWatcher singleton with the ref
-          final dataPointWatcher = DataPointWatcher(ref);
-
-          // Initialize directly here
-          if (!_initialized) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              dataPointWatcher.watchForFiles();
-            });
-            _initialized = true;
-          }
-
           ref.watch(remoteProjectsCardStreamProvider2);
           return MaterialApp.router(
             routerConfig: goRouter,

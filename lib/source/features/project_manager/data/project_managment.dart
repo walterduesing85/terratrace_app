@@ -17,7 +17,7 @@ class ProjectManagement {
     return projectCollection.snapshots().map((snapshot) {
       return snapshot.docs.map((doc) {
         return Project(
-          name: doc['name'],
+          name: doc.id, //['name'],
           members: doc['members'],
           // Other properties...
         );
@@ -33,7 +33,7 @@ class ProjectManagement {
         .map((snapshot) {
       return snapshot.docs.map((doc) {
         return Project(
-          name: doc['name'],
+          name: doc.id, //['name'],
           members: doc['members'],
           // Other properties...
         );
@@ -49,20 +49,76 @@ class ProjectManagement {
         .snapshots()
         .map((snapshot) {
       return snapshot.docs.map((doc) {
+        final data = doc.data() as Map<String, dynamic>? ?? {};
         return FluxData(
           dataSite: doc['dataSite'],
           dataLong: doc['dataLong'],
           dataLat: doc['dataLat'],
-          dataPress: doc['dataPress'],
-          dataTemp: doc['dataTemp'],
+          // dataPress: doc['dataPress'],
+          // dataTemp: doc['dataTemp'],
           dataDate: doc['dataDate'],
           dataNote: doc['dataNote'] ?? 'none',
           dataInstrument: doc['dataInstrument'],
           dataCflux: doc['dataCflux'],
-          dataSoilTemp: doc['dataSoilTemp'] ?? 'none',
+          // dataSoilTemp: doc['dataSoilTemp'] ?? 'none',
           dataCfluxGram: doc['dataCfluxGram'],
-          dataOrigin: doc['dataOrigin'],
           dataKey: doc['dataKey'],
+
+          // Newly added location parameters
+          dataPoint: data['dataPoint'] ?? 'none',
+          dataLocationAccuracy: data['dataLocationAccuracy'] ?? 'none',
+
+          // Statistical parameters with default values
+          dataSwcAvg: data['dataSwcAvg'] ?? '',
+          dataSoilTempAvg: data['dataSoilTempAvg'] ?? '',
+          dataBarPrAvg: data['dataBarPrAvg'] ?? '',
+          dataAirTempAvg: data['dataAirTempAvg'] ?? '',
+          dataRhAvg: data['dataRhAvg'] ?? '',
+          dataCellTempAvg: data['dataCellTempAvg'] ?? '',
+          dataCellPressAvg: data['dataCellPressAvg'] ?? '',
+          dataWsAvg: data['dataWsAvg'] ?? '',
+          dataWdaAvg: data['dataWdaAvg'] ?? '',
+          dataRadAvg: data['dataRadAvg'] ?? '',
+          dataParAvg: data['dataParAvg'] ?? '',
+
+          dataMbus: (data['dataMbus'] as List<dynamic>?)
+                  ?.map((e) => e.toString())
+                  .toList() ??
+              [],
+          // MAX values for FLX params
+          dataCh4max: data['dataCh4max'] ?? '',
+          dataCo2HiFsmax: data['dataCo2HiFsmax'] ?? '',
+          dataCo2max: data['dataCo2max'] ?? '',
+          dataH2omax: data['dataH2omax'] ?? '',
+          dataVocmax: data['dataVocmax'] ?? '',
+          // Statistical parameters for FLX data
+          dataCo2RSquared: data['dataCo2RSquared'] ?? 'none',
+          dataCo2Slope: data['dataCo2Slope'] ?? 'none',
+
+          dataCo2HiFsRSquared: data['dataCo2HiFsRSquared'] ?? 'none',
+          dataCo2HiFsSlope: data['dataCo2HiFsSlope'] ?? 'none',
+
+          dataVocRSquared: data['dataVocRSquared'] ?? 'none',
+          dataVocSlope: data['dataVocSlope'] ?? 'none',
+
+          dataCh4RSquared: data['dataCh4RSquared'] ?? 'none',
+          dataCh4Slope: data['dataCh4Slope'] ?? 'none',
+
+          dataH20RSquared: data['dataH20RSquared'] ?? 'none',
+          dataH2oSlope: data['dataH2oSlope'] ?? 'none',
+
+          // Flux data
+          dataCo2HiFsflux: data['dataCo2HiFsflux'] ?? 'none',
+          dataCo2HiFsfluxGram: data['dataCo2HiFsfluxGram'] ?? 'none',
+
+          dataVocflux: data['dataVocflux'] ?? 'none',
+          dataVocfluxGram: data['dataVocfluxGram'] ?? 'none',
+
+          dataCh4flux: data['dataCh4flux'] ?? 'none',
+          dataCh4fluxGram: data['dataCh4fluxGram'] ?? 'none',
+
+          dataH2oflux: data['dataH2oflux'] ?? 'none',
+          dataH2ofluxGram: data['dataH2ofluxGram'] ?? 'none',
         );
       }).toList();
     });

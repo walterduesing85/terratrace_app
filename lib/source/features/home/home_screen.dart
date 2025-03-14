@@ -33,8 +33,6 @@ class _HomeScrenState extends State<HomeScreen> {
                         buttonColor: const Color.fromRGBO(64, 75, 96, 1),
                         buttonText: 'Create new project',
                         goTo: () {
-                          ref.read(isRemoteProvider.notifier).state = false;
-                          ref.read(isRemoteProvider.notifier).state = false;
                           ref
                               .read(projectNameProvider.notifier)
                               .setProjectName('');
@@ -44,9 +42,9 @@ class _HomeScrenState extends State<HomeScreen> {
                         });
                   }),
                 ),
-                // const SizedBox(
-                //   height: 40.0,
-                // ),
+                const SizedBox(
+                  height: 30.0,
+                ),
                 Flexible(
                   child: RoundedButton(
                       buttonColor: const Color.fromRGBO(64, 75, 96, 1),
@@ -56,27 +54,17 @@ class _HomeScrenState extends State<HomeScreen> {
                       }),
                 ),
                 const SizedBox(
-                  height: 40.0,
+                  height: 30.0,
                 ),
                 Flexible(
                   child: RoundedButton(
                       buttonColor: const Color.fromRGBO(64, 75, 96, 1),
-                      buttonText: 'MBU1 (CO2)',
+                      buttonText: 'Acquire Data',
                       goTo: () {
                         context.pushNamed(
                           AppRoute.chamberAcquisition.name,
-                          queryParameters: {'type': 'mbu1'},
+                          // queryParameters: {'type': 'mbu1'},
                         );
-                        // context.pushNamed(AppRoute.chamberConnect.name);
-                      }),
-                ),
-                Flexible(
-                  child: RoundedButton(
-                      buttonColor: const Color.fromRGBO(64, 75, 96, 1),
-                      buttonText: 'MBU2 (CH4)',
-                      goTo: () {
-                        context.pushNamed(AppRoute.chamberAcquisition.name,
-                            queryParameters: {'type': 'mbu2'});
                         // context.pushNamed(AppRoute.chamberConnect.name);
                       }),
                 ),

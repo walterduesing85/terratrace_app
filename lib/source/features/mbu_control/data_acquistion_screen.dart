@@ -6,8 +6,7 @@ import 'package:terratrace/source/features/mbu_control/chart_menu.dart';
 import 'package:terratrace/source/features/project_manager/presentation/sign_in_form.dart';
 
 class DataAcquisitionScreenScreen extends ConsumerWidget {
-  final String? type;
-  const DataAcquisitionScreenScreen({Key? key, this.type}) : super(key: key);
+  const DataAcquisitionScreenScreen({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -20,16 +19,13 @@ class DataAcquisitionScreenScreen extends ConsumerWidget {
               appBar: AppBar(
                 backgroundColor: const Color.fromRGBO(58, 66, 86, 1.0),
                 title: CustomAppBar(
-                  title: type == "mbu1"
-                      ? 'MBU1: Select Device'
-                      : "MBU2: Select Device", // Use data when available, or default title
+                  title:
+                      "Select Device", // Use data when available, or default title
                 ),
               ),
               body: SignInForm()); // Show the SignInForm when not signed in
         } else {
-          return BLEScreen(
-            type: type,
-          );
+          return BLEScreen();
         }
       },
       loading: () => const Center(child: CircularProgressIndicator()),

@@ -1,0 +1,363 @@
+{
+  "Terratrace-SSD-MBU": [
+      {
+        "Class": "FLX",
+        "Char": "2A37",
+        "Name": "CO2-HiFs",
+        "MinValue": 0,
+        "MaxValue": 1000000,
+        "Hz": 2,
+        "Unit": "ppm",
+        "Format": "0.00",
+        "Type": "float"
+      },
+      {
+        "Class": "EPV",
+        "Char": "2A38",
+        "Name": "Battery",
+        "MinValue": 0,
+        "MaxValue": 30,
+        "Hz": 1,
+        "Unit": "V",
+        "Format": "0.0",
+        "Type": "float"
+      },
+      {
+        "Class": "EPV",
+        "Char": "2A4C",
+        "Name": "Flow",
+        "MinValue": 0,
+        "MaxValue": 10000,
+        "Hz": 2,
+        "Unit": "SCCM",
+        "Format": "0.0",
+        "Type": "float"
+      },
+      {
+        "Class": "HWA",
+        "Char": "2A39",
+        "Name": "Battery Alarm",
+        "MinValue": 0,
+        "MaxValue": 1,
+        "Hz": "on event",
+        "Unit": "",
+        "Format": "",
+        "Type": "bool"
+      },
+      {
+        "Class": "HWA",
+        "Char": "2A41",
+        "Name": "Flow Alarm",
+        "MinValue": 0,
+        "MaxValue": 1,
+        "Hz": "on event",
+        "Unit": "",
+        "Format": "",
+        "Type": "bool"
+      },
+      {
+        "Class": "CMD",
+        "Char": "2A3D",
+        "Name": "Close AC",
+        "MinValue": 0,
+        "MaxValue": 1,
+        "Event": "Play Button",
+        "Type": "int"
+      },
+      {
+        "Class": "CMD",
+        "Char": "2A3C",
+        "Name": "Open AC",
+        "MinValue": 0,
+        "MaxValue": 1,
+        "Event": "Stop Button",
+        "Type": "int"
+      },
+      {
+        "Class": "CMD",
+        "Char": "2A40",
+        "Name": "Set CO2 Zero",
+        "MinValue": 0,
+        "MaxValue": 1000000,
+        "Event": "User Action",
+        "Type": "int"
+      },
+      {
+        "Class": "CMD",
+        "Char": "2A3F",
+        "Name": "Filter",
+        "MinValue": 0,
+        "MaxValue": 100000,
+        "Event": "User Action",
+        "Type": "int"
+      },
+      {
+        "Class": "CMD",
+        "Char": "2A3E",
+        "Name": "Pump",
+        "MinValue": 0,
+        "MaxValue": 1,
+        "Event": "Play/Stop button",
+        "Type": "int"
+      }
+    ],
+  "Terratrace-LGR-MBU": [
+      {
+        "Class": "FLX",
+        "Char": "2A47",
+        "Name": "CH4",
+        "MinValue": 0,
+        "MaxValue": 1000000,
+        "Hz": 2,
+        "Unit": "ppm",
+        "Format": "0.000E+0",
+        "Type": "float"
+      },
+      {
+        "Class": "FLX",
+        "Char": "2A48",
+        "Name": "CO2",
+        "MinValue": 0,
+        "MaxValue": 1000000,
+        "Hz": 2,
+        "Unit": "ppm",
+        "Format": "0.00",
+        "Type": "float"
+      },
+      {
+        "Class": "FLX",
+        "Char": "2A49",
+        "Name": "H2O",
+        "MinValue": 0,
+        "MaxValue": 1000000,
+        "Hz": 2,
+        "Unit": "ppm",
+        "Format": "0.00",
+        "Type": "float"
+      },
+      {
+        "Class": "EPV",
+        "Char": "2A4A",
+        "Name": "Cell Temperature",
+        "MinValue": 0,
+        "MaxValue": 60,
+        "Hz": 2,
+        "Unit": "°C",
+        "Format": "0.0",
+        "Type": "float"
+      },
+      {
+        "Class": "EPV",
+        "Char": "2A4B",
+        "Name": "Cell Pressure",
+        "MinValue": 0,
+        "MaxValue": 1,
+        "Hz": 2,
+        "Unit": "hPa",
+        "Format": "0.0",
+        "Type": "float"
+      },
+      {
+        "Class": "CMD",
+        "Char": "2A3D",
+        "Name": "Close AC",
+        "MinValue": 0,
+        "MaxValue": 1,
+        "Event": "Play Button",
+        "Type": "int"
+      },
+      {
+        "Class": "CMD",
+        "Char": "2A3C",
+        "Name": "Open AC",
+        "MinValue": 0,
+        "MaxValue": 1,
+        "Event": "Stop Button",
+        "Type": "int"
+      }
+    ],
+
+  "Terratrace-LICOR-MBU":  [
+    {
+      "Class": "EPV",
+      "Char": "2A38",
+      "Name": "Battery",
+      "MinValue": 0,
+      "MaxValue": 30,
+      "Hz": 1,
+      "Unit": "V",
+      "Format": "0.0",
+      "Type": "float"
+    },
+    {
+      "Class": "HWA",
+      "Char": "2A39",
+      "Name": "Battery Alarm",
+      "MinValue": 0,
+      "MaxValue": 1,
+      "Hz": "on event",
+      "Unit": "",
+      "Format": "",
+      "Type": "bool"
+    },
+    {
+      "Class": "HWA",
+      "Char": "2A41",
+      "Name": "Flow Alarm",
+      "MinValue": 0,
+      "MaxValue": 1,
+      "Hz": "on event",
+      "Unit": "",
+      "Format": "",
+      "Type": "bool"
+    },
+    {
+      "Class": "FLX",
+      "Char": "2A48",
+      "Name": "CO2",
+      "MinValue": 0,
+      "MaxValue": 1000000,
+      "Hz": 2,
+      "Unit": "ppm",
+      "Format": "0.00",
+      "Type": "float"
+    },
+    {
+      "Class": "FLX",
+      "Char": "2A49",
+      "Name": "H2O",
+      "MinValue": 0,
+      "MaxValue": 1000000,
+      "Hz": 2,
+      "Unit": "ppm",
+      "Format": "0.00",
+      "Type": "float"
+    },
+    {
+      "Class": "EPV",
+      "Char": "2A4A",
+      "Name": "Cell Temperature",
+      "MinValue": 0,
+      "MaxValue": 60,
+      "Hz": 2,
+      "Unit": "°C",
+      "Format": "0.0",
+      "Type": "float"
+    },
+    {
+      "Class": "EPV",
+      "Char": "2A4B",
+      "Name": "Cell Pressure",
+      "MinValue": 0,
+      "MaxValue": 1,
+      "Hz": 2,
+      "Unit": "hPa",
+      "Format": "0.0",
+      "Type": "float"
+    },
+    {
+      "Class": "EPV",
+      "Char": "2A4C",
+      "Name": "Flow",
+      "MinValue": 0,
+      "MaxValue": 10000,
+      "Hz": 2,
+      "Unit": "SCCM",
+      "Format": "0.0",
+      "Type": "float"
+    },
+    {
+      "Class": "CMD",
+      "Char": "2A3D",
+      "Name": "Close AC",
+      "MinValue": 0,
+      "MaxValue": 1,
+      "Event": "Play Button",
+      "Type": "int"
+    },
+    {
+      "Class": "CMD",
+      "Char": "2A3C",
+      "Name": "Open AC",
+      "MinValue": 0,
+      "MaxValue": 1,
+      "Event": "Stop Button",
+      "Type": "int"
+    },
+    {
+      "Class": "CMD",
+      "Char": "2A3E",
+      "Name": "Pump",
+      "MinValue": 0,
+      "MaxValue": 1,
+      "Event": "Play/Stop button",
+      "Type": "int"
+    }
+  ],
+
+  "Terratrace-AC-MBU": [
+    {
+      "Class": "EPV",
+      "Char": "2A38",
+      "Name": "Battery",
+      "MinValue": 0,
+      "MaxValue": 30,
+      "Hz": 1,
+      "Unit": "V",
+      "Format": "0.0",
+      "Type": "float"
+    },
+    {
+      "Class": "HWA",
+      "Char": "2A39",
+      "Name": "Battery Alarm",
+      "MinValue": 0,
+      "MaxValue": 1,
+      "Hz": "on event",
+      "Unit": "",
+      "Format": "",
+      "Type": "bool"
+    },
+    {
+      "Class": "HWN",
+      "Char": "2A3A",
+      "Name": "AC open",
+      "MinValue": 0,
+      "MaxValue": 1,
+      "Hz": "on event",
+      "Unit": "",
+      "Format": "",
+      "Type": "bool"
+    },
+    {
+      "Class": "HWN",
+      "Char": "2A3B",
+      "Name": "AC closed",
+      "MinValue": 0,
+      "MaxValue": 1,
+      "Hz": "on event",
+      "Unit": "",
+      "Format": "",
+      "Type": "bool"
+    },
+    {
+      "Class": "CMD",
+      "Char": "2A3D",
+      "Name": "Close AC",
+      "MinValue": 0,
+      "MaxValue": 1,
+      "Event": "Play Button",
+      "Type": "int"
+    },
+    {
+      "Class": "CMD",
+      "Char": "2A3C",
+      "Name": "Open AC",
+      "MinValue": 0,
+      "MaxValue": 1,
+      "Event": "Stop Button",
+      "Type": "int"
+    }
+  ]
+}
+

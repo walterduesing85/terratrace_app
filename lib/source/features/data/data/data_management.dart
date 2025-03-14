@@ -10,6 +10,29 @@ import 'package:latlong2/latlong.dart';
 import 'package:terratrace/source/features/data/domain/flux_data.dart';
 import 'package:terratrace/source/features/project_manager/data/project_managment.dart';
 
+final dataPointCountProvider =
+    StateNotifierProvider<DataPointCountValueNotifier, int>(
+        (ref) => DataPointCountValueNotifier());
+
+class DataPointCountValueNotifier extends StateNotifier<int> {
+  DataPointCountValueNotifier() : super(1);
+
+  // Sets the data point count to a specific value.
+  void setDataPointCount(int value) {
+    state = value;
+  }
+
+  // Increments the data point count by one.
+  void increment() {
+    state++;
+  }
+
+  // Clears the count (resets it to zero).
+  void clear() {
+    state = 1;
+  }
+}
+
 final projectNameProvider =
     StateNotifierProvider<ProjectNameValueNotifier, String>(
         (ref) => ProjectNameValueNotifier());
@@ -40,7 +63,6 @@ class SearchValueNotifier extends StateNotifier<String> {
 
 final searchValueTabProvider =
     StateNotifierProvider<SearchValueNotifier, String>((ref) {
-  print('SearchValueNotifier working');
   return SearchValueNotifier();
 });
 
@@ -50,8 +72,6 @@ final searchValueProvider =
 });
 
 //Providers that are set for set up when project is created.. Usually do not change much
-final isRemoteProvider = StateProvider<bool>((ref) => false);
-final browseFilesProvider = StateProvider<bool>((ref) => false);
 
 final sortPreferenceProvider = StateProvider<String>((ref) => 'highest');
 
@@ -67,12 +87,10 @@ final fluxDataListProvider = StreamProvider<List<FluxData>>((ref) async* {
   final projectManager = ref.watch(projectManagementProvider);
   final project = ref.watch(projectNameProvider);
   final searchValue = ref.watch(searchValueProvider);
-
   if (project.isNotEmpty) {
     // Call the function with the required project parameter to get the Stream
     final fluxDataStream = projectManager.getFluxDataStream(project);
     await for (final dataList in fluxDataStream) {
-      print('DataList length: ${dataList.length}');
       yield dataList
           .where((fluxDataEl) =>
               fluxDataEl.dataSite!
@@ -125,7 +143,6 @@ class SelectedFluxDataNotifier extends StateNotifier<List<FluxData>> {
 
   void toggleFluxData(FluxData fluxData) {
     if (state.contains(fluxData)) {
-      print(fluxData.dataCflux);
       state = state.where((data) => data != fluxData).toList();
     } else {
       state = [...state, fluxData];
@@ -176,77 +193,3 @@ void _showInfoWindow(BuildContext context, FluxData data) {
     ),
   );
 }
-
-
-
-// --_-_Section for Mock Data:: !!! ...............................................................................................................
-// --_-_Section for Mock Data:: !!!...      .,....  
-
-
-
-// // Define a StateNotifier to manage the FluxData list
-// class FluxMockDataNotifier extends StateNotifier<List<FluxData>> {
-//   FluxMockDataNotifier() : super([]);
-
-//   void addData(FluxData data) {
-//     state = [...state, data];
-//   }
-// }
-
-// // Create a provider for FluxDataNotifier
-// final fluxMockDataNotifierProvider = StateNotifierProvider<FluxMockDataNotifier, List<FluxData>>((ref) {
-//   return FluxMockDataNotifier();
-// });
-
-// // Function to generate mock FluxData
-// FluxData generateMockFluxData(int index) {
-//   final random = Random();
-//   final dateFormat = DateFormat('yyyy-MM-dd HH:mm:ss');
-  
-//   double randomLat = 52.0 + random.nextDouble() * 2; // Brandenburg latitude range
-//   double randomLong = 12.0 + random.nextDouble() * 2; // Brandenburg longitude range
-//   double randomTemp = 15.0 + random.nextDouble() * 10; // Temperature range 15-25 degrees Celsius
-//   double randomPress = 1000.0 + random.nextDouble() * 20; // Pressure range 1000-1020 hPa
-//   double randomCflux = random.nextDouble() * 10; // Cflux range 0-10
-//   double randomSoilTemp = 10.0 + random.nextDouble() * 10; // Soil temperature range 10-20 degrees Celsius
-//   double randomCfluxGram = random.nextDouble() * 5; // CfluxGram range 0-5
-
-//   return FluxData(
-//     dataSite: 'Site ${index + 1}',
-//     dataLong: randomLong.toString(),
-//     dataLat: randomLat.toString(),
-//     dataTemp: randomTemp.toStringAsFixed(2),
-//     dataPress: randomPress.toStringAsFixed(2),
-//     dataCflux: randomCflux.toStringAsFixed(2),
-//     dataDate: dateFormat.format(DateTime.now().subtract(Duration(days: random.nextInt(30)))),
-//     dataKey: 'key_$index',
-//     dataNote: 'Note ${index + 1}',
-//     dataSoilTemp: randomSoilTemp.toStringAsFixed(2),
-//     dataInstrument: 'Instrument ${random.nextInt(10)}',
-//     dataCfluxGram: randomCfluxGram.toStringAsFixed(2),
-//     dataOrigin: 'Origin ${random.nextInt(5)}',
-//   );
-// }
-
-// DateFormat(String s) {
-// }
-
-// // Stream controller for emitting FluxData
-// final StreamController<FluxData> _fluxMockDataController = StreamController<FluxData>.broadcast();
-
-// // StreamProvider for the FluxData stream
-// final fluxDataListProvider = StreamProvider<List<FluxData>>((ref) {
-//   ref.onDispose(() {
-//     _fluxMockDataController.close();
-//   });
-
-//   // Listen to the FluxDataNotifier and add data to the stream
-//   final fluxMockDataNotifier = ref.watch(fluxMockDataNotifierProvider.notifier);
-//   fluxMockDataNotifier.addListener((state) {
-//     state.forEach((data) {
-//       _fluxMockDataController.add(data);
-//     });
-//   });
-
-//   return _fluxMockDataController.stream.map((event) => ref.read(fluxMockDataNotifierProvider));
-// });

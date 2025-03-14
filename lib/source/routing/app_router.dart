@@ -4,10 +4,12 @@ import 'package:terratrace/source/features/data/presentation/data_list_screen.da
 import 'package:terratrace/source/features/data/presentation/edit_data_screen.dart';
 import 'package:terratrace/source/features/home/home_screen.dart';
 import 'package:terratrace/source/features/map/presentation/map_screen_selector.dart';
+import 'package:terratrace/source/features/mbu_control/reselect_bound.dart';
 import 'package:terratrace/source/features/mbu_control/data_acquistion_screen.dart';
 import 'package:terratrace/source/features/project_manager/presentation/create_new_project_screen.dart';
 import 'package:terratrace/source/features/project_manager/presentation/project_management_screen.dart';
 import 'package:terratrace/source/routing/not_found_screen.dart';
+import 'package:terratrace/source/features/project_manager/presentation/data_table_screen.dart';
 
 enum AppRoute {
   home,
@@ -17,7 +19,9 @@ enum AppRoute {
   mapScreen,
   editDataScreen,
   chamberConnect,
-  chamberAcquisition
+  chamberAcquisition,
+  reselectScreen,
+  dataTableScreen
 }
 
 final goRouter = GoRouter(
@@ -45,6 +49,26 @@ final goRouter = GoRouter(
               builder: (context, state) => const DataListScreen(),
             ),
             GoRoute(
+                path: 'dataTableScreen/:project',
+                name: AppRoute.dataTableScreen.name,
+                builder: (context, state) {
+                  return DataTableScreen(
+                    project: state.pathParameters['project'],
+                  );
+                },
+                routes: [
+                  GoRoute(
+                    path: 'reselectScreen/:samplingPoint',
+                    name: AppRoute.reselectScreen.name,
+                    builder: (context, state) {
+                      return ReselectScreen(
+                        project: state.pathParameters['project'],
+                        samplingPoint: state.pathParameters['samplingPoint'],
+                      );
+                    },
+                  ),
+                ]),
+            GoRoute(
               path: 'mapScreen',
               name: AppRoute.mapScreen.name,
               builder: (context, state) => MapScreenSelector(),
@@ -68,8 +92,8 @@ final goRouter = GoRouter(
               path: 'chamberAcquisition',
               name: AppRoute.chamberAcquisition.name,
               builder: (context, state) => DataAcquisitionScreenScreen(
-                type: state.uri.queryParameters['type'],
-              ),
+                  // type: state.uri.queryParameters['type'],
+                  ),
             ),
           ],
         ),
