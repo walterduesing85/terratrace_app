@@ -406,21 +406,21 @@ class _HeatMapScreenState extends ConsumerState<HeatMapScreen>
       styleUri: mapStyle,
       onMapCreated: (mapboxMap) {
         mapboxMap.location.updateSettings(
-            mp.LocationComponentSettings(enabled: true, pulsingEnabled: true));
+          mp.LocationComponentSettings(enabled: true, pulsingEnabled: true),
+        );
         print("🗺️ Mapbox map created. Initializing...");
 
-        // ✅ Set the controller without calling anything that triggers updates
+        // Set the controller without triggering updates
         ref.read(heatmapProvider.notifier).setMapboxController(mapboxMap);
 
-        // ✅ Set initial camera position
+        // Set the initial camera position
         mapboxMap.setCamera(cameraOptions);
       },
-      onStyleDataLoadedListener: (styleData) async {
-        print("🎨 Map style loaded. Initializing heatmap...");
-        // await ref.read(heatmapProvider.notifier).initHeatmap();
-
-        print("📍 Ensuring annotations are updated...");
+      onStyleLoadedListener: (styleData) async {
+        print("🎨 Map style data loaded. Initializing heatmap...");
+        // Ensure annotations are updated
         await ref.read(mapStateProvider.notifier).updateSelectedAnnotations();
+
         ref.watch(fluxDataListProvider).when(
               data: (fluxDataList) async {
                 print("Flux data updated (${fluxDataList.length} points)");
@@ -428,37 +428,36 @@ class _HeatMapScreenState extends ConsumerState<HeatMapScreen>
                     .read(heatmapProvider.notifier)
                     .updateHeatmapSource(fluxDataList);
                 ref.read(heatmapProvider.notifier).updateMarkerLayer();
-                ref
-                    .read(heatmapProvider.notifier)
-                    .updateHeatmapLayer(ref.read(heatmapLayerProvider));
+                // ref
+                //     .read(heatmapProvider.notifier)
+                //     .updateHeatmapLayer(ref.read(heatmapLayerProvider));
               },
               loading: () => print("Flux data is loading..."),
               error: (err, stack) => print("Error loading flux data: $err"),
             );
-
         // Set the style-loaded state to true
         ref.read(isStyleLoadedProvider.notifier).state = true;
       },
-      onStyleLoadedListener: (styleData) async {
-        print("🎨 Map style loaded. Initializing heatmap...");
-      //  await ref.read(heatmapProvider.notifier).initHeatmap();
-        ref.read(fluxDataListProvider).maybeWhen(
-              data: (fluxDataList) async {
-                print("Flux data updated (${fluxDataList.length} points)");
-                ref
-                    .read(heatmapProvider.notifier)
-                    .updateHeatmapSource(fluxDataList);
-                ref.read(heatmapProvider.notifier).updateMarkerLayer();
-                ref
-                    .read(heatmapProvider.notifier)
-                    .updateHeatmapLayer(ref.read(heatmapLayerProvider));
-              },
-              orElse: () => print("Flux data is loading..."),
-            );
+      // onStyleLoadedListener: (styleData) async {
+      //   print("🎨 Map style loaded. Finalizing setup...");
+      //   // Additional setup after style is fully loaded
+      //   ref.read(fluxDataListProvider).maybeWhen(
+      //         data: (fluxDataList) async {
+      //           print("Flux data updated (${fluxDataList.length} points)");
+      //           ref
+      //               .read(heatmapProvider.notifier)
+      //               .updateHeatmapSource(fluxDataList);
+      //           ref.read(heatmapProvider.notifier).updateMarkerLayer();
+      //           ref
+      //               .read(heatmapProvider.notifier)
+      //               .updateHeatmapLayer(ref.read(heatmapLayerProvider));
+      //         },
+      //         orElse: () => print("Flux data is loading..."),
+      //       );
 
-        print("📍 Ensuring annotations are updated...");
-        await ref.read(mapStateProvider.notifier).updateSelectedAnnotations();
-      },
+      //   // Ensure annotations are updated
+      //   await ref.read(mapStateProvider.notifier).updateSelectedAnnotations();
+      // },
     );
   }
 }
