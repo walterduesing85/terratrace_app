@@ -435,26 +435,8 @@ class _HeatMapScreenState extends ConsumerState<HeatMapScreen>
         // Set the style-loaded state to true
         ref.read(isStyleLoadedProvider.notifier).state = true;
       },
-      // onStyleLoadedListener: (styleData) async {
-      //   print("🎨 Map style loaded. Finalizing setup...");
-      //   // Additional setup after style is fully loaded
-      //   ref.read(fluxDataListProvider).maybeWhen(
-      //         data: (fluxDataList) async {
-      //           print("Flux data updated (${fluxDataList.length} points)");
-      //           ref
-      //               .read(heatmapProvider.notifier)
-      //               .updateHeatmapSource(fluxDataList);
-      //           ref.read(heatmapProvider.notifier).updateMarkerLayer();
-      //           ref
-      //               .read(heatmapProvider.notifier)
-      //               .updateHeatmapLayer(ref.read(heatmapLayerProvider));
-      //         },
-      //         orElse: () => print("Flux data is loading..."),
-      //       );
-
-      //   // Ensure annotations are updated
-      //   await ref.read(mapStateProvider.notifier).updateSelectedAnnotations();
-      // },
+      
+    
     );
   }
 }

@@ -24,13 +24,14 @@ class CameraState {
 
 class CameraPositionNotifier extends StateNotifier<CameraState> {
   final Ref ref;
+  bool hasMovedToLatestPoint = false; // 📌
   StreamSubscription<gl.Position>? userPositionStream;
 
   CameraPositionNotifier(this.ref)
       : super(CameraState(
-        cameraOptions: _createCameraOptions(lat: 38.7993, lng: -122.8469),
-        mode: 'none',
-      )) {
+          cameraOptions: _createCameraOptions(lat: 38.7993, lng: -122.8469),
+          mode: 'none',
+        )) {
     _listenToDataUpdates();
     _listenToUserLocation();
   }
@@ -46,6 +47,7 @@ class CameraPositionNotifier extends StateNotifier<CameraState> {
     // Update active button state
     ref.read(activeButtonProvider.notifier).setActiveButton('none');
   }
+
   /// ✅ **Manually initialize camera position (Called from `initState()`)**
   /// ✅ **Initialize camera once data is available**
   void initializeCamera() {
@@ -63,15 +65,23 @@ class CameraPositionNotifier extends StateNotifier<CameraState> {
     }
   }
 
-  /// 🔄 **Wait until `latestDataPointProvider` has data**
+  /// ✅ **Wait until `latestDataPointProvider` has data**
   void _waitForDataAndSetCamera() {
     ref.listen<FluxData?>(latestDataPointProvider, (prev, latestPoint) {
-      if (latestPoint != null) {
+      if (latestPoint != null && !hasMovedToLatestPoint) {
+        // Check if the camera hasn't been set yet
         print("✅ Data is available! Setting camera to latest point...");
         _flyToLocation(
           double.tryParse(latestPoint.dataLong ?? '-122.8469') ?? -122.8469,
           double.tryParse(latestPoint.dataLat ?? '38.7993') ?? 38.7993,
         );
+
+        // Set flag to true so the camera won't move again
+        hasMovedToLatestPoint = true;
+
+        // Deactivate tracking after flying to the latest point
+        state = state.copyWith(mode: 'none');
+        ref.read(activeButtonProvider.notifier).setActiveButton('none');
       }
     });
   }
@@ -172,4 +182,3 @@ final latestDataPointProvider = Provider<FluxData?>((ref) {
 
   return dataList.isNotEmpty ? dataList.last : null;
 });
-
