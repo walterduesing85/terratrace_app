@@ -33,6 +33,19 @@ class HeatmapNotifier extends StateNotifier<void> {
         });
       }
     });
+
+    // ✅ Listen to changes in selectedDataSetProvider to update chart state
+    ref.listen<AsyncValue<List<String>>>(selectedDataSetProvider, (_, next) {
+      // Ensure that the style has been loaded before executing the heatmap updates
+      final isStyleLoaded = ref.read(isStyleLoadedProvider);
+
+      if (isStyleLoaded) {
+        Future.delayed(Duration(milliseconds: 500), () {
+          print("🔥 Style is loaded. Updating heatmap...");
+          updateHeatmapLayer(ref.read(heatmapLayerProvider));
+        });
+      }
+    });
   }
 
   final Ref ref;
@@ -100,14 +113,15 @@ class HeatmapNotifier extends StateNotifier<void> {
 
   Future<void> updateHeatmapSource(fluxDataList) async {
     if (_mapboxMapController == null) return;
-
+    final selcetedFluxDataList = await ref.read(selectedDataSetProvider.future);
     final style = _mapboxMapController!.style;
 
     // ✅ Check if the heatmap source already exists
     final hasHeatmapSource =
         (await style.getStyleSources()).any((s) => s?.id == "heatmap-source");
 
-    final geoJsonString = _convertFluxDataToGeoJSON(fluxDataList);
+    final geoJsonString =
+        _convertFluxDataToGeoJSON(fluxDataList, selcetedFluxDataList);
 
     if (hasHeatmapSource) {
       // ✅ Update existing source instead of adding a new one
@@ -141,11 +155,6 @@ class HeatmapNotifier extends StateNotifier<void> {
     final layers = await style.getStyleLayers();
 
     final hasHeatmapLayer = layers.any((l) => l?.id == 'heatmap-layer');
-
-    // ✅ Ensure the custom image is only added once
-    if (!layers.any((l) => l?.id == 'marker-icon')) {
-      await addCustomImage(_mapboxMapController!);
-    }
 
     // ✅ Ensure the heatmap layer exists
     if (!hasHeatmapLayer) {
@@ -293,13 +302,13 @@ final heatmapProvider = StateNotifierProvider<HeatmapNotifier, void>((ref) {
 /// ✅ **Provider for HeatmapNotifier**
 final heatmapLayerProvider = Provider<mp.HeatmapLayer>((ref) {
   final mapState = ref.watch(mapStateProvider);
-  final globalMinMax = ref.watch(minMaxGramProvider);
+  //final globalMinMax = ref.watch(minMaxGramProvider);
 
-  final normalizedRange = normalizeMinMax(
-    mapState.rangeValues,
-    globalMinMax.minV,
-    globalMinMax.maxV,
-  );
+  // final normalizedRange = normalizeMinMax(
+  //   mapState.rangeValues,
+  //   globalMinMax.minV,
+  //   globalMinMax.maxV,
+  // );
 
   print(
       "🟢 HeatmapLayerProvider updated: radius=${mapState.radius}, opacity=${mapState.opacity}, rangeValues=${mapState.rangeValues}");
@@ -308,7 +317,7 @@ final heatmapLayerProvider = Provider<mp.HeatmapLayer>((ref) {
     id: "heatmap-layer",
     sourceId: "heatmap-source",
     heatmapWeightExpression: generateDynamicHeatmapWeightExpression(
-        normalizedRange.minV, normalizedRange.maxV),
+        mapState.rangeValues.minV, mapState.rangeValues.maxV),
     heatmapColorExpression: [
       "interpolate",
       ["linear"],
@@ -334,10 +343,6 @@ final heatmapLayerProvider = Provider<mp.HeatmapLayer>((ref) {
 //Method to generate dynamic heatmap weight expression
 List<Object> generateDynamicHeatmapWeightExpression(
     double minWeight, double maxWeight) {
-  if (minWeight >= maxWeight) {
-    maxWeight = minWeight + 0.01; // Prevents identical values
-  }
-
   print("🔍 Generating Weight Expression with: min=$minWeight, max=$maxWeight");
 
   final expression = [
@@ -357,52 +362,74 @@ List<Object> generateDynamicHeatmapWeightExpression(
   return expression;
 }
 
-MinMaxValues normalizeMinMax(
-    MinMaxValues input, double globalMin, double globalMax) {
-  if (globalMax == globalMin) {
-    return MinMaxValues(minV: 1, maxV: 10); // Prevents division by zero
+// MinMaxValues normalizeMinMax(
+//     MinMaxValues input, double globalMin, double globalMax) {
+//   if (globalMax == globalMin) {
+//     return MinMaxValues(minV: 1, maxV: 10); // Prevents division by zero
+//   }
+
+//   // ✅ Scale up normalization to ensure values don't collapse near zero
+//   double scalingFactor = 50.0;
+
+//   double adjustedMin = input.minV.clamp(globalMin, globalMax);
+//   double adjustedMax = input.maxV.clamp(globalMin, globalMax);
+
+//   double normalizedMin =
+//       ((adjustedMin - globalMin) / (globalMax - globalMin)) * scalingFactor;
+//   double normalizedMax =
+//       ((adjustedMax - globalMin) / (globalMax - globalMin)) * scalingFactor;
+
+//   // Ensure a valid range
+//   if ((normalizedMax - normalizedMin).abs() < 1.0) {
+//     normalizedMax = (normalizedMin + 1.0).clamp(1.0, scalingFactor);
+//   }
+
+//   print("🔍 Normalized Min/Max: $normalizedMin - $normalizedMax");
+
+//   return MinMaxValues(
+//     minV: normalizedMin,
+//     maxV: normalizedMax,
+//   );
+// }
+
+/// ✅ Converts `FluxDataList` to GeoJSON format, using a `List<String>` for selected flux data
+String _convertFluxDataToGeoJSON(
+    List<FluxData> fluxDataList, List<String> selectedFluxData) {
+  if (fluxDataList.length != selectedFluxData.length) {
+    throw ArgumentError(
+        'FluxData list and selectedFluxData list must have the same length.');
   }
 
-  // ✅ Scale up normalization to ensure values don't collapse near zero
-  double scalingFactor = 50.0;
+  final features = fluxDataList
+      .asMap()
+      .map((index, fluxData) {
+        // Ensure proper parsing of lat and long values
+        final lat = double.tryParse(fluxData.dataLat ?? '0.0') ?? 0.0;
+        final lng = double.tryParse(fluxData.dataLong ?? '0.0') ?? 0.0;
 
-  double adjustedMin = input.minV.clamp(globalMin, globalMax);
-  double adjustedMax = input.maxV.clamp(globalMin, globalMax);
+        // If the corresponding selectedFluxData value is 'none', ignore this entry
+        if (selectedFluxData[index] == 'none') {
+          return MapEntry(index, null); // Return null if the weight is 'none'
+        }
 
-  double normalizedMin =
-      ((adjustedMin - globalMin) / (globalMax - globalMin)) * scalingFactor;
-  double normalizedMax =
-      ((adjustedMax - globalMin) / (globalMax - globalMin)) * scalingFactor;
+        // Get corresponding weight from selectedFluxData, default to 0.0 if not parsable
+        final weight = double.tryParse(selectedFluxData[index]) ?? 0.0;
 
-  // Ensure a valid range
-  if ((normalizedMax - normalizedMin).abs() < 1.0) {
-    normalizedMax = (normalizedMin + 1.0).clamp(1.0, scalingFactor);
-  }
+        // Constructing the GeoJSON feature
+        final feature = {
+          "type": "Feature",
+          "properties": {"weight": weight},
+          "geometry": {
+            "type": "Point",
+            "coordinates": [lng, lat]
+          }
+        };
 
-  print("🔍 Normalized Min/Max: $normalizedMin - $normalizedMax");
-
-  return MinMaxValues(
-    minV: normalizedMin,
-    maxV: normalizedMax,
-  );
-}
-
-/// ✅ Converts `FluxDataList` to GeoJSON format
-String _convertFluxDataToGeoJSON(List<FluxData> fluxDataList) {
-  final features = fluxDataList.map((fluxData) {
-    final lat = double.tryParse(fluxData.dataLat ?? '0.0') ?? 0.0;
-    final lng = double.tryParse(fluxData.dataLong ?? '0.0') ?? 0.0;
-    final weight = double.tryParse(fluxData.dataCfluxGram ?? '0.0') ?? 1.0;
-
-    return {
-      "type": "Feature",
-      "properties": {"weight": weight},
-      "geometry": {
-        "type": "Point",
-        "coordinates": [lng, lat]
-      }
-    };
-  }).toList();
+        return MapEntry(index, feature);
+      })
+      .values
+      .whereType<Map>()
+      .toList(); // Remove the null entries
 
   return json.encode({"type": "FeatureCollection", "features": features});
 }

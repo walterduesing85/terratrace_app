@@ -10,9 +10,7 @@ import 'package:terratrace/source/constants/app_colors.dart';
 import 'package:terratrace/source/constants/text_styles.dart';
 import 'package:terratrace/source/features/bar_chart/prensentation/histogram_chart.dart';
 import 'package:terratrace/source/features/data/data/data_management.dart';
-import 'package:terratrace/source/features/data/domain/flux_data.dart';
 import 'package:terratrace/source/features/map/data/active_button_notifier.dart';
-
 import 'package:terratrace/source/features/map/data/camera_position_notifier.dart';
 import 'package:terratrace/source/features/map/data/heat_map_notifier.dart';
 import 'package:terratrace/source/features/map/data/map_data.dart';
@@ -21,7 +19,6 @@ import 'package:terratrace/source/features/map/presentation/flux_type_dropdown.d
 import 'package:terratrace/source/features/map/presentation/map_style_dropdown.dart';
 import 'package:terratrace/source/features/map/presentation/marker_popup_panel.dart';
 import 'package:terratrace/source/features/map/presentation/tab_data.dart';
-
 import 'package:terratrace/source/features/project_manager/data/project_managment.dart';
 
 final panelDraggableProvider = StateProvider<bool>((ref) => true);
