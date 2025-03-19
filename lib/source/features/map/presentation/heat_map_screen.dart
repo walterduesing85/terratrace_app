@@ -415,27 +415,19 @@ class _HeatMapScreenState extends ConsumerState<HeatMapScreen>
         mapboxMap.setCamera(cameraOptions);
       },
       onStyleLoadedListener: (styleData) async {
+        final fluxDataList = await ref.read(fluxDataListProvider.future);
         print("🎨 Map style data loaded. Initializing heatmap...");
         // Ensure annotations are updated
         await ref.read(mapStateProvider.notifier).updateSelectedAnnotations();
+        await ref
+            .read(heatmapProvider.notifier)
+            .updateHeatmapSource(fluxDataList);
+        await ref.read(heatmapProvider.notifier).updateMarkerLayer();
 
-        ref.watch(fluxDataListProvider).when(
-              data: (fluxDataList) async {
-                print("Flux data updated  (${fluxDataList.length} points)");
-                ref
-                    .read(heatmapProvider.notifier)
-                    .updateHeatmapSource(fluxDataList);
-                ref.read(heatmapProvider.notifier).updateMarkerLayer();
-                // ref
-                //     .read(heatmapProvider.notifier)
-                //     .updateHeatmapLayer(ref.read(heatmapLayerProvider));
-              },
-              loading: () => print("Flux data is loading..."),
-              error: (err, stack) => print("Error loading flux data: $err"),
-            );
         // Set the style-loaded state to true
         Future.delayed(Duration(seconds: 5), () {
           ref.read(isStyleLoadedProvider.notifier).state = true;
+          print("🎨 Map style loaded. isStyleLoadedProvider: true");
         });
       },
     );

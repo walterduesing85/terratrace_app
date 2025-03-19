@@ -271,6 +271,7 @@ final minMaxGramProvider = StateProvider<MinMaxValues>((ref) {
 
       if (cO2List.length == 1) {
         final singleValue = cO2List.first;
+        print("📊 Single value: $singleValue");
         return MinMaxValues(
           minV: singleValue,
           maxV: singleValue + 1.0, // ✅ Ensures valid range

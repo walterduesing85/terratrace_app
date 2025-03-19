@@ -20,30 +20,31 @@ class HeatmapNotifier extends StateNotifier<void> {
 
       if (isStyleLoaded) {
         print("🔥 Style is loaded. Updating heatmap...");
-        next.when(
-          data: (fluxDataList) async {
-            print("🔥 Flux data updated (${fluxDataList.length} points)");
-            await updateHeatmapSource(fluxDataList);
-            await updateMarkerLayer();
-          },
-          loading: () => print("⏳ Flux data is loading..."),
-          error: (err, stack) => print("❌ Error loading flux data: $err"),
-        );
+        Future.delayed(Duration(milliseconds: 500), () {
+          print("🔥 Style is loaded. Updating heatmap...");
+          next.when(
+            data: (fluxDataList) async {
+              await updateHeatmapSource(fluxDataList);
+              await updateMarkerLayer();
+            },
+            loading: () => print("⏳ Flux data is loading..."),
+            error: (err, stack) => print("❌ Error loading flux data: $err"),
+          );
+        });
       }
     });
 
     // ✅ Listen to changes in selectedDataSetProvider to update chart state
     ref.listen<AsyncValue<List<String>>>(selectedDataSetProvider,
         (_, next) async {
-      final fluxDataList = await ref.read(fluxDataListProvider.future);
       // Ensure that the style has been loaded before executing the heatmap updates
       final isStyleLoaded = ref.read(isStyleLoadedProvider);
       if (isStyleLoaded) {
+        final fluxDataList = await ref.read(fluxDataListProvider.future);
         Future.delayed(Duration(milliseconds: 500), () {
           print("🔥 Style is loaded. Updating heatmap...");
           next.when(
             data: (datat) async {
-              print("🔥 Flux data updated (${fluxDataList.length} points)");
               await updateHeatmapSource(fluxDataList);
               await updateMarkerLayer();
             },
@@ -99,8 +100,12 @@ class HeatmapNotifier extends StateNotifier<void> {
 
   Future<void> updateHeatmapSource(fluxDataList) async {
     if (_mapboxMapController == null) return;
+
     final selcetedFluxDataList = await ref.read(selectedDataSetProvider.future);
     final style = _mapboxMapController!.style;
+
+    print(
+        '🔥 Updating heatmap source with ${fluxDataList.length} points and ${selcetedFluxDataList.length} ');
 
     // ✅ Check if the heatmap source already exists
     final hasHeatmapSource =
