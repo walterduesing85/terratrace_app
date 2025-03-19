@@ -19,10 +19,30 @@ class HeatmapNotifier extends StateNotifier<void> {
       final isStyleLoaded = ref.read(isStyleLoadedProvider);
 
       if (isStyleLoaded) {
+        print("🔥 Style is loaded. Updating heatmap...");
+        next.when(
+          data: (fluxDataList) async {
+            print("🔥 Flux data updated (${fluxDataList.length} points)");
+            await updateHeatmapSource(fluxDataList);
+            await updateMarkerLayer();
+          },
+          loading: () => print("⏳ Flux data is loading..."),
+          error: (err, stack) => print("❌ Error loading flux data: $err"),
+        );
+      }
+    });
+
+    // ✅ Listen to changes in selectedDataSetProvider to update chart state
+    ref.listen<AsyncValue<List<String>>>(selectedDataSetProvider,
+        (_, next) async {
+      final fluxDataList = await ref.read(fluxDataListProvider.future);
+      // Ensure that the style has been loaded before executing the heatmap updates
+      final isStyleLoaded = ref.read(isStyleLoadedProvider);
+      if (isStyleLoaded) {
         Future.delayed(Duration(milliseconds: 500), () {
           print("🔥 Style is loaded. Updating heatmap...");
           next.when(
-            data: (fluxDataList) async {
+            data: (datat) async {
               print("🔥 Flux data updated (${fluxDataList.length} points)");
               await updateHeatmapSource(fluxDataList);
               await updateMarkerLayer();
@@ -30,19 +50,6 @@ class HeatmapNotifier extends StateNotifier<void> {
             loading: () => print("⏳ Flux data is loading..."),
             error: (err, stack) => print("❌ Error loading flux data: $err"),
           );
-        });
-      }
-    });
-
-    // ✅ Listen to changes in selectedDataSetProvider to update chart state
-    ref.listen<AsyncValue<List<String>>>(selectedDataSetProvider, (_, next) {
-      // Ensure that the style has been loaded before executing the heatmap updates
-      final isStyleLoaded = ref.read(isStyleLoadedProvider);
-
-      if (isStyleLoaded) {
-        Future.delayed(Duration(milliseconds: 500), () {
-          print("🔥 Style is loaded. Updating heatmap...");
-          updateHeatmapLayer(ref.read(heatmapLayerProvider));
         });
       }
     });
@@ -89,27 +96,6 @@ class HeatmapNotifier extends StateNotifier<void> {
   mp.MapboxMap? getMapboxController() {
     return _mapboxMapController;
   }
-
-  /// ✅ Initializes the heatmap using available flux data and add markers
-  // Future<void> initHeatmap() async {
-  //   print("🔥 Initializing heatmap...");
-
-  //   // ✅ Ensure Mapbox controller is available
-  //   final mapboxMap = ref.read(heatmapProvider.notifier).getMapboxController();
-
-  //   // Wait until the map controller is not null
-  //   if (mapboxMap == null) {
-  //     print("⚠️ Mapbox controller is NULL during initialization. Retrying...");
-
-  //     // Retry after a short delay, you can also set a timeout to stop retrying after a certain time
-  //     await Future.delayed(Duration(seconds: 1));
-  //     return initHeatmap(); // Retry initialization
-  //   }
-
-  //   // ✅ Step 1: First, update the heatmap layer
-  //   print("🟢 Updating heatmap layer FIRST...");
-  //   await updateHeatmapLayer(ref.read(heatmapLayerProvider));
-  // }
 
   Future<void> updateHeatmapSource(fluxDataList) async {
     if (_mapboxMapController == null) return;

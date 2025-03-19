@@ -11,6 +11,7 @@ import 'package:terratrace/source/features/data/domain/flux_data.dart';
 
 import 'package:terratrace/source/features/project_manager/domain/project.dart';
 import 'package:terratrace/source/features/project_manager/presentation/project_card_drawer.dart';
+import 'package:terratrace/source/features/project_manager/presentation/project_card_project_manager.dart';
 import 'package:terratrace/source/features/project_manager/presentation/remote_project_card.dart';
 import 'package:terratrace/source/features/user/domain/user_managment.dart';
 
@@ -170,7 +171,6 @@ class ProjectManagementNotifier extends StateNotifier<ProjectState> {
 
           dataTemp: row[9].toString(), // TEMPERATURE (°C)
           dataPress: row[10].toString(), // PRESSURE (HPa)
-
 
           dataCflux: row[14].toString(), // FLUX (ppm/sec)
           dataCfluxGram: row[14].toString(), // FLUX (moles/m²/d)
@@ -384,6 +384,43 @@ final projectNameProvider = Provider<String>((ref) {
 });
 
 final projectCardStreamProvider =
+    StreamProvider.autoDispose<List<ProjectCardProjectManager>>((ref) {
+  final projectManagement = ref.watch(projectManagementProvider.notifier);
+  final userAsync = ref.watch(currentUserStateProvider);
+
+  return userAsync.when(
+    data: (user) {
+      if (user == null) return Stream.value([]);
+
+      // Filter projects where the user is a member
+      return projectManagement.getUserProjects(user.uid).map((projects) {
+        debugPrint('User: ${user.uid}');
+
+        return projects.map((project) {
+          final userMembership = project.members?[user.uid];
+
+          final membershipStatus = userMembership == 'owner'
+              ? const Icon(Icons.card_membership, color: Colors.green)
+              : userMembership == 'collaborator'
+                  ? const Icon(Icons.how_to_reg, color: Colors.blue)
+                  : const Icon(Icons.person, color: Colors.grey);
+
+          return ProjectCardProjectManager(
+            project: project.name ?? 'Unnamed Project',
+            membershipStatus: membershipStatus,
+          );
+        }).toList();
+      });
+    },
+    loading: () => Stream.value([]),
+    error: (error, stack) {
+      debugPrint('Error fetching user data: $error');
+      return Stream.value([]);
+    },
+  );
+});
+
+final projectDrawerCardStreamProvider =
     StreamProvider.autoDispose<List<ProjectCardDrawer>>((ref) {
   final projectManagement = ref.watch(projectManagementProvider.notifier);
   final userAsync = ref.watch(currentUserStateProvider);

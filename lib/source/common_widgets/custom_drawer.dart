@@ -127,7 +127,7 @@ class _CustomDrawerState extends ConsumerState<CustomDrawer>
 
                     /// **📂 Projects Tab**
 
-                    RemoteProjectsTab(),
+                    ProjectTapDrawer(),
 
                     /// **👥 Users Tab**
                     TabUser(),

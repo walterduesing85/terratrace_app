@@ -7,15 +7,14 @@ import 'package:terratrace/source/features/map/presentation/heat_map_screen.dart
 import 'package:terratrace/source/features/project_manager/data/project_managment.dart';
 import 'package:terratrace/source/routing/app_router.dart';
 
-class ProjectCardDrawer extends StatelessWidget {
-  const ProjectCardDrawer(
-      {required this.project,
-      required this.membershipStatus,
-      this.isInProject});
+class ProjectCardProjectManager extends StatelessWidget {
+  const ProjectCardProjectManager({
+    required this.project,
+    required this.membershipStatus,
+  });
 
   final String project;
   final Icon membershipStatus;
-  final bool? isInProject;
 
   @override
   Widget build(BuildContext context) {
@@ -64,6 +63,8 @@ class ProjectCardDrawer extends StatelessWidget {
                                 await ref
                                     .read(projectManagementProvider.notifier)
                                     .setProjectName(project);
+
+                                context.pushNamed(AppRoute.mapScreen.name);
                               }
                             },
                             child: Text(

@@ -247,7 +247,8 @@ class _HeatMapScreenState extends ConsumerState<HeatMapScreen>
                     )
                   : RangeValues(rangeValues.minV, rangeValues.maxV),
               min: useLogNormalization
-                  ? 0.0
+                  ? log(ref.watch(minMaxGramProvider).minV + 1) /
+                      log(ref.watch(minMaxGramProvider).maxV + 1)
                   : ref
                       .read(minMaxGramProvider)
                       .minV, // Ensure min is set to 0 or actual data min
@@ -420,7 +421,7 @@ class _HeatMapScreenState extends ConsumerState<HeatMapScreen>
 
         ref.watch(fluxDataListProvider).when(
               data: (fluxDataList) async {
-                print("Flux data updated (${fluxDataList.length} points)");
+                print("Flux data updated  (${fluxDataList.length} points)");
                 ref
                     .read(heatmapProvider.notifier)
                     .updateHeatmapSource(fluxDataList);
@@ -433,10 +434,10 @@ class _HeatMapScreenState extends ConsumerState<HeatMapScreen>
               error: (err, stack) => print("Error loading flux data: $err"),
             );
         // Set the style-loaded state to true
-        ref.read(isStyleLoadedProvider.notifier).state = true;
+        Future.delayed(Duration(seconds: 5), () {
+          ref.read(isStyleLoadedProvider.notifier).state = true;
+        });
       },
-      
-    
     );
   }
 }
