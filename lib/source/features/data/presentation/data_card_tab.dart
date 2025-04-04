@@ -8,7 +8,8 @@ import 'package:terratrace/source/constants/constants.dart';
 import 'package:terratrace/source/features/data/data/data_management.dart';
 import 'package:terratrace/source/features/data/data/map_provider.dart';
 import 'package:terratrace/source/features/data/domain/flux_data.dart';
-
+import 'package:terratrace/source/features/map/data/camera_position_notifier.dart';
+import 'package:terratrace/source/features/project_manager/data/project_managment.dart';
 import 'package:terratrace/source/routing/app_router.dart';
 
 class DataCardTab extends ConsumerStatefulWidget {
@@ -63,7 +64,7 @@ class _DataCardTabState extends ConsumerState<DataCardTab> {
     return Padding(
       padding: const EdgeInsets.all(8.0),
       child: Card(
-        color: Colors.white.withOpacity(0.4),
+        color: Colors.white.withValues(alpha: 0.4),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(15),
         ),
@@ -103,13 +104,13 @@ class _DataCardTabState extends ConsumerState<DataCardTab> {
                   child: MaterialButton(
                     onLongPress: () => showEditDialog(context, widget.fluxData),
                     onPressed: () {
-                      final mapController =
-                          ref.read(mapControllerProvider.notifier);
-                      final target = LatLng(
-                          double.parse(widget.fluxData.dataLat!),
-                          double.parse(widget.fluxData.dataLong!));
-                      mapController.moveCamera(target);
-                      ref.read(cameraPositionProvider) == target;
+                      //   final mapController =
+                      //       ref.read(mapControllerProvider.notifier);
+                      //   final target = LatLng(
+                      //       double.parse(widget.fluxData.dataLat!),
+                      //       double.parse(widget.fluxData.dataLong!));
+                      //   mapController.moveCamera(target);
+                      //   ref.read(cameraPositionProvider) == target;
                     },
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -149,14 +150,9 @@ class _DataCardTabState extends ConsumerState<DataCardTab> {
                       size: 25.0,
                     ),
                     onPressed: () {
-                      print('Pressed');
-                      final mapController =
-                          ref.read(mapControllerProvider.notifier);
-                      final target = LatLng(
-                          double.parse(widget.fluxData.dataLat!),
-                          double.parse(widget.fluxData.dataLong!));
-                      mapController.moveCamera(target);
-                      ref.read(cameraPositionProvider) == target;
+                      ref.read(cameraPositionProvider.notifier).flyToLocation(
+                          double.parse(widget.fluxData.dataLong!),
+                          double.parse(widget.fluxData.dataLat!));
                     },
                   ),
                 ),

@@ -2,13 +2,13 @@ import 'dart:async';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:terratrace/source/features/project_manager/data/project_managment.dart';
 import 'package:terratrace/source/routing/app_router.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'firebase_options.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
 import 'package:terratrace/source/constants/constants.dart';
 // import 'package:file_picker/file_picker.dart';
@@ -119,7 +119,7 @@ Future<void> requestPermissions() async {
 }
 
 class MyApp extends StatelessWidget {
-  static bool _initialized = false;
+  // static bool _initialized = false;
 
   @override
   Widget build(BuildContext context) {
@@ -172,7 +172,7 @@ class MyApp extends StatelessWidget {
     return ProviderScope(
       child: Consumer(
         builder: (context, ref, _) {
-          ref.watch(remoteProjectsCardStreamProvider2);
+          // ref.watch(remoteProjectsCardStreamProvider2);
           return MaterialApp.router(
             routerConfig: goRouter,
             debugShowCheckedModeBanner: false,

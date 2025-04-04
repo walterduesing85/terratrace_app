@@ -17,3 +17,9 @@ const TextStyle tabText = TextStyle(
   fontSize: 18,
   fontWeight: FontWeight.bold,
 );
+
+const TextStyle kMapSetting = TextStyle(
+  fontSize: 16,
+  fontWeight: FontWeight.bold,
+  color: Colors.white70,
+);

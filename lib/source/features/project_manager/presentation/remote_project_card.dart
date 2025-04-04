@@ -132,7 +132,7 @@ class RemoteProjectCard extends StatelessWidget {
 
                             if (confirmDelete == true) {
                               await ref
-                                  .watch(projectManagementProvider)
+                                  .watch(projectManagementProvider.notifier)
                                   .deleteFireStoreProject(project, context);
                               showDownloadMessage(
                                   context, "The project is deleted!");
@@ -254,7 +254,7 @@ class RemoteProjectCard extends StatelessWidget {
                   if (membershipStatus.icon == Icons.how_to_reg ||
                       membershipStatus.icon == Icons.card_membership) {
                     await ref
-                        .read(projectNameProvider.notifier)
+                        .read(projectManagementProvider.notifier)
                         .setProjectName(project);
                     context.pushNamed(AppRoute.mapScreen.name);
                   }

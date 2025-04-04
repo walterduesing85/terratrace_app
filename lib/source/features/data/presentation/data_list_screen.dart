@@ -76,7 +76,6 @@ class _DataListScreenState extends State<DataListScreen> {
                     ref
                         .read(searchValueProvider.notifier)
                         .setSearchValue(value);
-                    print(value);
                   },
                   decoration: kInputTextField.copyWith(
                     suffixIcon: CircleIconButton(

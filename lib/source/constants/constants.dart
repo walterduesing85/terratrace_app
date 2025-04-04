@@ -25,11 +25,20 @@ const kCardHeadeTextStyle = TextStyle(
   fontWeight: FontWeight.bold,
   fontSize: 20,
 );
-
+const kUserCardHeadeTextStyle = TextStyle(
+  color: Colors.white70,
+  fontWeight: FontWeight.bold,
+  fontSize: 20,
+);
 // Subtitle Cards
 
 const kCardSubtitleTextStyle = TextStyle(
   color: Colors.black,
+  fontSize: 15,
+);
+
+const kUserCardSubtitleTextStyle = TextStyle(
+  color: Colors.white70,
   fontSize: 15,
 );
 const kMessageTextFieldDecoration = InputDecoration(

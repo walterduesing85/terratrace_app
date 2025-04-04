@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:terratrace/source/common_widgets/custom_appbar.dart';
 import 'package:terratrace/source/features/authentication/data.dart';
+import 'package:terratrace/source/features/project_manager/presentation/project_Tab_Project_Manager.dart';
 import 'package:terratrace/source/features/project_manager/presentation/remote_projects_tab.dart';
 
 class ProjectManagementScreen extends ConsumerWidget {
@@ -26,7 +27,7 @@ class ProjectManagementScreen extends ConsumerWidget {
         ),
       ),
       body:
-          RemoteProjectsTab(), //TODO Solve Stream already listend error when signing in and out
+          ProjectTapDrawer(), //TODO Solve Stream already listend error when signing in and out
     );
   }
 }

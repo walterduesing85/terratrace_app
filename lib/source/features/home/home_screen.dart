@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:terratrace/source/common_widgets/rounded_button.dart';
 import 'package:terratrace/source/features/data/data/data_management.dart';
+import 'package:terratrace/source/features/project_manager/data/project_managment.dart';
 import 'package:terratrace/source/routing/app_router.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
@@ -41,7 +42,7 @@ class _HomeScrenState extends State<HomeScreen> {
                       buttonText: 'Create new project',
                       goTo: () {
                         ref
-                            .read(projectNameProvider.notifier)
+                              .read(projectManagementProvider.notifier)
                             .setProjectName('');
                         context.pushNamed(AppRoute.createNewProjectScreen.name);
                       },

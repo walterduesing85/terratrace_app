@@ -10,16 +10,10 @@ class HistogramChart extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return AsyncValueWidget<List<BinData>>(
-      value: ref.watch(binProvider),
-      data: (binData) {
-        print("📊 Rendering Histogram Chart with ${binData.length} bins");
-
-        if (binData.isEmpty) {
-          print(
-              "⚠️ No bin data available! Histogram will not display anything.");
-          return const Center(child: Text("No data available"));
-        }
+    final binData = ref.watch(binProvider).maybeWhen(
+          data: (bins) => bins as List<BinData>,
+          orElse: () => <BinData>[],
+        );
         final binColors = ref.watch(binColorProvider);
 
         return AspectRatio(
@@ -30,28 +24,45 @@ class HistogramChart extends ConsumerWidget {
               BarChartData(
                 barGroups: _createBarGroups(binData, binColors),
                 titlesData: FlTitlesData(
-                  leftTitles: AxisTitles(
+              rightTitles: AxisTitles(
                     sideTitles: SideTitles(showTitles: true, reservedSize: 40),
                   ),
+              topTitles: AxisTitles(
+                sideTitles: SideTitles(showTitles: false, reservedSize: 40),
+              ),
+              leftTitles: AxisTitles(
+                sideTitles: SideTitles(
+                  showTitles: true,
+                  reservedSize: 40,
+                  getTitlesWidget: (double value, TitleMeta meta) {
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 6),
+                      child: Text(
+                        value.toStringAsFixed(1),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.white70,
+                        ),
+                        textAlign: TextAlign.right,
+                      ),
+                    );
+                  },
+                ),
+              ),
                   bottomTitles: AxisTitles(
                     sideTitles: SideTitles(
                       showTitles: true,
                       reservedSize: 25,
                       getTitlesWidget: (double value, TitleMeta meta) {
-                        if (value.toInt() >= 0 &&
-                            value.toInt() < binData.length) {
+                    if (value.toInt() >= 0 && value.toInt() < binData.length) {
                           return Padding(
-                            padding: const EdgeInsets.only(
-                              top: 6,
-                              left: 6,
-                            ),
+                        padding: const EdgeInsets.only(top: 10, left: 6),
                             child: RotationTransition(
-                              turns: AlwaysStoppedAnimation(25 / 360),
+                          turns: AlwaysStoppedAnimation(70 / 360),
                               child: Text(
-                                binData[value.toInt()]
-                                    .binValue
-                                    .toStringAsFixed(1),
-                                style: const TextStyle(fontSize: 10),
+                            binData[value.toInt()].binValue.toStringAsFixed(1),
+                            style: const TextStyle(
+                                fontSize: 12, color: Colors.white70),
                               ),
                             ),
                           );
@@ -62,12 +73,12 @@ class HistogramChart extends ConsumerWidget {
                   ),
                 ),
                 borderData: FlBorderData(show: false),
-                gridData: FlGridData(show: true),
-              ),
+            gridData: FlGridData(
+              show: true,
             ),
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 
@@ -81,7 +92,9 @@ class HistogramChart extends ConsumerWidget {
         barRods: [
           BarChartRodData(
             toY: bin.binCounts.toDouble(),
-            color: binColors[index],
+            color: binColors.isNotEmpty && index < binColors.length
+                ? binColors[index]
+                : Colors.grey,
             width: 20,
             borderRadius: BorderRadius.circular(2),
           ),

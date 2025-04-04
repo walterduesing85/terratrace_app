@@ -41,7 +41,9 @@ class DataCard extends StatelessWidget {
                       Icons.edit,
                       color: Color(0xFFC6FF00),
                     ),
-                    onPressed: () {},
+                    onPressed: () {
+                      print('Edit button pressed');
+                    },
                   ),
                 ),
               ),

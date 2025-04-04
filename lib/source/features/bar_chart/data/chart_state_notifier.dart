@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:terratrace/source/features/bar_chart/data/chart_data.dart';
 import 'package:terratrace/source/features/data/data/data_management.dart';
-import 'package:terratrace/source/features/data/domain/flux_data.dart';
+
 import 'package:terratrace/source/features/map/data/map_data.dart';
 
 class ChartStateNotifier extends StateNotifier<ChartState> {
@@ -9,15 +9,21 @@ class ChartStateNotifier extends StateNotifier<ChartState> {
 
   ChartStateNotifier(this.ref) : super(ChartState()) {
     _initialize();
+
+    // ✅ Listen for changes in selectedFluxTypeProvider instead
+    ref.listen<String>(selectedFluxTypeProvider, (prev, next) {
+      print("📊 Flux type changed to: $next");
+      _updateCO2Data(ref.read(selectedDataSetProvider));
+    });
   }
 
   void _initialize() {
     // ✅ Ensure the initial state is populated
-    final fluxDataList = ref.read(fluxDataListProvider);
+    final fluxDataList = ref.read(selectedDataSetProvider);
     _updateCO2Data(fluxDataList);
 
-    // ✅ Listen to changes in fluxDataListProvider
-    ref.listen<AsyncValue<List<FluxData>>>(fluxDataListProvider, (_, next) {
+    // ✅ Listen to changes in selectedDataSetProvider to update chart state
+    ref.listen<AsyncValue<List<String>>>(selectedDataSetProvider, (_, next) {
       _updateCO2Data(next);
     });
 
@@ -29,11 +35,11 @@ class ChartStateNotifier extends StateNotifier<ChartState> {
   }
 
   // ✅ Extracted CO₂ data update logic
-  void _updateCO2Data(AsyncValue<List<FluxData>> asyncData) {
+  void _updateCO2Data(AsyncValue<List<String>> asyncData) {
     asyncData.when(
       data: (dataList) {
         final co2Values = dataList
-            .map((data) => double.tryParse(data.dataCfluxGram ?? '0.0') ?? 0.0)
+            .map((data) => double.tryParse(data ?? '0.0') ?? 0.0)
             .toList();
 
         if (co2Values.isNotEmpty) {
@@ -63,7 +69,7 @@ class ChartStateNotifier extends StateNotifier<ChartState> {
   }
 }
 
-// ✅ Use `autoDispose` to free resources when not in use
+// ✅ Use autoDispose to free resources when not in use
 final chartStateProvider =
     StateNotifierProvider.autoDispose<ChartStateNotifier, ChartState>((ref) {
   return ChartStateNotifier(ref);

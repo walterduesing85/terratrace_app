@@ -1,7 +1,3 @@
-import 'dart:async';
-
-import 'package:flutter/material.dart';
-import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart';
 
@@ -14,7 +10,7 @@ final dataPointCountProvider =
     StateNotifierProvider<DataPointCountValueNotifier, int>(
         (ref) => DataPointCountValueNotifier());
 
-class DataPointCountValueNotifier extends StateNotifier<int> {
+        class DataPointCountValueNotifier extends StateNotifier<int> {
   DataPointCountValueNotifier() : super(1);
 
   // Sets the data point count to a specific value.
@@ -33,21 +29,73 @@ class DataPointCountValueNotifier extends StateNotifier<int> {
   }
 }
 
-final projectNameProvider =
-    StateNotifierProvider<ProjectNameValueNotifier, String>(
-        (ref) => ProjectNameValueNotifier());
+// final projectNameProvider =
+//     StateNotifierProvider<ProjectNameValueNotifier, String>(
+//         (ref) => ProjectNameValueNotifier());
 
-class ProjectNameValueNotifier extends StateNotifier<String> {
-  ProjectNameValueNotifier() : super('');
+// class ProjectNameValueNotifier extends StateNotifier<String> {
+//   ProjectNameValueNotifier() : super('');
 
-  setProjectName(String value) {
-    state = value;
-  }
+//   setProjectName(String value) {
+//     state = value;
+//   }
 
-  void clearProjectName() {
-    state = '';
+//   void clearProjectName() {
+//     state = '';
+//   }
+// }
+
+/// **1️⃣ Select the Flux Type (Dropdown-controlled)**
+class SelectedFluxTypeNotifier extends StateNotifier<String> {
+  SelectedFluxTypeNotifier() : super("CO2"); // Default selection
+  void setFluxType(String fluxType) {
+    state = fluxType;
   }
 }
+
+final selectedFluxTypeProvider =
+    StateNotifierProvider<SelectedFluxTypeNotifier, String>((ref) {
+  return SelectedFluxTypeNotifier();
+});
+
+final selectedDataSetProvider =
+    StreamProvider.autoDispose<List<String>>((ref) async* {
+  final fluxDataList = ref.watch(fluxDataListProvider); // Full dataset
+  final selectedFluxType =
+      ref.watch(selectedFluxTypeProvider); // Selected flux type
+
+  // ✅ Handle loading & error state
+  if (fluxDataList.isLoading) {
+    print("🚀 selectedDataSetProvider is waiting for data...");
+    yield [];
+    return;
+  }
+  if (fluxDataList.hasError) {
+    print("❌ ERROR in selectedDataSetProvider: ${fluxDataList.error}");
+    yield [];
+    return;
+}
+
+  final dataList = fluxDataList.value ?? [];
+  print('🔥 selectedDataSetProvider - Found ${dataList.length} items');
+
+  // ✅ Filter the dataset only when needed
+  final filteredData = dataList.map((fluxData) {
+    switch (selectedFluxType) {
+      case "Methane":
+        return fluxData.dataCh4fluxGram ?? "0.0";
+      case "VOC":
+        return fluxData.dataVocfluxGram ?? "0.0";
+      case "H2O":
+        return fluxData.dataH2ofluxGram ?? "0.0";
+      default: // CO₂ by default
+        return fluxData.dataCfluxGram ?? "0.0";
+    }
+  }).toList();
+
+  print("✅ Selected dataset updated with ${filteredData.length} values.");
+  yield filteredData; // Emit only when data actually changes
+});
 
 class SearchValueNotifier extends StateNotifier<String> {
   SearchValueNotifier() : super('');
@@ -84,9 +132,10 @@ class SortData {
 }
 
 final fluxDataListProvider = StreamProvider<List<FluxData>>((ref) async* {
-  final projectManager = ref.watch(projectManagementProvider);
+  final projectManager = ref.watch(projectManagementProvider.notifier);
   final project = ref.watch(projectNameProvider);
   final searchValue = ref.watch(searchValueProvider);
+
   if (project.isNotEmpty) {
     // Call the function with the required project parameter to get the Stream
     final fluxDataStream = projectManager.getFluxDataStream(project);
@@ -104,25 +153,6 @@ final fluxDataListProvider = StreamProvider<List<FluxData>>((ref) async* {
   }
 });
 
-class FluxDataNotifier extends StateNotifier<List<FluxData>> {
-  FluxDataNotifier() : super([]);
-
-  void setFluxData(List<FluxData> fluxData) {
-    state = fluxData;
-  }
-
-  void addFluxData(FluxData fluxData) {
-    Future.delayed(Duration(milliseconds: 100), () {
-      state = [...state, fluxData];
-    });
-  }
-}
-
-final fluxDataNotifierProvider =
-    StateNotifierProvider<FluxDataNotifier, List<FluxData>>((ref) {
-  return FluxDataNotifier();
-});
-
 final listLengthProvider = Provider.autoDispose<int>((ref) {
   final dataListAsyncValue = ref.watch(fluxDataListProvider);
 
@@ -133,6 +163,7 @@ final listLengthProvider = Provider.autoDispose<int>((ref) {
   );
 });
 
+//draws a marker on the map  when selected in Data List
 final selectedFluxDataProvider =
     StateNotifierProvider<SelectedFluxDataNotifier, List<FluxData>>((ref) {
   return SelectedFluxDataNotifier();
@@ -145,6 +176,7 @@ class SelectedFluxDataNotifier extends StateNotifier<List<FluxData>> {
     if (state.contains(fluxData)) {
       state = state.where((data) => data != fluxData).toList();
     } else {
+      print("new Point added");
       state = [...state, fluxData];
     }
   }
@@ -154,42 +186,42 @@ class SelectedFluxDataNotifier extends StateNotifier<List<FluxData>> {
   }
 }
 
-final markersProvider2 = Provider<Set<Marker>>((ref) {
-  final selectedData = ref.watch(selectedFluxDataProvider);
-  return selectedData
-      .map((data) => Marker(
-            point: LatLng(
-              double.parse(data.dataLat!),
-              double.parse(data.dataLong!),
-            ),
-            width: 80,
-            height: 80,
-            child: GestureDetector(
-              // onTap: () => _showInfoWindow(, data),
-              child: Icon(
-                Icons.location_on,
-                color: Colors.red,
-                size: 40.0,
-              ),
-            ),
-          ))
-      .toSet();
-});
+// final markersProvider2 = Provider<Set<Marker>>((ref) {
+//   final selectedData = ref.watch(selectedFluxDataProvider);
+//   return selectedData
+//       .map((data) => Marker(
+//             point: LatLng(
+//               double.parse(data.dataLat!),
+//               double.parse(data.dataLong!),
+//             ),
+//             width: 80,
+//             height: 80,
+//             child: GestureDetector(
+//               // onTap: () => _showInfoWindow(, data),
+//               child: Icon(
+//                 Icons.location_on,
+//                 color: Colors.red,
+//                 size: 40.0,
+//               ),
+//             ),
+//           ))
+//       .toSet();
+// });
 
-void _showInfoWindow(BuildContext context, FluxData data) {
-  showDialog(
-    context: context,
-    builder: (ctx) => AlertDialog(
-      title: Text(data.dataSite ?? 'No Title'),
-      content: Text(data.dataCfluxGram ?? 'No Content'),
-      actions: <Widget>[
-        TextButton(
-          child: Text('Close'),
-          onPressed: () {
-            Navigator.of(ctx).pop();
-          },
-        ),
-      ],
-    ),
-  );
-}
+// void _showInfoWindow(BuildContext context, FluxData data) {
+//   showDialog(
+//     context: context,
+//     builder: (ctx) => AlertDialog(
+//       title: Text(data.dataSite ?? 'No Title'),
+//       content: Text(data.dataCfluxGram ?? 'No Content'),
+//       actions: <Widget>[
+//         TextButton(
+//           child: Text('Close'),
+//           onPressed: () {
+//             Navigator.of(ctx).pop();
+//           },
+//         ),
+//       ],
+//     ),
+//   );
+// }

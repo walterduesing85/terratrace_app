@@ -3,13 +3,13 @@ import 'package:terratrace/source/features/data/domain/flux_data.dart';
 import 'package:terratrace/source/features/data/presentation/data_list_screen.dart';
 import 'package:terratrace/source/features/data/presentation/edit_data_screen.dart';
 import 'package:terratrace/source/features/home/home_screen.dart';
-import 'package:terratrace/source/features/map/presentation/map_screen_selector.dart';
-import 'package:terratrace/source/features/mbu_control/reselect_bound.dart';
+import 'package:terratrace/source/features/map/presentation/heat_map_screen.dart';
 import 'package:terratrace/source/features/mbu_control/data_acquistion_screen.dart';
 import 'package:terratrace/source/features/project_manager/presentation/create_new_project_screen.dart';
 import 'package:terratrace/source/features/project_manager/presentation/project_management_screen.dart';
 import 'package:terratrace/source/routing/not_found_screen.dart';
 import 'package:terratrace/source/features/project_manager/presentation/data_table_screen.dart';
+import 'package:terratrace/source/features/mbu_control/reselect_bound.dart';
 
 enum AppRoute {
   home,
@@ -71,7 +71,7 @@ final goRouter = GoRouter(
             GoRoute(
               path: 'mapScreen',
               name: AppRoute.mapScreen.name,
-              builder: (context, state) => MapScreenSelector(),
+              builder: (context, state) => HeatMapScreen(),
               routes: [
                 GoRoute(
                   path: 'edit-data-screen/:projectName',

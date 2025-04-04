@@ -8,7 +8,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 // import 'package:permission_handler/permission_handler.dart';
 import 'package:utm/utm.dart';
-// import 'package:terratrace/source/features/project_manager/data/project_managment.dart';
+import 'package:terratrace/source/features/project_manager/data/project_managment.dart';
 import 'package:terratrace/source/features/data/data/data_management.dart';
 import 'package:intl/intl.dart';
 import 'dart:math';
@@ -324,7 +324,7 @@ PARAMETER ANALYSIS
     String content = header + rows.join("\n");
     await file.writeAsString(content);
 
-    ref.watch(projectNameProvider.notifier).setProjectName(projectId);
+    ref.watch(projectManagementProvider.notifier).setProjectName(projectId);
     ref
         .watch(dataPointCountProvider.notifier)
         .setDataPointCount(int.parse(samplingPoint) + 1);

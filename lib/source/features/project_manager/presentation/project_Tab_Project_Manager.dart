@@ -4,12 +4,13 @@ import 'package:terratrace/source/common_widgets/async_value_widget.dart';
 import 'package:terratrace/source/features/authentication/authentication_managment.dart';
 import 'package:terratrace/source/features/project_manager/data/project_managment.dart';
 import 'package:terratrace/source/features/project_manager/presentation/project_card_drawer.dart';
+import 'package:terratrace/source/features/project_manager/presentation/project_card_project_manager.dart';
 
 import 'package:terratrace/source/features/project_manager/presentation/remote_project_card.dart';
 import 'sign_in_form.dart'; // Import the SignInForm widget
 
-class ProjectTapDrawer extends ConsumerWidget {
-  const ProjectTapDrawer({super.key});
+class ProjectTabProjectManager extends ConsumerWidget {
+  const ProjectTabProjectManager({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -20,8 +21,8 @@ class ProjectTapDrawer extends ConsumerWidget {
         if (user == null) {
           return SignInForm(); // Show the SignInForm when not signed in
         } else {
-          return AsyncValueWidget<List<RemoteProjectCard>>(
-            value: ref.watch(projectDrawerCardStreamProvider),
+          return AsyncValueWidget<List<ProjectCardProjectManager>>(
+            value: ref.watch(projectCardStreamProvider),
             data: (projectCards) => ListView.builder(
               itemCount: projectCards.length,
               itemBuilder: (context, index) {
