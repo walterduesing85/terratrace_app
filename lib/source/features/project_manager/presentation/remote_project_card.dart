@@ -6,6 +6,7 @@ import 'package:terratrace/source/features/project_manager/data/project_managmen
 import 'package:terratrace/source/features/mbu_control/save_csv.dart';
 import 'package:terratrace/source/routing/app_router.dart';
 import 'package:terratrace/source/features/mbu_control/utils.dart';
+import 'package:internet_connection_checker/internet_connection_checker.dart';
 
 class RemoteProjectCard extends StatelessWidget {
   const RemoteProjectCard({
@@ -15,6 +16,42 @@ class RemoteProjectCard extends StatelessWidget {
 
   final String project;
   final Icon membershipStatus;
+
+  // Future<void> showCustomDialog({
+  //   required BuildContext context,
+  //   required String title,
+  //   required String content,
+  //   required String confirmButtonText,
+  //   required VoidCallback onConfirm,
+  //   String cancelButtonText = 'Cancel',
+  // }) async {
+  //   return showDialog(
+  //     context: context,
+  //     builder: (context) {
+  //       return AlertDialog(
+  //         title: Text(title),
+  //         content: Text(content),
+  //         actions: [
+  //           ElevatedButton(
+  //             onPressed: () async {
+  //               onConfirm();
+  //               Navigator.of(context)
+  //                   .pop(); // Close the dialog after confirming
+  //             },
+  //             child: Text(confirmButtonText),
+  //           ),
+  //           TextButton(
+  //             onPressed: () {
+  //               Navigator.of(context)
+  //                   .pop(); // Close the dialog without confirming
+  //             },
+  //             child: Text(cancelButtonText),
+  //           ),
+  //         ],
+  //       );
+  //     },
+  //   );
+  // }
 
   @override
   Widget build(BuildContext context) {
@@ -33,7 +70,8 @@ class RemoteProjectCard extends StatelessWidget {
             child: Container(
               height: 70,
               decoration: BoxDecoration(
-                  color: const Color.fromRGBO(64, 75, 96, 1),
+                  // color: const Color.fromRGBO(64, 75, 96, 1),
+                  color: Color.fromARGB(255, 95, 98, 106),
                   borderRadius: BorderRadius.circular(15)),
               child: ListTile(
                 contentPadding: const EdgeInsets.symmetric(horizontal: 10.0),
@@ -46,25 +84,82 @@ class RemoteProjectCard extends StatelessWidget {
                       // Delete Button
                       PopupMenuButton<String>(
                         icon: const Icon(Icons.more_vert,
-                            color: Colors.blueGrey, size: 24),
+                            // color: Colors.blueGrey,
+                            size: 24),
                         onSelected: (String value) async {
                           if (value == 'delete') {
-                            await ref
-                                .watch(projectManagementProvider)
-                                .deleteFireStoreProject(project, context);
+                            // Show confirmation dialog
+                            final bool? confirmDelete = await showDialog<bool>(
+                              context: context,
+                              builder: (BuildContext context) {
+                                return AlertDialog(
+                                  // backgroundColor:
+                                  //     const Color.fromRGBO(64, 75, 96, 1),
+                                  title: Text(
+                                    'Delete Project',
+                                    style: TextStyle(color: Colors.white),
+                                  ),
+                                  content: Text(
+                                    'Are you sure you want to delete the project "$project"? This action cannot be undone.',
+                                    style: TextStyle(color: Colors.white),
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () {
+                                        Navigator.of(context).pop(false);
+                                      },
+                                      child: Text(
+                                        'Cancel',
+                                        style: TextStyle(color: Colors.white),
+                                      ),
+                                    ),
+                                    ElevatedButton(
+                                      onPressed: () {
+                                        Navigator.of(context).pop(true);
+                                      },
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: const Color.fromARGB(
+                                            255, 113, 15, 15),
+                                      ),
+                                      child: Text('Delete',
+                                          style:
+                                              TextStyle(color: Colors.white)),
+                                    ),
+                                  ],
+                                );
+                              },
+                            );
+
+                            if (confirmDelete == true) {
+                              await ref
+                                  .watch(projectManagementProvider)
+                                  .deleteFireStoreProject(project, context);
+                              showDownloadMessage(
+                                  context, "The project is deleted!");
+                            }
                           } else if (value == 'reselect') {
                             context.pushNamed(AppRoute.dataTableScreen.name,
                                 pathParameters: {
                                   'project': project,
                                 });
-                            // Navigator.push(
-                            //   context,
-                            //   MaterialPageRoute(
-                            //       builder: (context) => ReselectScreen(
-                            //             project: project,
-                            //             samplingPoint: "1",
-                            //           )),
-                            // );
+                          } else if (value == 'zip_files') {
+                            final filepath =
+                                await zipFilesContainingProjectName(project);
+                            showDownloadMessage(
+                                context, 'Zip file has been downloaded!');
+                            bool hasConnection = await InternetConnectionChecker
+                                .instance.hasConnection;
+                            if (hasConnection) {
+                              await showCustomDialog(
+                                context: context,
+                                title: 'Share Project Zip File',
+                                content: 'Do you want to share the file?',
+                                confirmButtonText: 'Share',
+                                onConfirm: () async {
+                                  await shareFile(filepath);
+                                },
+                              );
+                            }
                           }
                         },
                         itemBuilder: (BuildContext context) =>
@@ -76,6 +171,10 @@ class RemoteProjectCard extends StatelessWidget {
                           const PopupMenuItem<String>(
                             value: 'reselect',
                             child: Text('Reselect Boundaries'),
+                          ),
+                          const PopupMenuItem<String>(
+                            value: 'zip_files',
+                            child: Text('Zip and download all samplings'),
                           ),
                         ],
                       ),
@@ -96,34 +195,22 @@ class RemoteProjectCard extends StatelessWidget {
                                   await exportFirestoreToCSV(project);
 
                               // Notify the user that the file has been downloaded
-                              showDownloadMessage(context);
-                              return showDialog(
-                                context: context,
-                                builder: (context) {
-                                  return AlertDialog(
-                                    title: Text('Share Summary Table'),
-                                    content: Text(
-                                        'Do you want to share the CSV file?'),
-                                    actions: [
-                                      ElevatedButton(
-                                        onPressed: () async {
-                                          await shareCSVFile(filepath);
-                                          Navigator.of(context)
-                                              .pop(); // close the dialog after sharing
-                                        },
-                                        child: Text('Share CSV'),
-                                      ),
-                                      TextButton(
-                                        onPressed: () {
-                                          Navigator.of(context)
-                                              .pop(); // close the dialog without sharing
-                                        },
-                                        child: Text('Cancel'),
-                                      ),
-                                    ],
-                                  );
-                                },
-                              );
+                              showDownloadMessage(
+                                  context, 'File has been downloaded!');
+                              bool hasConnection =
+                                  await InternetConnectionChecker
+                                      .instance.hasConnection;
+                              if (hasConnection) {
+                                await showCustomDialog(
+                                  context: context,
+                                  title: 'Share Summary Table',
+                                  content: 'Do you want to share the CSV file?',
+                                  confirmButtonText: 'Share CSV',
+                                  onConfirm: () async {
+                                    await shareFile(filepath);
+                                  },
+                                );
+                              }
                             } catch (e) {
                               print(e);
                               // Handle error (if necessary)

@@ -154,22 +154,26 @@ class ProjectManagement {
       final members = projectData?['members'] ?? {}; // Get project members
 
       // Start a batch operation to delete references efficiently
-      final batch = FirebaseFirestore.instance.batch();
+      // final batch = FirebaseFirestore.instance.batch();
 
       // Remove project reference from each user's "projects" field
       for (String userId in members.keys) {
         final userDocRef =
             FirebaseFirestore.instance.collection('users').doc(userId);
-        batch.update(userDocRef, {
+        userDocRef.update({
           'projects.$projectName': FieldValue.delete(),
         });
+        // batch.update(userDocRef, {
+        //   'projects.$projectName': FieldValue.delete(),
+        // });
       }
 
-      // Delete the project document
-      batch.delete(projectCollection.doc(projectName));
+      await projectCollection.doc(projectName).delete();
+      // // Delete the project document
+      // batch.delete(projectCollection.doc(projectName));
 
-      // Commit batch operation
-      await batch.commit();
+      // // Commit batch operation
+      // await batch.commit();
     } catch (e) {
       _showErrorDialog(context, e.toString());
     }

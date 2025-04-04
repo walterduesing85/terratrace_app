@@ -11,9 +11,9 @@ class ProjectManagementScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
-      backgroundColor: const Color.fromRGBO(58, 66, 86, 1.0),
+      // backgroundColor: const Color.fromRGBO(58, 66, 86, 1.0),
       appBar: AppBar(
-        backgroundColor: const Color.fromRGBO(58, 66, 86, 1.0),
+        // backgroundColor: const Color.fromRGBO(58, 66, 86, 1.0),
         title: CustomAppBar(
           title: ref.watch(appBarTitleProvider).when(
                 loading: () => 'Loading...', // Show loading message
@@ -30,4 +30,3 @@ class ProjectManagementScreen extends ConsumerWidget {
     );
   }
 }
-

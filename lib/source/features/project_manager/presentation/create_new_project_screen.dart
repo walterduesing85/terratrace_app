@@ -23,14 +23,14 @@ class CreateNewProjectScreen extends ConsumerWidget {
     final authState = ref.watch(currentUserStateProvider);
     return Scaffold(
         appBar: AppBar(
-          backgroundColor: const Color.fromRGBO(58, 66, 86, 1.0),
+          // backgroundColor: const Color.fromRGBO(58, 66, 86, 1.0),
           title: CustomAppBar(
             title: ref.watch(projectNameProvider).isEmpty
                 ? 'Create Project'
                 : ref.watch(projectNameProvider),
           ),
         ),
-        backgroundColor: const Color.fromRGBO(58, 66, 86, 1),
+        // backgroundColor: const Color.fromRGBO(58, 66, 86, 1),
         body: authState.when(
           data: (user) {
             if (user == null) {

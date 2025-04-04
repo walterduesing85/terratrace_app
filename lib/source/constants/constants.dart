@@ -8,7 +8,9 @@ const kSendButtonTextStyle = TextStyle(
   fontSize: 18.0,
 );
 
-const kGreenFluxColor = Color.fromRGBO(180, 211, 175, 1);
+const kGreenFluxColor = Color.fromRGBO(199, 211, 175, 1);
+// const kGreenFluxColor = Color.fromRGBO(151, 209, 142, 1);
+// const kGreenFluxColor = Color.fromRGBO(180, 211, 175, 1);
 
 // TExtsyyle for the drawer
 const kDrawerTextStyle = TextStyle(
@@ -89,5 +91,6 @@ String pressure = '';
 
 double chamberVolume = 0.002756; //in cubic meter
 double chamberArea = 0.0314;
-double gasConstant = 0.0831451;
+// double gasConstant = 0.0831451;
 double molarMassCO2 = 44.0095;
+double gasConstant = 8.314462618;

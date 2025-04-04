@@ -15,6 +15,7 @@ import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'stats_func.dart';
 import 'package:terratrace/source/constants/constants.dart';
+import 'package:terratrace/source/features/mbu_control/widgets/chart_widgets.dart';
 // import 'package:go_router/go_router.dart';
 // import 'package:terratrace/source/routing/app_router.dart';
 
@@ -31,7 +32,7 @@ class _BLEScreenState extends State<BLEScreen> {
   // List<BluetoothService> services = [];
   // Map<Guid, List<int>> readValues = {};
   final Map<String, List<Map<String, dynamic>>> collectedData = {};
-  Position? userLocation;
+  List<Position> userLocation = [];
   int playStopCounter = 0;
 
   // These boundaries are expressed in pixel offsets relative to the chart's width.
@@ -46,6 +47,7 @@ class _BLEScreenState extends State<BLEScreen> {
   double slope = 0.0;
   double rSquared = 0.0;
   double flux = 0.0;
+  double fluxError = 0.0;
 
   // A minimum separation (in pixels) between handles
   final double minHandleSeparation = 20.0;
@@ -76,10 +78,14 @@ class _BLEScreenState extends State<BLEScreen> {
   Map<String, String> formatMap = {};
   List<double> tempValues = [];
   List<double> pressValues = [];
-  double chamberDiameter = 200;
-  double chamberHeight = 100;
-  double avgPressure = 1013.15;
+  double chamberDiameter = 0.2;
+  double chamberHeight = 0.1;
+  double avgPressure = 1013.25;
   double avgTemp = 20;
+
+  double minY = 0;
+  double maxY = 1.0;
+  double stepSize = 0.1;
 
   late String selectedParameter;
   late NumberFormat formatter;
@@ -97,7 +103,53 @@ class _BLEScreenState extends State<BLEScreen> {
     super.initState();
     // checkSavedDevices();
     // startScan();
-    // _getUserLocation();
+    _checkLocationPermissions();
+  }
+
+  /// Check and request location permissions.
+  Future<void> _checkLocationPermissions() async {
+    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      print("Location services are disabled.");
+      return;
+    }
+
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        print("Location permissions are denied.");
+        return;
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      print("Location permissions are permanently denied.");
+      return;
+    }
+  }
+
+  /// Fetch the current position and add it to userLocation.
+  Future<void> _saveUserLocation() async {
+    if (!mounted) return; // Early return if widget is not mounted
+
+    try {
+      Position position = await Geolocator.getCurrentPosition(
+        locationSettings: AndroidSettings(
+          accuracy: LocationAccuracy.best,
+          distanceFilter: 0,
+          forceLocationManager: true,
+        ),
+      );
+
+      if (!mounted) return; // Check again after async operation
+
+      setState(() {
+        userLocation.add(position);
+      });
+    } catch (e) {
+      print("Error getting location: $e");
+    }
   }
 
   Future<void> initializeSelectedParameter() async {
@@ -244,17 +296,18 @@ class _BLEScreenState extends State<BLEScreen> {
     FlutterBluePlus.startScan(timeout: Duration(seconds: 5));
 
     FlutterBluePlus.scanResults.listen((results) {
-      setState(() {
-        for (ScanResult scanResult in results) {
-          final deviceName = scanResult.device.platformName;
+      if (!mounted) return;
+      // setState(() {
+      for (ScanResult scanResult in results) {
+        final deviceName = scanResult.device.platformName;
 
-          // Only add devices with "Terratrace" in their name
-          if (deviceName.contains("Terratrace") &&
-              !availableDevices.contains(scanResult.device)) {
-            availableDevices.add(scanResult.device);
-          }
+        // Only add devices with "Terratrace" in their name
+        if (deviceName.contains("Terratrace") &&
+            !availableDevices.contains(scanResult.device)) {
+          availableDevices.add(scanResult.device);
         }
-      });
+      }
+      // });
     });
 
     Future.delayed(Duration(seconds: 5), () {
@@ -285,25 +338,7 @@ class _BLEScreenState extends State<BLEScreen> {
           device.connectionState.listen((state) {
         if (state == BluetoothConnectionState.disconnected) {
           print("Device ${device.remoteId.str} disconnected");
-          // Cancel the subscription and update the UI for this device.
-          deviceStateSubscriptions[device.remoteId.str]?.cancel();
-          deviceStateSubscriptions.remove(device.remoteId.str);
-          setState(() {
-            connectedDevices
-                .removeWhere((d) => d.remoteId.str == device.remoteId.str);
-            isDeviceFound = connectedDevices.any(
-              (device) =>
-                  device.platformName ==
-                  "Terratrace-SSD-MBU", // TODO make it dynamic, check which MBUs have commands to send manually
-            );
-// TODO send notifications to user with Snackbar when device is disconnecetd (needs context)
-// TODO should i delete everything if device gets disconnected?
-            dataPoints.clear();
-            collectedData.clear();
-            showSaveButton = false;
-            isPlaying = false;
-            // Optionally clear data specific to this device (e.g., dataPoints, collectedData).
-          });
+          _handleDeviceDisconnection(device);
         }
       });
       if (device.platformName.isNotEmpty &&
@@ -316,7 +351,70 @@ class _BLEScreenState extends State<BLEScreen> {
       await initializeSelectedParameter();
     } catch (e) {
       print('Error connecting to device ${device.remoteId.str}: $e');
+      _handleDeviceDisconnection(device);
     }
+  }
+
+  void _handleDeviceDisconnection(BluetoothDevice device) {
+    if (!mounted) return;
+
+    // Cancel the subscription and update the UI for this device
+    deviceStateSubscriptions[device.remoteId.str]?.cancel();
+    deviceStateSubscriptions.remove(device.remoteId.str);
+
+    setState(() {
+      // Remove device from connected devices
+      connectedDevices
+          .removeWhere((d) => d.remoteId.str == device.remoteId.str);
+
+      // Update device found status
+      isDeviceFound = connectedDevices.any(
+        (device) => device.platformName == "Terratrace-SSD-MBU",
+      );
+
+      // Clear all data
+      dataPoints.clear();
+      collectedData.clear();
+      showSaveButton = false;
+      isPlaying = false;
+      playStopCounter = 0;
+
+      // If no devices are connected, switch back to scan screen
+      if (connectedDevices.isEmpty) {
+        proceedToAcquire = false;
+        savedDeviceNames.clear();
+        deviceServices.clear();
+        readValues.clear();
+        deviceParametersMap.clear();
+        deviceR2SlopeMap.clear();
+        deviceCommandsMap.clear();
+        deviceFlxParamsMap.clear();
+        uuidMap.clear();
+        notifyParamsMap.clear();
+        unitMap.clear();
+        formatMap.clear();
+        tempValues.clear();
+        pressValues.clear();
+        avgPressure = 1013.25;
+        avgTemp = 20;
+        userLocation.clear();
+
+        // Show SnackBar notification
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Device ${device.platformName} disconnected'),
+            backgroundColor: Colors.red,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    });
+
+    // Remove saved device preferences
+    SharedPreferences.getInstance().then((prefs) {
+      prefs.remove('last_connected_device_${device.remoteId.str}');
+      prefs.remove('device_name_${device.remoteId.str}');
+    });
   }
 
   Future<void> saveLastConnectedDevice(
@@ -361,17 +459,99 @@ class _BLEScreenState extends State<BLEScreen> {
       for (var characteristic in service.characteristics) {
         if (characteristic.properties.notify) {
           characteristic.lastValueStream.listen((value) {
-            // if (!mounted) return; // Ensure widget is still in the tree
+            if (!mounted) return; // Add mounted check
+
+            // Store read values keyed by device ID and characteristic UUID.
+            readValues[device.remoteId.str] ??= {};
+            readValues[device.remoteId.str]![characteristic.uuid] = value;
+
+            // Update plot and location in a single setState
             setState(() {
-              // Store read values keyed by device ID and characteristic UUID.
-              readValues[device.remoteId.str] ??= {};
-              readValues[device.remoteId.str]![characteristic.uuid] = value;
-              _updatePlot(device.platformName, characteristic.uuid,
-                  value); // Adjust if your plotting needs to distinguish devices.
+              _updatePlot(device.platformName, characteristic.uuid, value);
+              _saveUserLocation();
             });
           });
           characteristic.setNotifyValue(true);
         }
+      }
+    }
+  }
+
+  void _updatePlot(String deviceName, Guid uuid, List<int> value) {
+    if (!mounted) return; // Add mounted check at the start
+
+    double parseFloat(List<int> value) {
+      if (value.length >= 4) {
+        return ByteData.sublistView(Uint8List.fromList(value))
+            .getFloat32(0, Endian.little);
+      }
+      return 0.0;
+    }
+
+    String parameter = uuidMap[uuid.toString()] ?? "";
+    String deviceParam = "$parameter${deviceName.replaceAll('Terratrace', '')}";
+
+    if (parameter.isNotEmpty) {
+      if (playStopCounter < 2) {
+        double dataPoint = double.parse(
+            parseFloat(value).toStringAsFixed(parameter == "CH4" ? 3 : 2));
+        DateTime timestamp = DateTime.now();
+
+        if (!mounted) return; // Add mounted check before setState
+
+        // Update collectedData
+        collectedData.putIfAbsent(deviceParam, () => []);
+        DateTime firstTimestamp = collectedData[deviceParam]!.isEmpty
+            ? timestamp
+            : collectedData[deviceParam]![0]["timestamp"];
+
+        double secondsDifference =
+            timestamp.difference(firstTimestamp).inMilliseconds / 1000.0;
+
+        collectedData[deviceParam]!.add({
+          "timestamp": timestamp,
+          "value": dataPoint,
+          "sec": secondsDifference.toStringAsFixed(2),
+        });
+
+        // Update temperature and pressure values
+        if (deviceParam.contains("Temperature")) {
+          tempValues.add(dataPoint);
+          avgTemp = calculateAverage(tempValues);
+        }
+        if (deviceParam.contains("Pressure")) {
+          pressValues.add(dataPoint);
+          avgPressure = calculateAverage(pressValues);
+        }
+      }
+
+      if (!mounted) return; // Add mounted check before setState
+
+      // Update plot data and boundaries
+      if (deviceR2SlopeMap.containsKey(deviceName) &&
+          deviceR2SlopeMap[deviceName]!.containsKey(selectedParameter) &&
+          deviceR2SlopeMap[deviceName]![selectedParameter]!.length >= 2 &&
+          parameter == selectedParameter) {
+        leftBoundary = deviceR2SlopeMap[deviceName]![selectedParameter]![0];
+        rightBoundary = deviceR2SlopeMap[deviceName]![selectedParameter]![1];
+        slope = deviceR2SlopeMap[deviceName]![selectedParameter]![2];
+        rSquared = deviceR2SlopeMap[deviceName]![selectedParameter]![3];
+        indexLeftBoundary =
+            deviceR2SlopeMap[deviceName]![selectedParameter]![4].toInt();
+        indexRightBoundary =
+            deviceR2SlopeMap[deviceName]![selectedParameter]![5].toInt();
+        flux = deviceR2SlopeMap[deviceName]![selectedParameter]![6];
+        fluxError = deviceR2SlopeMap[deviceName]![selectedParameter]![7];
+      }
+
+      if (parameter == selectedParameter) {
+        updatePlotData(deviceParam);
+        // if (isPlaying) {
+        if (deviceFlxParamsMap[selectedParamDevice]!
+            .contains(selectedParameter)) {
+          dynamicSlopeAndRSquared(deviceName);
+        }
+        // }
       }
     }
   }
@@ -402,84 +582,6 @@ class _BLEScreenState extends State<BLEScreen> {
     }
   }
 
-  void _updatePlot(String deviceName, Guid uuid, List<int> value) {
-    // if (!mounted) return; // Ensure widget is still in the tree
-    double parseFloat(List<int> value) {
-      if (value.length >= 4) {
-        return ByteData.sublistView(Uint8List.fromList(value))
-            .getFloat32(0, Endian.little);
-      }
-      return 0.0;
-    }
-
-    String parameter = uuidMap[uuid.toString()] ?? "";
-    // parameter = parameter.replaceAll('-', '').replaceAll(' ', '');
-    String deviceParam = "$parameter${deviceName.replaceAll('Terratrace', '')}";
-    if (parameter.isNotEmpty) {
-      if (playStopCounter < 2) {
-        double dataPoint = double.parse(
-            parseFloat(value).toStringAsFixed(parameter == "CH4" ? 3 : 2));
-        DateTime timestamp = DateTime.now();
-        // Get the timestamp of the first data point in the selected range
-
-        setState(() {
-          collectedData.putIfAbsent(deviceParam, () => []);
-          // Determine the first timestamp for this parameter
-          DateTime firstTimestamp;
-          if (collectedData[deviceParam]!.isEmpty) {
-            firstTimestamp = timestamp;
-          } else {
-            firstTimestamp = collectedData[deviceParam]![0]["timestamp"];
-          }
-          // Calculate difference in seconds (milliseconds / 1000.0)
-          double secondsDifference =
-              timestamp.difference(firstTimestamp).inMilliseconds / 1000.0;
-
-          collectedData[deviceParam]!.add({
-            "timestamp": timestamp,
-            "value": dataPoint,
-            "sec": secondsDifference.toStringAsFixed(2),
-          });
-          if (deviceParam.contains("Temperature")) {
-            tempValues.add(dataPoint);
-            avgTemp = calculateAverage(tempValues);
-          }
-          if (deviceParam.contains("Pressure")) {
-            pressValues.add(dataPoint);
-            avgPressure = calculateAverage(pressValues);
-          }
-        });
-      }
-      setState(() {
-        // Ensure plot updates correctly when switching parameters
-        if (deviceR2SlopeMap.containsKey(deviceName) &&
-            deviceR2SlopeMap[deviceName]!.containsKey(selectedParameter) &&
-            deviceR2SlopeMap[deviceName]![selectedParameter]!.length >= 2 &&
-            parameter == selectedParameter) {
-          leftBoundary = deviceR2SlopeMap[deviceName]![selectedParameter]![
-              0]; // Saved left boundary
-          rightBoundary = deviceR2SlopeMap[deviceName]![selectedParameter]![1];
-          slope = deviceR2SlopeMap[deviceName]![selectedParameter]![2];
-          rSquared = deviceR2SlopeMap[deviceName]![selectedParameter]![3];
-          indexLeftBoundary =
-              deviceR2SlopeMap[deviceName]![selectedParameter]![4].toInt();
-          indexRightBoundary =
-              deviceR2SlopeMap[deviceName]![selectedParameter]![5].toInt();
-          flux = deviceR2SlopeMap[deviceName]![selectedParameter]![
-              6]; // Saved right boundary
-        }
-
-        if (parameter == selectedParameter) {
-          updatePlotData(deviceParam);
-          if (isPlaying) {
-            _calculateSlopeAndRSquared(deviceName);
-          }
-        }
-      });
-    }
-  }
-
-// Function to refresh the plot when switching parameters
   void updatePlotData(String deviceParam) {
     setState(() {
       dataPoints.clear();
@@ -505,6 +607,17 @@ class _BLEScreenState extends State<BLEScreen> {
             // Add data point to the plot
             dataPoints.add(FlSpot(timeInSeconds, point["value"]));
           }
+          if (isPlaying) {
+            setState(() {
+              rightBoundary =
+                  350; // dynamically set the rightboundary to be the last acquired point, as per Giorgio's request
+            });
+          }
+          setState(() {
+            minY = dataPoints.map((e) => e.y).reduce((a, b) => a < b ? a : b);
+            maxY = dataPoints.map((e) => e.y).reduce((a, b) => a > b ? a : b);
+            stepSize = calculateStepSize(minY, maxY);
+          });
         }
       }
     });
@@ -558,14 +671,14 @@ class _BLEScreenState extends State<BLEScreen> {
         rSquared,
         indexLeftBoundary.toDouble(),
         indexRightBoundary.toDouble(),
-        (86400 * avgPressure * slope * (chamberHeight / 1000)) /
-            (1000000 * gasConstant * avgTemp)
+        flux,
+        fluxError
       ];
     }
   }
 
   /// Convert boundary positions into data indices and calculate regression
-  void _calculateSlopeAndRSquared(String deviceName) {
+  void dynamicSlopeAndRSquared(String deviceName) {
     if (dataPoints.isEmpty) return;
     print(
         "Chart width: $chartWidth, Left: $leftBoundary, Right: $rightBoundary");
@@ -576,7 +689,6 @@ class _BLEScreenState extends State<BLEScreen> {
     // Ensure indices are within valid range
     startIndex = startIndex.clamp(0, dataPoints.length - 1);
     endIndex = endIndex.clamp(0, dataPoints.length - 1);
-
     print(
         "Start Index: $startIndex, End Index: $endIndex, Total: ${dataPoints.length}");
 
@@ -588,6 +700,7 @@ class _BLEScreenState extends State<BLEScreen> {
         rSquared = 0.0;
         indexLeftBoundary = startIndex;
         indexRightBoundary = endIndex;
+        fluxError = 0.0;
       });
       saveParameterValues(deviceName);
       return;
@@ -622,13 +735,28 @@ class _BLEScreenState extends State<BLEScreen> {
     // Compute R²
     double rSquaredCalculated = r * r;
 
+    final dataset = collectedData[
+        "$selectedParameter-${selectedParamDevice.replaceAll("Terratrace-", "")}"];
+    final error = calculateSlopesAndStdDev(dataset, startIndex, endIndex);
+
     // Update UI
     setState(() {
-      slope = double.parse(m.toStringAsFixed(2));
+      slope =
+          double.parse(m.toStringAsFixed(selectedParameter == "CH4" ? 4 : 2));
       rSquared = double.parse(rSquaredCalculated.toStringAsFixed(2));
-
+      flux = selectedParameter == "CH4"
+          ? (86400 * avgPressure * 100 * slope * chamberHeight) /
+              (1000000 * gasConstant * (avgTemp + 273.15))
+          : double.parse(((86400 * avgPressure * 100 * slope * chamberHeight) /
+                  (1000000 * gasConstant * (avgTemp + 273.15)))
+              .toStringAsFixed(3));
       indexLeftBoundary = startIndex;
       indexRightBoundary = endIndex;
+
+      fluxError = slope == 0
+          ? 0
+          : double.parse(
+              ((error["stdDeviation"]! / m) * 100).toStringAsFixed(1));
 
       // Define start and end points for the slope line
       double xStart = subset.first.x;
@@ -642,7 +770,7 @@ class _BLEScreenState extends State<BLEScreen> {
       ];
     });
     saveParameterValues(deviceName);
-    print("Slope: $slope, R²: $rSquared");
+    print("Slope: $slope, R²: $rSquared, FluxError: $fluxError Flux: $flux");
   }
 
   void showNewAcquisitionDialog(BuildContext context, VoidCallback onConfirm) {
@@ -650,8 +778,8 @@ class _BLEScreenState extends State<BLEScreen> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          backgroundColor:
-              Color.fromRGBO(64, 75, 96, 1), // Set background color
+          // backgroundColor:
+          //     Color.fromRGBO(64, 75, 96, 1), // Set background color
           title: Text(
             "Confirm New Acquisition",
             style:
@@ -677,7 +805,12 @@ class _BLEScreenState extends State<BLEScreen> {
               onPressed: () {
                 setState(() {
                   collectedData.clear(); // Reset collectedData
-                  deviceR2SlopeMap.clear(); // Clear r2SlopeMap if needed
+                  deviceR2SlopeMap.forEach((outerKey, innerMap) {
+                    innerMap.forEach((innerKey, list) {
+                      innerMap[innerKey] = [];
+                    });
+                  });
+                  // deviceR2SlopeMap.clear(); // Clear r2SlopeMap if needed
                   // isPlaying = true;
                   // playStopCounter = 1;
                   // dataPoints.clear();
@@ -719,18 +852,8 @@ class _BLEScreenState extends State<BLEScreen> {
     return step;
   }
 
-// Function to format Y-axis labels
-  String formatYAxisLabel(double value, double stepSize) {
-    if (stepSize >= 10) {
-      return value.toStringAsFixed(0); // No decimals
-    } else {
-      return value.toStringAsFixed(2); // Two decimal places
-    }
-  }
-
   @override
   void dispose() {
-    // Cancel the subscription when disposing
     // Cancel all active device state subscriptions
     for (var subscription in deviceStateSubscriptions.values) {
       subscription.cancel();
@@ -742,20 +865,38 @@ class _BLEScreenState extends State<BLEScreen> {
       device.disconnect();
     }
     connectedDevices.clear();
-    setState(() {
-      isPlaying = false;
-      playStopCounter = 0;
-      proceedToAcquire = false;
-    });
+
+    // Clear all data
+    dataPoints.clear();
+    collectedData.clear();
+    showSaveButton = false;
+    isPlaying = false;
+    proceedToAcquire = false;
+    playStopCounter = 0;
+    savedDeviceNames.clear();
+    deviceServices.clear();
+    readValues.clear();
+    deviceParametersMap.clear();
+    deviceR2SlopeMap.clear();
+    deviceCommandsMap.clear();
+    deviceFlxParamsMap.clear();
+    uuidMap.clear();
+    notifyParamsMap.clear();
+    unitMap.clear();
+    formatMap.clear();
+    tempValues.clear();
+    pressValues.clear();
+    userLocation.clear();
+
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        backgroundColor: const Color.fromRGBO(58, 66, 86, 1.0),
+        // backgroundColor: const Color.fromRGBO(58, 66, 86, 1.0),
         appBar: AppBar(
-          backgroundColor: const Color.fromRGBO(58, 66, 86, 1.0),
+          // backgroundColor: const Color.fromRGBO(58, 66, 86, 1.0),
           title: CustomAppBar(
               title: connectedDevices.isEmpty
                   ? 'Connect to Devices'
@@ -769,7 +910,12 @@ class _BLEScreenState extends State<BLEScreen> {
         body: !proceedToAcquire
             ? Column(
                 children: [
+                  SizedBox(
+                      height: 16.0), // Add spacing between AppBar and button
                   ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                        backgroundColor:
+                            const Color.fromARGB(255, 176, 237, 70)),
                     onPressed: startScan,
                     child:
                         Text(isScanning ? 'Scanning...' : 'Scan for Devices'),
@@ -797,11 +943,18 @@ class _BLEScreenState extends State<BLEScreen> {
                               }
                             },
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: isConnected
-                                  ? Colors.red[900]
-                                  : Color(0xFFC6FF00),
+                                backgroundColor: isConnected
+                                    ? const Color.fromARGB(255, 113, 15, 15)
+                                    : const Color.fromARGB(
+                                        255, 176, 237, 70) //Color(0xFFC6FF00),
+                                ),
+                            child: Text(
+                              isConnected ? 'Disconnect' : 'Connect',
+                              style: TextStyle(
+                                  // fontSize: 20, // match the stroke text size
+                                  // color: Colors.white,
+                                  ),
                             ),
-                            child: Text(isConnected ? 'Disconnect' : 'Connect'),
                           ),
                         );
                       },
@@ -872,47 +1025,51 @@ class _BLEScreenState extends State<BLEScreen> {
                               )
                             : Container(),
                         Expanded(
-                          child: DropdownButton<String>(
-                            isExpanded: true,
-                            iconEnabledColor: Color.fromRGBO(58, 66, 86, 1.0),
-                            dropdownColor: Color.fromRGBO(58, 66, 86, 1.0),
-                            value: selectedParameter.isEmpty
-                                ? null
-                                : "$selectedParameter ($selectedParamDevice)",
-                            items: deviceParametersMap
-                                .entries // Iterate over key-value pairs (platform, parameters list)
-                                .expand((entry) => entry.value.map((param) {
-                                      // For each parameter, append the platform name in parentheses
-                                      String displayText =
-                                          "$param (${entry.key.replaceAll("Terratrace-", "")})";
-                                      return DropdownMenuItem<String>(
-                                        value: "$param (${entry.key})",
-                                        child: Text(
-                                          displayText,
-                                          style: TextStyle(color: Colors.white),
-                                        ),
-                                      );
-                                    }))
-                                .toList(),
-                            onChanged: (value) {
-                              // Split the string on the '(' character.
-                              List<String> parts = value!.split('(');
-
-                              setState(() {
-                                if (parts.length == 2) {
-                                  // Trim the parameter name (before the '(').
+                          child: ParameterDropdown(
+                            selectedParameter: selectedParameter,
+                            selectedParamDevice: selectedParamDevice,
+                            deviceParametersMap: deviceParametersMap,
+                            onParameterSelected: (value) {
+                              List<String> parts = value.split('(');
+                              if (parts.length == 2) {
+                                setState(() {
                                   selectedParameter = parts[0].trim();
-                                  // Remove the closing parenthesis and trim to get the device name.
                                   selectedParamDevice =
                                       parts[1].replaceAll(')', '').trim();
                                   formatter = NumberFormat(
                                       formatMap[selectedParameter], "en_US");
-                                }
-                                // updatePlotData(
-                                //     "$selectedParameter${selectedParamDevice.replaceAll('Terratrace', '')}");
-                                dataPoints.clear();
-                              });
+                                  dataPoints.clear();
+                                  leftBoundary =
+                                      deviceR2SlopeMap[selectedParamDevice]![
+                                              selectedParameter]![
+                                          0]; // Saved left boundary
+                                  rightBoundary =
+                                      deviceR2SlopeMap[selectedParamDevice]![
+                                              selectedParameter]![
+                                          1]; // Saved right boundary
+                                  slope =
+                                      deviceR2SlopeMap[selectedParamDevice]![
+                                          selectedParameter]![2];
+                                  rSquared =
+                                      deviceR2SlopeMap[selectedParamDevice]![
+                                          selectedParameter]![3];
+                                  indexLeftBoundary =
+                                      deviceR2SlopeMap[selectedParamDevice]![
+                                              selectedParameter]![4]
+                                          .toInt();
+                                  indexRightBoundary =
+                                      deviceR2SlopeMap[selectedParamDevice]![
+                                              selectedParameter]![5]
+                                          .toInt();
+                                  flux = deviceR2SlopeMap[selectedParamDevice]![
+                                      selectedParameter]![6];
+                                  fluxError =
+                                      deviceR2SlopeMap[selectedParamDevice]![
+                                          selectedParameter]![7];
+                                });
+                              }
                             },
+                            formatMap: formatMap,
                           ),
                         ),
                         IconButton(
@@ -927,14 +1084,106 @@ class _BLEScreenState extends State<BLEScreen> {
                             builder: (context, ref, child) {
                               return IconButton(
                                   onPressed: () async {
+                                    // Check and set default boundaries for any parameter with empty boundaries
+                                    if (deviceR2SlopeMap
+                                        .containsKey(selectedParamDevice)) {
+                                      deviceR2SlopeMap[selectedParamDevice]!
+                                          .forEach((key, list) {
+                                        if (list.isEmpty) {
+                                          String deviceParam =
+                                              "$key${selectedParamDevice.replaceAll('Terratrace', '')}";
+                                          final data =
+                                              collectedData[deviceParam];
+                                          if (data != null && data.isNotEmpty) {
+                                            // Set default boundaries (40.0 and 350.0)
+                                            final slopeRsquared =
+                                                calculateSlopeAndRSquared(data);
+                                            final error =
+                                                calculateSlopesAndStdDev(
+                                                    data, 0, data.length - 1);
+
+                                            deviceR2SlopeMap[
+                                                selectedParamDevice]![key] = [
+                                              40.0, // Default left boundary
+                                              350.0, // Default right boundary
+                                              double.parse(
+                                                  slopeRsquared["slope"]!
+                                                      .toStringAsFixed(2)),
+                                              double.parse(
+                                                  slopeRsquared["rSquared"]!
+                                                      .toStringAsFixed(2)),
+                                              0,
+                                              data.length.toDouble() - 1,
+                                              key == "CH4"
+                                                  ? (86400 *
+                                                          avgPressure *
+                                                          100 *
+                                                          slope *
+                                                          chamberHeight) /
+                                                      (1000000 *
+                                                          gasConstant *
+                                                          (avgTemp + 273.15))
+                                                  : double.parse(((86400 *
+                                                              avgPressure *
+                                                              100 *
+                                                              slopeRsquared[
+                                                                  "slope"]! *
+                                                              chamberHeight) /
+                                                          (1000000 *
+                                                              gasConstant *
+                                                              (avgTemp +
+                                                                  273.15)))
+                                                      .toStringAsFixed(3)),
+                                              double.parse(slopeRsquared[
+                                                              "slope"]!
+                                                          .toStringAsFixed(
+                                                              2)) ==
+                                                      0
+                                                  ? 0
+                                                  : double.parse(
+                                                      ((error["stdDeviation"]! /
+                                                                  slopeRsquared[
+                                                                      "slope"]!) *
+                                                              100)
+                                                          .toStringAsFixed(1))
+                                            ];
+                                          }
+                                        }
+                                      });
+                                    }
+
                                     final bool? didSave =
                                         await showDialog<bool>(
                                       context: context,
-                                      builder: (context) => SaveDataPopup(
-                                        collectedData: collectedData,
-                                        ref: ref,
-                                        r2SlopeMap: deviceR2SlopeMap,
-                                      ),
+                                      builder: (context) {
+                                        return SaveDataPopup(
+                                          collectedData: collectedData,
+                                          ref: ref,
+                                          r2SlopeMap: deviceR2SlopeMap,
+                                          userLocation: Position(
+                                            longitude: userLocation.fold(
+                                                    0.0,
+                                                    (sum, pos) =>
+                                                        sum + pos.longitude) /
+                                                userLocation.length,
+                                            latitude: userLocation.fold(
+                                                    0.0,
+                                                    (sum, pos) =>
+                                                        sum + pos.latitude) /
+                                                userLocation.length,
+                                            timestamp: DateTime.now(),
+                                            accuracy: userLocation
+                                                .map((pos) => pos.accuracy)
+                                                .reduce(min),
+                                            altitude: 0,
+                                            altitudeAccuracy: 0,
+                                            heading: 0,
+                                            headingAccuracy: 0,
+                                            speed: 0.0,
+                                            speedAccuracy: 0.0,
+                                          ),
+                                        );
+                                      },
                                     );
                                     // If the user saved successfully, clear the data
                                     if (didSave == true) {
@@ -942,17 +1191,23 @@ class _BLEScreenState extends State<BLEScreen> {
                                         collectedData
                                             .clear(); // Reset collectedData
                                         deviceR2SlopeMap
-                                            .clear(); // Clear r2SlopeMap if needed
+                                            .forEach((outerKey, innerMap) {
+                                          innerMap.forEach((innerKey, list) {
+                                            innerMap[innerKey] = [];
+                                          });
+                                        }); // Clear r2SlopeMap if needed
                                         isPlaying = false;
                                         playStopCounter = 0;
                                         dataPoints.clear();
                                         showSaveButton = false;
+                                        leftBoundary = 40.0;
+                                        rightBoundary = 350.0;
+                                        userLocation = [];
                                       });
                                     }
                                   },
-                                  icon: Icon(Icons.save_as, color: Colors.white)
-                                  // child: Text('Save'),
-                                  );
+                                  icon:
+                                      Icon(Icons.save_as, color: Colors.white));
                             },
                           ),
                         IconButton(
@@ -975,6 +1230,7 @@ class _BLEScreenState extends State<BLEScreen> {
                               showSaveButton = false;
                               isPlaying = false;
                               proceedToAcquire = false;
+                              playStopCounter = 0;
                             });
                           },
                         ),
@@ -987,212 +1243,85 @@ class _BLEScreenState extends State<BLEScreen> {
                       rightBoundary = rightBoundary.clamp(
                           leftBoundary + minHandleSeparation,
                           chartWidth - handleWidth);
-                      // }
 
-                      print(
-                          "Chart width: $chartWidth, Left: $leftBoundary, Right: $rightBoundary");
                       return Padding(
                         padding: const EdgeInsets.all(16.0),
                         child: Stack(
                           children: [
                             // The line chart.
                             Positioned.fill(
-                              child: LineChart(
-                                key: ValueKey(selectedParameter),
-                                LineChartData(
-                                  lineTouchData: LineTouchData(
-                                    touchTooltipData: LineTouchTooltipData(
-                                      // Customize tooltip appearance
-                                      getTooltipItems: (touchedSpots) {
-                                        return touchedSpots.map(
-                                          (touchedSpot) {
-                                            final xValue =
-                                                touchedSpot.x; // x coordinate
-                                            final yValue =
-                                                touchedSpot.y; // y coordinate
-                                            return LineTooltipItem(
-                                              'x: $xValue, y: $yValue', // Display both x and y values
-                                              TextStyle(
-                                                  color: Colors
-                                                      .white), // Customize text style
-                                            );
-                                          },
-                                        ).toList();
-                                      },
-                                    ),
-                                    touchSpotThreshold:
-                                        10, // Adjust sensitivity
-                                    getTouchedSpotIndicator:
-                                        (barData, spotIndexes) {
-                                      // This prevents drawing the vertical line
-                                      return spotIndexes
-                                          .map(
-                                            (index) => TouchedSpotIndicatorData(
-                                              FlLine(
-                                                  color: Colors
-                                                      .transparent), // Makes the line invisible
-                                              FlDotData(
-                                                  show:
-                                                      true), // Keeps the dot highlight
-                                            ),
-                                          )
-                                          .toList();
-                                    },
-                                  ),
-                                  lineBarsData: [
-                                    LineChartBarData(
-                                      spots: dataPoints.isNotEmpty
-                                          ? dataPoints
-                                          : [FlSpot(0, 0)],
-                                      isCurved: true,
-                                      curveSmoothness: 0.3,
-                                      barWidth: 2,
-                                      color: Color(0xFFAEEA00),
-                                    ),
-                                    // Slope line
-                                    if ((playStopCounter == 1 ||
-                                            playStopCounter == 2) &&
-                                        deviceFlxParamsMap[selectedParamDevice]!
-                                            .contains(selectedParameter))
-                                      LineChartBarData(
-                                        spots: slopeLinePoints.isNotEmpty
-                                            ? slopeLinePoints
-                                            : [FlSpot(0, 0)],
-                                        isCurved: false,
-                                        barWidth: 2,
-                                        color: Colors.redAccent,
-                                        dashArray: [
-                                          5,
-                                          5
-                                        ], // Dashed line for visibility
-                                      ),
-                                  ],
-                                  titlesData: FlTitlesData(
-                                    leftTitles: AxisTitles(
-                                      sideTitles: SideTitles(
-                                        showTitles: true,
-                                        reservedSize: 40,
-                                        // interval:stepSize, // Dynamically set interval
-                                        getTitlesWidget: (value, meta) {
-                                          // Find min and max Y values in the dataset
-// Check if dataPoints is empty before calculating min/max
-                                          double minY = dataPoints.isNotEmpty
-                                              ? dataPoints
-                                                  .map((e) => e.y)
-                                                  .reduce(
-                                                      (a, b) => a < b ? a : b)
-                                              : 0.0;
-
-                                          double maxY = dataPoints.isNotEmpty
-                                              ? dataPoints
-                                                  .map((e) => e.y)
-                                                  .reduce(
-                                                      (a, b) => a > b ? a : b)
-                                              : 1.0;
-                                          double stepSize =
-                                              calculateStepSize(minY, maxY);
-                                          return Text(
-                                            selectedParameter == "CH4"
-                                                ? value.toStringAsFixed(3)
-                                                : formatYAxisLabel(
-                                                    value, stepSize),
-                                            // value.toStringAsFixed(2),
-                                            style: TextStyle(
-                                                fontSize: 12,
-                                                color: Colors.white),
-                                          );
-                                        },
-                                      ),
-                                    ),
-                                    topTitles: AxisTitles(
-                                        sideTitles:
-                                            SideTitles(showTitles: false)),
-                                    rightTitles: AxisTitles(
-                                        sideTitles:
-                                            SideTitles(showTitles: false)),
-                                    bottomTitles: AxisTitles(
-                                      sideTitles: SideTitles(
-                                        showTitles: true,
-                                        reservedSize: 24,
-                                        interval: (dataPoints.length >= 10)
-                                            ? (dataPoints.length / 5)
-                                                .ceilToDouble()
-                                            : 2, // Ensure proper spacing
-                                        getTitlesWidget: (value, meta) {
-                                          int index = value
-                                              .round(); // Round to nearest int
-
-                                          return Text(index.toString(),
-                                              style: TextStyle(
-                                                  fontSize: 12,
-                                                  color: Colors.white));
-                                        },
-                                      ),
-                                    ),
-                                  ),
-                                  gridData: FlGridData(show: true),
-                                  borderData: FlBorderData(show: true),
-                                ),
+                              child: CustomLineChart(
+                                dataPoints: dataPoints,
+                                slopeLinePoints: slopeLinePoints,
+                                minY: minY - (maxY - minY) * 0.05,
+                                maxY: maxY + (maxY - minY) * 0.05,
+                                stepSize: stepSize,
+                                selectedParameter: selectedParameter,
+                                showSlopeLine: (playStopCounter == 1 ||
+                                        playStopCounter == 2) &&
+                                    deviceFlxParamsMap[selectedParamDevice]!
+                                        .contains(selectedParameter),
+                                chartWidth: chartWidth,
                               ),
                             ),
-                            // Left draggable boundary handle.
+
                             // Interactive selection overlay.
-                            // Wrap with IgnorePointer so it doesn't intercept gestures.
                             if ((playStopCounter == 1 ||
                                     playStopCounter == 2) &&
                                 deviceFlxParamsMap[selectedParamDevice]!
                                     .contains(selectedParameter))
                               Positioned.fill(
-                                child: IgnorePointer(
-                                  child: CustomPaint(
-                                    painter: SelectionPainter(leftBoundary,
-                                        rightBoundary, chartWidth),
-                                  ),
+                                child: ChartOverlay(
+                                  leftBoundary: leftBoundary,
+                                  rightBoundary: rightBoundary,
+                                  chartWidth: chartWidth,
+                                  minHandleSeparation: minHandleSeparation,
+                                  onCalculateSlope: dynamicSlopeAndRSquared,
+                                  selectedParamDevice: selectedParamDevice,
+                                  showSelection: (playStopCounter == 1 ||
+                                          playStopCounter == 2) &&
+                                      deviceFlxParamsMap[selectedParamDevice]!
+                                          .contains(selectedParameter),
+                                  onLeftBoundaryChanged: (newPosition) {
+                                    if (!mounted) return;
+                                    setState(() {
+                                      leftBoundary = newPosition;
+                                    });
+                                  },
+                                  onRightBoundaryChanged: (newPosition) {
+                                    if (!mounted) return;
+                                    setState(() {
+                                      rightBoundary = newPosition;
+                                    });
+                                  },
                                 ),
                               ),
-                            // Floating Legend for Latest Value
-                            Positioned(
-                              top: 20,
-                              left: 20,
-                              child: Container(
-                                padding: EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  color: Colors.black54,
-                                  borderRadius: BorderRadius.circular(10),
+
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                ChartValueDisplay(
+                                  selectedParameter: selectedParameter,
+                                  dataPoints: dataPoints,
+                                  formatter: formatter,
+                                  unitMap: unitMap,
+                                  avgTemp: avgTemp,
+                                  avgPressure: avgPressure,
                                 ),
-                                child: Text(
-                                  selectedParameter.contains("Temperature")
-                                      ? "$selectedParameter: ${dataPoints.isNotEmpty ? formatter.format(dataPoints.last.y) : "N/A"} ${unitMap[selectedParameter]} \nAverage: ${avgTemp.toStringAsFixed(2)}°C"
-                                      : selectedParameter.contains("Pressure")
-                                          ? "$selectedParameter: ${dataPoints.isNotEmpty ? formatter.format(dataPoints.last.y) : "N/A"} ${unitMap[selectedParameter]} \nAverage: ${avgPressure.toStringAsFixed(2)} hPa"
-                                          : "$selectedParameter: ${dataPoints.isNotEmpty ? formatter.format(dataPoints.last.y) : "N/A"} ${unitMap[selectedParameter]}",
-                                  style: TextStyle(
-                                      color: Colors.white, fontSize: 14),
-                                ),
-                              ),
-                            ),
-                            if ((playStopCounter == 1 ||
-                                    playStopCounter == 2) &&
-                                deviceFlxParamsMap[selectedParamDevice]!
+                                // ),
+                                if (deviceFlxParamsMap[selectedParamDevice]!
                                     .contains(selectedParameter))
-                              // Display slope and R².
-                              Positioned(
-                                top: 60,
-                                left: 20,
-                                child: Container(
-                                  padding: EdgeInsets.all(8),
-                                  decoration: BoxDecoration(
-                                    color: Colors.black54,
-                                    borderRadius: BorderRadius.circular(10),
+                                  ChartStatsDisplay(
+                                    slope: slope,
+                                    rSquared: rSquared,
+                                    flux: flux,
+                                    fluxError: fluxError,
+                                    formatter: formatter,
                                   ),
-                                  child: Text(
-                                    "Slope: ${slope.toStringAsFixed(2)} [ppm/sec] \nR²: ${rSquared.toStringAsFixed(2)} \nFlux: ${flux.toStringAsFixed(2)} [moles/(m2*day)]",
-                                    style: TextStyle(
-                                        color: Colors.white, fontSize: 14),
-                                  ),
-                                ),
-                              ),
-                            // Left draggable boundary handle (placed on top).
+                              ],
+                            ),
+
+                            // Left draggable boundary handle
                             if ((playStopCounter == 1 ||
                                     playStopCounter == 2) &&
                                 deviceFlxParamsMap[selectedParamDevice]!
@@ -1201,32 +1330,25 @@ class _BLEScreenState extends State<BLEScreen> {
                                 left: leftBoundary - handleWidth / 2,
                                 top: 0,
                                 bottom: 0,
-                                child: GestureDetector(
-                                  onPanUpdate: (details) {
+                                child: ChartBoundaryHandle(
+                                  position: leftBoundary,
+                                  handleWidth: handleWidth,
+                                  isLeft: true,
+                                  minHandleSeparation: minHandleSeparation,
+                                  chartWidth: chartWidth,
+                                  onBoundaryChanged: (newPosition) {
+                                    if (!mounted) return;
                                     setState(() {
-                                      leftBoundary =
-                                          (leftBoundary + details.delta.dx)
-                                              .clamp(
-                                                  0.0,
-                                                  rightBoundary -
-                                                      minHandleSeparation);
+                                      leftBoundary = newPosition;
                                     });
-                                    // _calculateSlopeAndRSquared();
-                                    print(
-                                        "Left boundary moved to: $leftBoundary");
                                   },
-                                  onPanEnd: (_) {
-                                    _calculateSlopeAndRSquared(
-                                        selectedParamDevice);
-                                  },
-                                  child: Container(
-                                    width: handleWidth,
-                                    color: Colors.white.withOpacity(0.0),
-                                  ),
+                                  onPanEnd: () => dynamicSlopeAndRSquared(
+                                      selectedParamDevice),
+                                  showHandle: true,
                                 ),
                               ),
 
-                            // Right draggable boundary handle (placed on top).
+                            // Right draggable boundary handle
                             if ((playStopCounter == 1 ||
                                     playStopCounter == 2) &&
                                 deviceFlxParamsMap[selectedParamDevice]!
@@ -1235,28 +1357,21 @@ class _BLEScreenState extends State<BLEScreen> {
                                 left: rightBoundary - handleWidth / 2,
                                 top: 0,
                                 bottom: 0,
-                                child: GestureDetector(
-                                  onPanUpdate: (details) {
+                                child: ChartBoundaryHandle(
+                                  position: rightBoundary,
+                                  handleWidth: handleWidth,
+                                  isLeft: false,
+                                  minHandleSeparation: minHandleSeparation,
+                                  chartWidth: chartWidth,
+                                  onBoundaryChanged: (newPosition) {
+                                    if (!mounted) return;
                                     setState(() {
-                                      rightBoundary =
-                                          (rightBoundary + details.delta.dx)
-                                              .clamp(
-                                                  leftBoundary +
-                                                      minHandleSeparation,
-                                                  chartWidth);
+                                      rightBoundary = newPosition;
                                     });
-                                    // _calculateSlopeAndRSquared();
-                                    print(
-                                        "Right boundary moved to: $rightBoundary");
                                   },
-                                  onPanEnd: (_) {
-                                    _calculateSlopeAndRSquared(
-                                        selectedParamDevice);
-                                  },
-                                  child: Container(
-                                    width: handleWidth,
-                                    color: Colors.white.withOpacity(0.0),
-                                  ),
+                                  onPanEnd: () => dynamicSlopeAndRSquared(
+                                      selectedParamDevice),
+                                  showHandle: true,
                                 ),
                               ),
                           ],
@@ -1269,23 +1384,23 @@ class _BLEScreenState extends State<BLEScreen> {
   }
 }
 
-/// A simple custom painter to draw the selection overlay.
-class SelectionPainter extends CustomPainter {
-  final double leftBoundary;
-  final double rightBoundary;
-  final double chartWidth;
+// /// A simple custom painter to draw the selection overlay.
+// class SelectionPainter extends CustomPainter {
+//   final double leftBoundary;
+//   final double rightBoundary;
+//   final double chartWidth;
 
-  SelectionPainter(this.leftBoundary, this.rightBoundary, this.chartWidth);
+//   SelectionPainter(this.leftBoundary, this.rightBoundary, this.chartWidth);
 
-  @override
-  void paint(Canvas canvas, Size size) {
-    final Paint paint = Paint()
-      ..color = Colors.white.withOpacity(0.2)
-      ..style = PaintingStyle.fill;
-    Rect rect = Rect.fromLTRB(leftBoundary, 0, rightBoundary, size.height);
-    canvas.drawRect(rect, paint);
-  }
+//   @override
+//   void paint(Canvas canvas, Size size) {
+//     final Paint paint = Paint()
+//       ..color = Colors.white.withOpacity(0.2)
+//       ..style = PaintingStyle.fill;
+//     Rect rect = Rect.fromLTRB(leftBoundary, 0, rightBoundary, size.height);
+//     canvas.drawRect(rect, paint);
+//   }
 
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
-}
+//   @override
+//   bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
+// }

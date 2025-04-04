@@ -12,18 +12,20 @@ import 'package:utm/utm.dart';
 import 'package:terratrace/source/features/data/data/data_management.dart';
 import 'package:intl/intl.dart';
 import 'dart:math';
+import 'package:flutter/foundation.dart';
 import 'package:terratrace/source/constants/constants.dart';
-import 'stats_func.dart';
 import 'utils.dart';
 
 class SaveDataPopup extends ConsumerStatefulWidget {
   final Map<String, List<Map<String, dynamic>>> collectedData;
   final WidgetRef ref;
   final Map<String, Map<String, List<double>>> r2SlopeMap;
+  final Position userLocation;
   const SaveDataPopup({
     required this.collectedData,
     required this.ref,
     required this.r2SlopeMap,
+    required this.userLocation,
     Key? key,
   }) : super(key: key);
 
@@ -36,17 +38,17 @@ class _SaveDataPopupState extends ConsumerState<SaveDataPopup> {
   late final TextEditingController samplingPointController;
   final TextEditingController noteController = TextEditingController();
   final List<String> flxParams = ["CO2HiFs", "VOC", "CH4", "H2O", "CO2"];
-  Position? _userLocation;
+  // Position? userLocation;
   var utmResult;
   bool _isLoading = false;
   double chamberDiameter = 200;
   double chamberHeight = 100;
   String project = "";
+  final _formKey = GlobalKey<FormState>();
 
   @override
   void initState() {
     super.initState();
-    _getUserLocation();
     final pointCount = ref.read(dataPointCountProvider);
     final projectName = ref.read(projectNameProvider);
     setState(() {
@@ -54,46 +56,9 @@ class _SaveDataPopupState extends ConsumerState<SaveDataPopup> {
       siteController = TextEditingController(text: projectName.toString());
       samplingPointController =
           TextEditingController(text: pointCount.toString());
-    });
-  }
-
-  void _getUserLocation() async {
-    bool serviceEnabled;
-    LocationPermission permission;
-
-    serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) {
-      print("Location services are disabled.");
-      return;
-    }
-
-    permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied) {
-        print("Location permissions are denied.");
-        return;
-      }
-    }
-
-    if (permission == LocationPermission.deniedForever) {
-      print("Location permissions are permanently denied.");
-      return;
-    }
-
-    Position position = await Geolocator.getCurrentPosition(
-        locationSettings: AndroidSettings(
-      accuracy: LocationAccuracy.best,
-      distanceFilter: 0,
-      forceLocationManager: true, // Forces use of the Android location manager
-      intervalDuration:
-          const Duration(milliseconds: 500), // More frequent updates
-    ));
-
-    setState(() {
-      _userLocation = position;
-      utmResult =
-          UTM.fromLatLon(lat: position.latitude, lon: position.longitude);
+      utmResult = UTM.fromLatLon(
+          lat: widget.userLocation.latitude,
+          lon: widget.userLocation.longitude);
     });
   }
 
@@ -101,56 +66,44 @@ class _SaveDataPopupState extends ConsumerState<SaveDataPopup> {
     String site = siteController.text.trim();
     String samplingPoint = samplingPointController.text.trim();
     String note = noteController.text.trim();
-    // double chamberArea = pi * pow(chamberDiameter / 2, 2) / 1e6;
-    // double chamberVolume =
-    //     pi * pow(chamberDiameter / 2, 2) * chamberHeight / 1e9;
-    // double avgPressure = 1013.15;
-    // double avgTemp = 20;
 
     if (widget.collectedData.isEmpty ||
-        _userLocation == null ||
+        widget.userLocation == null ||
         site.isEmpty ||
         samplingPoint.isEmpty) {
       print("Incomplete data");
       return "";
     }
 
-    // final directory = await getApplicationDocumentsDirectory();
     Directory directory = Directory('/storage/emulated/0/Documents');
-    final filePath = '${directory.path}/${site}_${samplingPoint}_ble_data.txt';
-    final file = File(filePath);
-    print("FILEPATH: $filePath");
 
-    // Determine hemisphere manually based on latitude
-    String hemisphere = _userLocation!.latitude >= 0 ? "N" : "S";
-
-    // EPSG Code (WGS 84 UTM zone-based)
+    String hemisphere = widget.userLocation!.latitude >= 0 ? "N" : "S";
     int epsg = utmResult.zoneNumber + (hemisphere == "N" ? 32600 : 32700);
-    String dataDate = DateTime.now().toString();
+    final DateFormat formatter = DateFormat('yyyy-MM-dd HH:mm:ss');
+    final String dataDate = formatter.format(DateTime.now());
+
     String projectId = samplingPoint == '1'
         ? '${site.replaceAll(' ', '')}_${DateFormat('dd-MM-yyyy').format(DateTime.now())}'
         : site;
+    final filePath =
+        '${directory.path}/${projectId}_Sampling#${samplingPoint}.txt';
+    final file = File(filePath);
+    print("FILEPATH: $filePath");
 
     // Build the dataMap with all the required fields.
     Map<String, dynamic> dataMap = {
-      'dataDate': dataDate, // TIME
-      'dataSite': samplingPoint == '1' ? site : site.split('_')[0], // SITE
-      'dataPoint': samplingPoint, // POINT
-      'dataLong': _userLocation!.longitude, // LONGITUDE
-      'dataLat': _userLocation!.latitude, // LATITUDE
-      'dataEasting': utmResult.easting, // EASTING
-      'dataNorthing': utmResult.northing, // NORTHING
-      'dataZone':
-          '${utmResult.zoneNumber}${utmResult.zoneLetter}', // ZONE NUMBER
-      // 'dataZoneLetter': , // ZONE LETTER
-      'dataHemisphere': hemisphere, // HEMISPHERE
-      'dataEPSG': epsg, // EPSG
-      'dataLocationAccuracy':
-          _userLocation!.accuracy.toStringAsFixed(1), // LOCATION ACCURACY
-      'dataNote': note, // NOTE
-
-      // Additional fields (initialized to null if not provided yet)
-      // 'dataKey': null,
+      'dataDate': dataDate,
+      'dataSite': samplingPoint == '1' ? site : site.split('_')[0],
+      'dataPoint': samplingPoint,
+      'dataLong': widget.userLocation!.longitude,
+      'dataLat': widget.userLocation!.latitude,
+      'dataEasting': utmResult.easting,
+      'dataNorthing': utmResult.northing,
+      'dataZone': '${utmResult.zoneNumber}${utmResult.zoneLetter}',
+      'dataHemisphere': hemisphere,
+      'dataEPSG': epsg,
+      'dataLocationAccuracy': widget.userLocation!.accuracy.toStringAsFixed(1),
+      'dataNote': note,
       'dataInstrument': widget.r2SlopeMap.keys
     };
 
@@ -159,14 +112,14 @@ class _SaveDataPopupState extends ConsumerState<SaveDataPopup> {
 TIME:\t$dataDate
 SITE:\t$site
 POINT:\t$samplingPoint
-LONGITUDE:\t${_userLocation!.longitude}
-LATITUDE:\t${_userLocation!.latitude}
+LONGITUDE:\t${widget.userLocation!.longitude}
+LATITUDE:\t${widget.userLocation!.latitude}
 EASTING:\t${utmResult.easting}
 NORTHING:\t${utmResult.northing}
 ZONE:\t'${utmResult.zoneNumber}${utmResult.zoneLetter}'
 HEMISPHERE:\t$hemisphere
 EPSG:\t$epsg
-LOCATION ACCURACY:\t${_userLocation!.accuracy.toStringAsFixed(1)} meters
+LOCATION ACCURACY:\t${widget.userLocation!.accuracy.toStringAsFixed(1)} meters
 
 NOTE:\t$note
 
@@ -174,32 +127,24 @@ PARAMETER ANALYSIS
 """;
 
     late DocumentReference projectDoc;
-
     final _auth = FirebaseAuth.instance;
     User? user = _auth.currentUser;
-
-    // Initialize rows
     List<String> rows = [];
 
     if (_auth.currentUser != null) {
       final db = FirebaseFirestore.instance;
-// Query for project documents with the given site name.
-      QuerySnapshot querySnapshot =
-          await db.collection('projects').where('name', isEqualTo: site).get();
+      var doc = await db.collection('projects').doc(projectId).get();
 
       bool userHasAccess = false;
 
-      // Check if the current user is listed in any of the project's members.
-      for (var doc in querySnapshot.docs) {
+      if (doc.exists) {
         Map<String, dynamic> members = doc['members'] as Map<String, dynamic>;
         if (members.containsKey(user?.uid)) {
           projectDoc = doc.reference;
           userHasAccess = true;
-          break;
         }
       }
 
-      // If no accessible project document exists, create one with the current user as owner.
       if (!userHasAccess) {
         projectDoc = db.collection('projects').doc(projectId);
         await projectDoc.set({
@@ -209,102 +154,128 @@ PARAMETER ANALYSIS
         });
 
         DocumentReference userDocRef = db.collection('users').doc(user?.uid);
-
-        userDocRef.get().then((DocumentSnapshot documentSnapshot) {
+        await userDocRef.get().then((DocumentSnapshot documentSnapshot) {
           Map<String, dynamic> projectMember = {};
-
           if (documentSnapshot.exists) {
             var projectsField = documentSnapshot.get('projects');
             if (projectsField != null && projectsField is Map) {
               projectMember = Map<String, dynamic>.from(projectsField);
             }
           }
-
-          // Now add your new project
           projectMember[projectId] = 'owner';
-
-          // Write the updated map to Firestore
           userDocRef.set({'projects': projectMember}, SetOptions(merge: true));
         });
         ref.read(dataPointCountProvider.notifier).setDataPointCount(1);
       }
 
-      // Loop through each parameter in collectedData
-      await Future.forEach(widget.collectedData.entries,
-          (MapEntry<String, List<Map<String, dynamic>>> entry) async {
+      // Process all parameters in parallel
+      await Future.wait(widget.collectedData.entries.map((entry) async {
         final param = entry.key;
         final data = entry.value;
-        // Create a reference to the subcollection for the current parameter
+
+        // Create a batch for this parameter
+        WriteBatch batch = db.batch();
         CollectionReference paramCollection = projectDoc
             .collection('time-series')
-            .doc(param) // a document representing this parameter
-            .collection(samplingPoint); // its data points
+            .doc(param)
+            .collection(samplingPoint);
 
-        // Add parameter-specific table header
+        // Process statistics in parallel
+        final statsFuture = compute(
+          (Map<String, dynamic> params) {
+            final data = params['data'] as List<Map<String, dynamic>>;
+            final param = params['param'] as String;
+            final flxParams = params['flxParams'] as List<String>;
+
+            if (!flxParams.contains(param.split("-")[0])) {
+              double minVal = double.infinity;
+              double maxVal = double.negativeInfinity;
+              double sum = 0.0;
+              double sumSquared = 0.0;
+
+              for (var point in data) {
+                double value = point["value"].toDouble();
+                minVal = min(minVal, value);
+                maxVal = max(maxVal, value);
+                sum += value;
+                sumSquared += value * value;
+              }
+
+              double mean = sum / data.length;
+              double variance = (sumSquared / data.length) - (mean * mean);
+              double stdDev = sqrt(variance);
+
+              return {
+                'min': minVal,
+                'max': maxVal,
+                'mean': mean,
+                'stdDev': stdDev,
+                'isFlx': false
+              };
+            }
+            return {'isFlx': true};
+          },
+          {
+            'data': data,
+            'param': param,
+            'flxParams': flxParams,
+          },
+        );
+
+        // Build parameter header and rows
         String paramHeader = "\n$param:\n#\tTIME (sec)\t$param\n";
+        List<String> paramRows = [];
 
-        // Initialize statistics using the first value.
-        double firstValue = data.first["value"].toDouble();
-        double minVal = firstValue;
-        double maxVal = firstValue;
-        double mean = 0.0;
-        double M2 = 0.0;
-        int count = 0;
+        // Process data points in chunks for better performance
+        const chunkSize = 500;
+        for (var i = 0; i < data.length; i += chunkSize) {
+          final chunk = data.skip(i).take(chunkSize);
+          final chunkRows = chunk.map((point) {
+            final index = i + data.indexOf(point);
+            return "${index + 1}\t${point["sec"]}\t${point["value"]}";
+          }).toList();
+          paramRows.addAll(chunkRows);
 
-        // Populate rows for this parameter
-        await Future.wait(data.asMap().entries.map((mapEntry) async {
-          final i = mapEntry.key;
-          double value = data[i]["value"].toDouble();
-
-          // Build row for the parameter
-          String row = "${i + 1}\t${data[i]["sec"]}\t${data[i]["value"]}";
-          paramHeader += row + "\n";
-
-          if (!flxParams.contains(param.split("-")[0])) {
-            if (value < minVal) minVal = value;
-            if (value > maxVal) maxVal = value;
+          // Add documents to batch
+          for (var point in chunk) {
+            final docRef = paramCollection.doc(data.indexOf(point).toString());
+            batch.set(docRef, {
+              'timestamp': point["timestamp"].toIso8601String(),
+              'elapsedTime': point["sec"],
+              'value': point["value"],
+            });
           }
+        }
 
-          count++;
-          // Welford's algorithm: update mean and M2
-          double delta = value - mean;
-          mean += delta / count;
-          double delta2 = value - mean;
-          M2 += delta * delta2;
+        // Commit the batch
+        await batch.commit();
 
-          // Use the index as the document ID (as a string).
-          await paramCollection.doc(i.toString()).set({
-            'timestamp': data[i]["timestamp"].toIso8601String(),
-            'elapsedTime': data[i]["sec"],
-            'value': data[i]["value"],
-          });
-        })); //.toList());
+        // Add parameter header and rows
+        paramHeader += paramRows.join('\n');
+        rows.add(paramHeader);
 
-        if (!flxParams.contains(param.split("-")[0])) {
-          // Calculate average and standard deviation
-          double avg = mean;
-          double variance = count > 1
-              ? M2 / count
-              : 0.0; // use count - 1 for sample variance if needed
-          double stdDev = sqrt(variance);
+        // Process statistics
+        final stats = await statsFuture;
+        if (stats['isFlx'] == false) {
+          final minVal = stats['min'] as double;
+          final maxVal = stats['max'] as double;
+          final mean = stats['mean'] as double;
+          final stdDev = stats['stdDev'] as double;
 
           dataMap['${param}Max'] = maxVal.toStringAsFixed(2);
           dataMap['${param}Min'] = minVal.toStringAsFixed(2);
-          dataMap['${param}Avg'] = avg.toStringAsFixed(2);
+          dataMap['${param}Avg'] = mean.toStringAsFixed(2);
           dataMap['${param}Std'] = stdDev.toStringAsFixed(2);
 
           header += "$param:\n";
           header += "  MIN: ${minVal.toStringAsFixed(2)}\n";
           header += "  MAX: ${maxVal.toStringAsFixed(2)}\n";
-          header += "  AVG: ${avg.toStringAsFixed(2)}\n";
+          header += "  AVG: ${mean.toStringAsFixed(2)}\n";
           header += "  STD.DEV.: ${stdDev.toStringAsFixed(2)}\n\n";
         }
+      }));
 
-        // Add the parameter table to the content
-        rows.add(paramHeader);
-      });
-
-      // Adding R² and slope for each parameter in r2SlopeMap
+      // Process R² and slope data
       widget.r2SlopeMap.forEach((device, parameters) {
         parameters.forEach((param, values) {
           if (values.length >= 4) {
@@ -314,21 +285,10 @@ PARAMETER ANALYSIS
             double slope = values[2];
             int leftIndex = values[4].toInt();
             int rightIndex = values[5].toInt();
-            var dataForIndex = widget
-                .collectedData["$param${device.replaceAll("Terratrace", "")}"];
-            // double constGas = 8.314;
-
-            // double k = (86400 * avgPressure * (chamberHeight / 1000)) /
-            //     (1000000 * gasConstant * avgTemp);
             double fluxInMoles = values[6];
             double fluxInGrams = fluxInMoles * molarMassCO2;
             String prefix = "$param-${device.replaceAll("Terratrace-", "")}";
-
-            var errorSlope =
-                calculateSlopesAndStdDev(dataForIndex, leftIndex, rightIndex);
-            double fluxError = (errorSlope["stdDeviation"]! /
-                    errorSlope["wholeIntervalSlope"]!) *
-                100;
+            double fluxError = values[7];
 
             header += "$prefix:\n";
             header += "  Left Boundary: $leftIndex\n";
@@ -354,20 +314,16 @@ PARAMETER ANALYSIS
         });
       });
 
-      // Create a new document in the 'data' subcollection of the project document.
+      // Save the dataMap to Firestore
       DocumentReference dataDocRef =
           projectDoc.collection('data').doc(samplingPoint);
-      // Save the entire dataMap to the document in the 'data' subcollection.
       await dataDocRef.set(dataMap);
     }
 
     header += "FLUX RECORD TRACKS\n";
-
-// Combine header and all rows (separate tables for each parameter)
     String content = header + rows.join("\n");
-
-// Write the content to the file
     await file.writeAsString(content);
+
     ref.watch(projectNameProvider.notifier).setProjectName(projectId);
     ref
         .watch(dataPointCountProvider.notifier)
@@ -375,8 +331,6 @@ PARAMETER ANALYSIS
     print('Data saved to $filePath');
     widget.collectedData.clear();
     return filePath;
-    // Navigator.pop(context, true);
-    // Navigator.of(context).pop();
   }
 
   @override
@@ -392,115 +346,111 @@ PARAMETER ANALYSIS
     return AlertDialog(
       title: Text("Save acquired data"),
       content: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: _isLoading
-              ? [
-                  Container(
-                    // Semi-transparent dark background
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                    ),
-                    child: Center(
-                      child: Card(
-                        color: Colors.black.withOpacity(0.6),
-                        elevation: 8,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                              vertical: 20, horizontal: 24),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              CircularProgressIndicator(
-                                color: Color(0xFFAEEA00),
-                              ),
-                              SizedBox(height: 16),
-                              Text(
-                                "Processing data...",
-                                style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w500,
-                                    color: Color(0xFFAEEA00)),
-                              ),
-                            ],
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: _isLoading
+                ? [
+                    Container(
+                      decoration: BoxDecoration(
+                          // color: Colors.white,
+                          ),
+                      child: Center(
+                        child: Card(
+                          // color: Colors.black.withOpacity(0.6),
+                          elevation: 8,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                                vertical: 20, horizontal: 24),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                CircularProgressIndicator(
+                                  color: Color(0xFFAEEA00),
+                                ),
+                                SizedBox(height: 16),
+                                Text(
+                                  "Processing data...",
+                                  style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w500,
+                                      color: Color(0xFFAEEA00)),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                  )
-                ]
-              : [
-                  TextField(
-                    controller: siteController,
-                    decoration: InputDecoration(labelText: "Site*"),
-                  ),
-                  TextField(
-                    controller: samplingPointController,
-                    decoration: InputDecoration(labelText: "Sampling point*"),
-                    keyboardType: TextInputType.number,
-                  ),
-                  TextField(
-                    controller: noteController,
-                    decoration: InputDecoration(labelText: "Note"),
-                  ),
-                  SizedBox(height: 10),
-                  if (_userLocation != null)
-                    Text(
-                      "Lon: ${_userLocation!.longitude.toStringAsFixed(8)} Lat: ${_userLocation!.latitude.toStringAsFixed(8)}",
                     )
-                  else
-                    Text("Fetching location..."),
-                ],
+                  ]
+                : [
+                    TextFormField(
+                      controller: siteController,
+                      decoration: InputDecoration(labelText: "Site*"),
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Site is required';
+                        }
+                        return null;
+                      },
+                    ),
+                    TextFormField(
+                      controller: samplingPointController,
+                      decoration: InputDecoration(labelText: "Sampling point*"),
+                      keyboardType: TextInputType.number,
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Sampling point is required';
+                        }
+                        return null;
+                      },
+                    ),
+                    TextFormField(
+                      controller: noteController,
+                      decoration: InputDecoration(labelText: "Note"),
+                    ),
+                    SizedBox(height: 10),
+                    if (widget.userLocation != null)
+                      Text(
+                        "Lon: ${widget.userLocation!.longitude.toStringAsFixed(8)}  Lat: ${widget.userLocation!.latitude.toStringAsFixed(8)}",
+                      )
+                    else
+                      Text("Fetching location...Please wait."),
+                  ],
+          ),
         ),
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context, false),
-          child: Text("Cancel"),
+          child: Text(
+            "Cancel",
+            style: TextStyle(color: Colors.white),
+          ),
         ),
         ElevatedButton(
           onPressed: () async {
+            // Validate the form fields first.
+            if (!_formKey.currentState!.validate()) {
+              return; // Don't proceed if validation fails.
+            }
             setState(() {
               _isLoading = true;
             });
             try {
-              String filepath = await _saveData();
+              // String filepath =
+              await _saveData();
               setState(() {
                 _isLoading = false;
               });
 
               // Notify the user that the file has been downloaded
-              showDownloadMessage(context);
+              showDownloadMessage(context, 'File has been downloaded!');
               Navigator.pop(context, true);
-              return showDialog(
-                context: context,
-                builder: (context) {
-                  return AlertDialog(
-                    title: Text('Share BLE txt file'),
-                    content: Text('Do you want to share the txt file?'),
-                    actions: [
-                      ElevatedButton(
-                        onPressed: () async {
-                          await shareCSVFile(filepath);
-                          Navigator.of(context)
-                              .pop(); // close the dialog after sharing
-                        },
-                        child: Text('Share'),
-                      ),
-                      TextButton(
-                        onPressed: () {
-                          Navigator.of(context)
-                              .pop(); // close the dialog without sharing
-                        },
-                        child: Text('Cancel'),
-                      ),
-                    ],
-                  );
-                },
-              );
             } catch (e) {
               print(e);
               // Handle error (if necessary)

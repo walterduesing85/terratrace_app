@@ -59,7 +59,7 @@ Map<String, double> calculateSlopesAndStdDev(
       collectedData.sublist(leftBoundaryIndex, rightBoundaryIndex + 1);
 
   // Calculate the slope for the whole interval using linear regression.
-  final wholeIntervalSlope = linearRegressionSlope(subset);
+  // final wholeIntervalSlope = linearRegressionSlope(subset);
   // Calculate constant step.
   final totalRange = rightBoundaryIndex - leftBoundaryIndex;
   int step = ((totalRange / 10).floor()) - 1;
@@ -90,7 +90,56 @@ Map<String, double> calculateSlopesAndStdDev(
   final stdDeviation = sqrt(variance);
 
   return {
-    "wholeIntervalSlope": wholeIntervalSlope,
+    // "wholeIntervalSlope": wholeIntervalSlope,
     "stdDeviation": stdDeviation,
+  };
+}
+
+Map<String, double> calculateSlopeAndRSquared(List<Map<String, dynamic>> data) {
+  final int n = data.length;
+  if (n < 2) {
+    throw ArgumentError('Data must have at least 2 points');
+  }
+
+  double sumX = 0.0, sumY = 0.0, sumXY = 0.0, sumX2 = 0.0, sumY2 = 0.0;
+
+  for (int i = 0; i < n; i++) {
+    double x = double.parse(data[i]['sec'].toString());
+    double y = data[i]['value'] as double;
+    sumX += x;
+    sumY += y;
+    sumXY += x * y;
+    sumX2 += x * x;
+    sumY2 += y * y;
+  }
+
+  double numerator = (n * sumXY) - (sumX * sumY);
+  double denominator = (n * sumX2) - (sumX * sumX);
+  if (denominator == 0) {
+    throw ArgumentError('Denominator is zero; check for identical x-values');
+  }
+  double slope = numerator / denominator;
+  double yIntercept = (sumY - (slope * sumX)) / n;
+  double meanY = sumY / n;
+
+  // Calculate total variation (sum of squared differences from the mean)
+  double totalVariation = 0.0;
+  // Calculate explained variation (sum of squared differences between predicted and mean)
+  double explainedVariation = 0.0;
+
+  for (int i = 0; i < n; i++) {
+    double x = double.parse(data[i]['sec'].toString());
+    double y = data[i]['value'] as double;
+    totalVariation += pow(y - meanY, 2);
+    double predictedY = slope * x + yIntercept;
+    explainedVariation += pow(predictedY - meanY, 2);
+  }
+
+  double rSquared =
+      totalVariation == 0 ? 0.0 : explainedVariation / totalVariation;
+
+  return {
+    'slope': slope,
+    'rSquared': rSquared,
   };
 }

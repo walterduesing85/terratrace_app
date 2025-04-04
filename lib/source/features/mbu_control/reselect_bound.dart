@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:fl_chart/fl_chart.dart';
-import 'package:terratrace/source/common_widgets/custom_appbar.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+// import 'package:terratrace/source/common_widgets/custom_appbar.dart';
+// import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:async';
 import 'dart:math';
 import 'dart:convert';
@@ -12,7 +12,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:terratrace/source/constants/constants.dart';
 import 'stats_func.dart';
 import 'dart:io';
-import 'utils.dart';
+// import 'utils.dart';
+import 'package:terratrace/source/features/mbu_control/widgets/chart_widgets.dart';
+// import 'chart_menu.dart';
 // import 'package:go_router/go_router.dart';
 // import 'package:terratrace/source/routing/app_router.dart';
 
@@ -45,10 +47,11 @@ class _ReselectScreenState extends State<ReselectScreen> {
   double slope = 0.0;
   double rSquared = 0.0;
   double flux = 0.0;
+  double fluxError = 0.0;
 
-  double chamberDiameter = 200;
-  double chamberHeight = 100;
-  double avgPressure = 1013.15;
+  double chamberDiameter = 0.2;
+  double chamberHeight = 0.1;
+  double avgPressure = 1013.25;
   double avgTemp = 20;
 
   // A minimum separation (in pixels) between handles
@@ -84,99 +87,107 @@ class _ReselectScreenState extends State<ReselectScreen> {
 
   bool isLoading = true;
   late Map<String, dynamic>? projectData;
+  String currentSamplingPoint = "1";
+  int totalSamplingPoints = 0;
+  bool hasCalculatedSlope = false;
+  Set<String> visitedParameters = {}; // Track visited parameters
+  bool isAllParametersVisited =
+      false; // Track if all parameters have been visited
 
   @override
   void initState() {
     super.initState();
     print("initState called");
+    currentSamplingPoint = widget.samplingPoint ?? "1";
     _updatePlot();
+    _getTotalSamplingPoints();
   }
 
   Future<void> _updatePlot() async {
-    String jsonString = await rootBundle.loadString('assets/mbus.json');
-    Map<String, dynamic> jsonData = jsonDecode(jsonString);
+    try {
+      String jsonString = await rootBundle.loadString('assets/mbus.json');
+      Map<String, dynamic> jsonData = jsonDecode(jsonString);
 
-    // List<String> headersFirestore = [];
+      Map<String, String> tempFormatMap = {};
+      Map<String, String> tempUnitMap = {};
+      Map<String, List<String>> tempDeviceFlxParamsMap = {};
+      Map<String, List<String>> tempDeviceParametersMap = {};
 
-    Map<String, String> tempFormatMap = {};
-    Map<String, String> tempUnitMap = {};
-    Map<String, List<String>> tempDeviceFlxParamsMap = {};
-    Map<String, List<String>> tempDeviceParametersMap = {};
+      final collection = await FirebaseFirestore.instance
+          .collection('projects')
+          .doc(widget.project)
+          .collection("data")
+          .doc(currentSamplingPoint)
+          .get();
 
-    final collection = await FirebaseFirestore.instance
-        .collection('projects')
-        .doc(widget.project)
-        .collection("data")
-        .doc(widget.samplingPoint)
-        .get();
-    final data = collection.data();
-    setState(() {
-      projectData = data;
-    });
+      if (!collection.exists) {
+        throw Exception('Document does not exist');
+      }
 
-    final mbus = projectData!["dataInstrument"];
+      final data = collection.data();
+      if (data == null) {
+        throw Exception('No data found');
+      }
 
-    // Iterate through each device name in mbus
-    for (var deviceName in mbus) {
-      if (jsonData.containsKey(deviceName)) {
-        // Get the list of parameters for the device
-        var parameters = jsonData[deviceName];
-        for (var param in parameters) {
-          if (param['Class'] == 'FLX' || param['Class'] == 'EPV') {
-            final paramFirestore =
-                '${param["Name"]}${deviceName.replaceAll("Terratrace", "")}';
-            tempFormatMap[param["Name"]] = param["Format"];
-            tempUnitMap[param["Name"]] = param["Unit"];
-            tempDeviceParametersMap.putIfAbsent(deviceName, () => []);
-            tempDeviceFlxParamsMap.putIfAbsent(deviceName, () => []);
-            tempDeviceParametersMap[deviceName]!.add(param["Name"]);
-            setState(() {
-              formatMap = tempFormatMap;
-              unitMap = tempUnitMap;
-              deviceParametersMap = tempDeviceParametersMap;
-            });
+      setState(() {
+        projectData = data;
+      });
 
-            if (param['Class'] == 'FLX') {
-              tempDeviceFlxParamsMap[deviceName]!.add(param["Name"]);
-              setState(() {
-                deviceFlxParamsMap = tempDeviceFlxParamsMap;
+      final mbus = projectData!["dataInstrument"];
+
+      // Clear existing data before loading new data
+      collectedData.clear();
+      dataPoints.clear();
+      slopeLinePoints.clear();
+
+      // Iterate through each device name in mbus
+      for (var deviceName in mbus) {
+        if (jsonData.containsKey(deviceName)) {
+          var parameters = jsonData[deviceName];
+          for (var param in parameters) {
+            if (param['Class'] == 'FLX' //|| param['Class'] == 'EPV'
+                ) {
+              final paramFirestore =
+                  '${param["Name"]}${deviceName.replaceAll("Terratrace", "")}';
+              tempFormatMap[param["Name"]] = param["Format"];
+              tempUnitMap[param["Name"]] = param["Unit"];
+              tempDeviceParametersMap.putIfAbsent(deviceName, () => []);
+              tempDeviceFlxParamsMap.putIfAbsent(deviceName, () => []);
+              tempDeviceParametersMap[deviceName]!.add(param["Name"]);
+
+              if (param['Class'] == 'FLX') {
+                tempDeviceFlxParamsMap[deviceName]!.add(param["Name"]);
                 deviceR2SlopeMap.putIfAbsent(deviceName, () => {});
                 deviceR2SlopeMap[deviceName]!
                     .putIfAbsent(param["Name"], () => []);
                 deviceR2SlopeMap[deviceName]![param["Name"]] = [
-                  data!['${paramFirestore}LeftBoundary'] ?? leftBoundary,
+                  data['${paramFirestore}LeftBoundary'] ?? leftBoundary,
                   data['${paramFirestore}RightBoundary'] ?? rightBoundary,
                   data['${paramFirestore}Slope'] ?? 0,
                   data['${paramFirestore}RSquared'] ?? 0,
                   (data['${paramFirestore}LeftIndexBoundary'] ?? 0).toDouble(),
                   (data['${paramFirestore}RightIndexBoundary'] ?? 0).toDouble(),
-                  data['${paramFirestore}FluxMoles'] ?? 0
+                  data['${paramFirestore}FluxMoles'] ?? 0,
+                  data['${paramFirestore}FluxError'] ?? 0,
                 ];
-              });
-            }
-            if (paramFirestore.contains("Temperature")) {
-              avgTemp = double.parse(data!['${paramFirestore}Avg']);
-            }
-            if (paramFirestore.contains("Pressure")) {
-              avgPressure = double.parse(data!['${paramFirestore}Avg']);
-            }
-            // if (param['Class'] == 'EPV') {
-            //   headersFirestore.add('${paramFirestore}Avg');
-            //   headersFirestore.add('${paramFirestore}Max');
-            //   headersFirestore.add('${paramFirestore}Min');
-            //   headersFirestore.add('${paramFirestore}Std');
-            // }
-            final timeseriesSnapshot = await FirebaseFirestore.instance
-                .collection('projects')
-                .doc(widget.project)
-                .collection("time-series")
-                .doc(paramFirestore)
-                .collection(widget.samplingPoint!)
-                .get();
+              }
 
-            setState(() {
+              if (paramFirestore.contains("Temperature")) {
+                avgTemp = double.parse(data['${paramFirestore}Avg']);
+              }
+              if (paramFirestore.contains("Pressure")) {
+                avgPressure = double.parse(data['${paramFirestore}Avg']);
+              }
+
+              final timeseriesSnapshot = await FirebaseFirestore.instance
+                  .collection('projects')
+                  .doc(widget.project)
+                  .collection("time-series")
+                  .doc(paramFirestore)
+                  .collection(currentSamplingPoint)
+                  .get();
+
               for (var doc in timeseriesSnapshot.docs) {
-                // Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
                 var value = doc.data()['value'];
                 var sec = doc.data()['elapsedTime'];
 
@@ -186,61 +197,255 @@ class _ReselectScreenState extends State<ReselectScreen> {
                   "sec": sec,
                 });
               }
-            });
+            }
           }
         }
       }
-    }
 
-    for (var device in deviceParametersMap.keys) {
-      for (var param in deviceParametersMap[device]!) {
-        if (deviceFlxParamsMap.containsKey(device) &&
-            deviceFlxParamsMap[device]!.contains(param)) {
-          setState(() {
-            selectedParameter = param;
-            selectedParamDevice = device;
-            formatter = NumberFormat(formatMap[selectedParameter], "en_US");
-          });
-          break; // Exit once the first FLX parameter is found
+      // Update state with new maps
+      setState(() {
+        formatMap = tempFormatMap;
+        unitMap = tempUnitMap;
+        deviceParametersMap = tempDeviceParametersMap;
+        deviceFlxParamsMap = tempDeviceFlxParamsMap;
+      });
+
+      // Find first available FLX parameter if none selected
+      if (selectedParameter.isEmpty || selectedParamDevice.isEmpty) {
+        for (var device in deviceParametersMap.keys) {
+          for (var param in deviceParametersMap[device]!) {
+            if (deviceFlxParamsMap[device]?.contains(param) == true) {
+              setState(() {
+                if (selectedParameter == "" && selectedParamDevice == "") {
+                  selectedParameter = param;
+                  selectedParamDevice = device;
+                }
+                formatter = NumberFormat(formatMap[selectedParameter], "en_US");
+              });
+              break;
+            }
+          }
+          if (selectedParameter.isNotEmpty) break;
         }
       }
-    }
 
-    // parameter = parameter.replaceAll('-', '').replaceAll(' ', '');
-    String deviceParam =
-        "$selectedParameter${selectedParamDevice.replaceAll('Terratrace', '')}";
-    if (selectedParameter.isNotEmpty) {
-      setState(() {
-        // Ensure plot updates correctly when switching parameters
-        if (deviceR2SlopeMap.containsKey(selectedParamDevice) &&
-            deviceR2SlopeMap[selectedParamDevice]!
-                .containsKey(selectedParameter) &&
-            deviceR2SlopeMap[selectedParamDevice]![selectedParameter]!.length >=
-                2) {
-          leftBoundary = deviceR2SlopeMap[selectedParamDevice]![
-              selectedParameter]![0]; // Saved left boundary
-          rightBoundary = deviceR2SlopeMap[selectedParamDevice]![
-              selectedParameter]![1]; // Saved right boundary
-          slope = deviceR2SlopeMap[selectedParamDevice]![selectedParameter]![2];
-          rSquared =
-              deviceR2SlopeMap[selectedParamDevice]![selectedParameter]![3];
-          indexLeftBoundary =
-              deviceR2SlopeMap[selectedParamDevice]![selectedParameter]![4]
-                  .toInt();
-          indexRightBoundary =
-              deviceR2SlopeMap[selectedParamDevice]![selectedParameter]![5]
-                  .toInt();
-          flux = deviceR2SlopeMap[selectedParamDevice]![selectedParameter]![6];
-        }
-
+      // Update plot data
+      if (selectedParameter.isNotEmpty) {
+        String deviceParam =
+            "$selectedParameter${selectedParamDevice.replaceAll('Terratrace', '')}";
         updatePlotData(deviceParam);
-        _calculateSlopeAndRSquared(selectedParamDevice);
+      }
+
+      setState(() {
+        isLoading = false;
       });
+    } catch (e) {
+      print('Error updating plot: $e');
+      setState(() {
+        isLoading = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error loading data: $e'),
+          duration: Duration(seconds: 3),
+        ),
+      );
     }
-    // Data loading is complete.
+  }
+
+  Future<void> _getTotalSamplingPoints() async {
+    final snapshot = await FirebaseFirestore.instance
+        .collection('projects')
+        .doc(widget.project)
+        .collection('data')
+        .get();
+
     setState(() {
-      isLoading = false;
+      totalSamplingPoints = snapshot.docs.length;
     });
+  }
+
+  Future<void> _navigateToSamplingPoint(String direction) async {
+    // Save current data if slope was calculated and parameter is a FLX parameter
+    if (hasCalculatedSlope &&
+        deviceFlxParamsMap[selectedParamDevice]?.contains(selectedParameter) ==
+            true) {
+      await _saveData();
+    }
+
+    if (direction == 'right') {
+      int currentPoint = int.parse(currentSamplingPoint);
+      if (currentPoint < totalSamplingPoints) {
+        // Reset state before loading new data
+        setState(() {
+          hasCalculatedSlope = false;
+          collectedData.clear();
+          dataPoints.clear();
+          slopeLinePoints.clear();
+          isLoading = true;
+        });
+
+        // Update sampling point
+        setState(() {
+          currentSamplingPoint = (currentPoint + 1).toString();
+        });
+
+        // Update plot with new data
+        await _updatePlot();
+      } else {
+        // If we're at the last point, move to next parameter and reset to point 1
+        // Only move to next parameter if current parameter is a FLX parameter
+        if (deviceFlxParamsMap[selectedParamDevice]
+                ?.contains(selectedParameter) ==
+            true) {
+          await _moveToNextParameter();
+
+          // If all parameters have been visited, show completion message
+          if (isAllParametersVisited) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                    'All sampling points for all flux parameters have been checked'),
+                duration: Duration(seconds: 3),
+              ),
+            );
+            // Don't change any state, just let the UI update to show disabled right arrow
+          }
+        } else {
+          // For non-FLX parameters, just show a message that we're at the last point
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Last sampling point reached for this parameter'),
+              duration: Duration(seconds: 3),
+            ),
+          );
+        }
+      }
+    } else if (direction == 'left') {
+      int currentPoint = int.parse(currentSamplingPoint);
+      if (currentPoint > 1) {
+        // Reset state before loading new data
+        setState(() {
+          hasCalculatedSlope = false;
+          collectedData.clear();
+          dataPoints.clear();
+          slopeLinePoints.clear();
+          isLoading = true;
+        });
+
+        // Update sampling point
+        setState(() {
+          currentSamplingPoint = (currentPoint - 1).toString();
+        });
+
+        // Update plot with new data
+        await _updatePlot();
+      }
+    }
+  }
+
+  Future<void> _moveToNextParameter() async {
+    // Find current parameter index
+    int currentDeviceIndex =
+        deviceParametersMap.keys.toList().indexOf(selectedParamDevice);
+    int currentParamIndex =
+        deviceParametersMap[selectedParamDevice]!.indexOf(selectedParameter);
+
+    // Mark current parameter as visited
+    // visitedParameters.add("$selectedParamDevice-$selectedParameter");
+    visitedParameters.add("$selectedParamDevice-$selectedParameter");
+
+    // Check if all FLX parameters have been visited
+    bool allFlxParamsVisited = true;
+    for (var device in deviceFlxParamsMap.keys) {
+      for (var param in deviceFlxParamsMap[device]!) {
+        if (!visitedParameters.contains("$device-$param")) {
+          allFlxParamsVisited = false;
+          break;
+        }
+      }
+      if (!allFlxParamsVisited) break;
+    }
+
+    if (allFlxParamsVisited) {
+      setState(() {
+        isAllParametersVisited = true;
+      });
+      return;
+    }
+
+    // Clear current data before switching parameters
+    setState(() {
+      hasCalculatedSlope = false;
+      collectedData.clear();
+      dataPoints.clear();
+      slopeLinePoints.clear();
+      isLoading = true;
+    });
+
+    // Move to next parameter
+    if (currentParamIndex <
+        deviceParametersMap[selectedParamDevice]!.length - 1) {
+      // Find next FLX parameter in current device
+      bool foundNext = false;
+      String? nextDevice;
+      String? nextParameter;
+
+      // First check remaining parameters in current device
+      for (var i = currentParamIndex + 1;
+          i < deviceParametersMap[selectedParamDevice]!.length;
+          i++) {
+        String param = deviceParametersMap[selectedParamDevice]![i];
+
+        if (deviceFlxParamsMap[selectedParamDevice]!.contains(param) &&
+            !visitedParameters.contains("$selectedParamDevice-$param")) {
+          nextDevice = selectedParamDevice;
+          nextParameter = param;
+          print("CHEEEECK $nextDevice $nextParameter");
+          setState(() {
+            selectedParameter = nextParameter!;
+            selectedParamDevice = nextDevice!;
+            currentSamplingPoint = "1";
+            formatter = NumberFormat(formatMap[selectedParameter], "en_US");
+          });
+          foundNext = true;
+          await _updatePlot();
+          break;
+        }
+      }
+    } else {
+      // Move to next device
+      await _moveToNextDevice();
+    }
+  }
+
+  Future<void> _moveToNextDevice() async {
+    int currentDeviceIndex =
+        deviceParametersMap.keys.toList().indexOf(selectedParamDevice);
+    if (currentDeviceIndex < deviceParametersMap.keys.length - 1) {
+      String nextDevice =
+          deviceParametersMap.keys.elementAt(currentDeviceIndex + 1);
+
+      // Find first FLX parameter in next device
+      bool foundNext = false;
+      for (var param in deviceParametersMap[nextDevice]!) {
+        if (deviceFlxParamsMap[nextDevice]!.contains(param)) {
+          setState(() {
+            selectedParamDevice = nextDevice;
+            selectedParameter = param;
+            currentSamplingPoint = "1";
+          });
+          foundNext = true;
+          await _updatePlot();
+          break;
+        }
+      }
+
+      if (!foundNext) {
+        // No FLX parameters in next device, try next device
+        await _moveToNextDevice();
+      }
+    }
   }
 
 // Function to refresh the plot when switching parameters
@@ -260,6 +465,28 @@ class _ReselectScreenState extends State<ReselectScreen> {
         }
       }
       dataPoints = newPoints; // update the reference
+      if (deviceR2SlopeMap.containsKey(selectedParamDevice) &&
+          deviceR2SlopeMap[selectedParamDevice]!
+              .containsKey(selectedParameter) &&
+          deviceR2SlopeMap[selectedParamDevice]![selectedParameter]!.length >=
+              2) {
+        leftBoundary = deviceR2SlopeMap[selectedParamDevice]![
+            selectedParameter]![0]; // Saved left boundary
+        rightBoundary = deviceR2SlopeMap[selectedParamDevice]![
+            selectedParameter]![1]; // Saved right boundary
+        slope = deviceR2SlopeMap[selectedParamDevice]![selectedParameter]![2];
+        rSquared =
+            deviceR2SlopeMap[selectedParamDevice]![selectedParameter]![3];
+        indexLeftBoundary =
+            deviceR2SlopeMap[selectedParamDevice]![selectedParameter]![4]
+                .toInt();
+        indexRightBoundary =
+            deviceR2SlopeMap[selectedParamDevice]![selectedParameter]![5]
+                .toInt();
+        flux = deviceR2SlopeMap[selectedParamDevice]![selectedParameter]![6];
+        fluxError =
+            deviceR2SlopeMap[selectedParamDevice]![selectedParameter]![7];
+      }
     });
   }
 
@@ -276,14 +503,14 @@ class _ReselectScreenState extends State<ReselectScreen> {
         rSquared,
         indexLeftBoundary.toDouble(),
         indexRightBoundary.toDouble(),
-        (86400 * avgPressure * slope * (chamberHeight / 1000)) /
-            (1000000 * gasConstant * avgTemp)
+        flux,
+        fluxError
       ];
     }
   }
 
   /// Convert boundary positions into data indices and calculate regression
-  void _calculateSlopeAndRSquared(String deviceName) {
+  void dynamicSlopeAndRSquared(String deviceName) {
     if (dataPoints.isEmpty) return;
     print(
         "Chart width: $chartWidth, Left: $leftBoundary, Right: $rightBoundary");
@@ -294,7 +521,6 @@ class _ReselectScreenState extends State<ReselectScreen> {
     // Ensure indices are within valid range
     startIndex = startIndex.clamp(0, dataPoints.length - 1);
     endIndex = endIndex.clamp(0, dataPoints.length - 1);
-
     print(
         "Start Index: $startIndex, End Index: $endIndex, Total: ${dataPoints.length}");
 
@@ -306,6 +532,7 @@ class _ReselectScreenState extends State<ReselectScreen> {
         rSquared = 0.0;
         indexLeftBoundary = startIndex;
         indexRightBoundary = endIndex;
+        fluxError = 0.0;
       });
       saveParameterValues(deviceName);
       return;
@@ -340,13 +567,29 @@ class _ReselectScreenState extends State<ReselectScreen> {
     // Compute R²
     double rSquaredCalculated = r * r;
 
+    final dataset = collectedData[
+        "$selectedParameter-${selectedParamDevice.replaceAll("Terratrace-", "")}"];
+    final error = calculateSlopesAndStdDev(dataset, startIndex, endIndex);
+
     // Update UI
     setState(() {
       slope = double.parse(m.toStringAsFixed(2));
-      rSquared = double.parse(rSquaredCalculated.toStringAsFixed(2));
+      rSquared = double.parse(rSquaredCalculated
+          .toStringAsFixed(selectedParameter == "CH4" ? 4 : 2));
 
       indexLeftBoundary = startIndex;
       indexRightBoundary = endIndex;
+      flux = selectedParameter == "CH4"
+          ? (86400 * avgPressure * 100 * slope * chamberHeight) /
+              (1000000 * gasConstant * (avgTemp + 273.15))
+          : double.parse(((86400 * avgPressure * 100 * slope * chamberHeight) /
+                  (1000000 * gasConstant * (avgTemp + 273.15)))
+              .toStringAsFixed(3));
+
+      fluxError = slope == 0
+          ? 0
+          : double.parse(
+              ((error["stdDeviation"]! / m) * 100).toStringAsFixed(1));
 
       // Define start and end points for the slope line
       double xStart = subset.first.x;
@@ -358,9 +601,10 @@ class _ReselectScreenState extends State<ReselectScreen> {
         FlSpot(xStart, yStart),
         FlSpot(xEnd, yEnd),
       ];
+      hasCalculatedSlope = true; // Set this flag when slope is calculated
     });
     saveParameterValues(deviceName);
-    print("Slope: $slope, R²: $rSquared");
+    print("Slope: $slope, R²: $rSquared, FluxError: $fluxError");
   }
 
   // Function to calculate Y-axis step size based on min and max values
@@ -384,14 +628,14 @@ class _ReselectScreenState extends State<ReselectScreen> {
     return step;
   }
 
-// Function to format Y-axis labels
-  String formatYAxisLabel(double value, double stepSize) {
-    if (stepSize >= 10) {
-      return value.toStringAsFixed(0); // No decimals
-    } else {
-      return value.toStringAsFixed(2); // Two decimal places
-    }
-  }
+// // Function to format Y-axis labels
+//   String formatYAxisLabel(double value, double stepSize) {
+//     if (stepSize >= 10) {
+//       return value.toStringAsFixed(0); // No decimals
+//     } else {
+//       return value.toStringAsFixed(2); // Two decimal places
+//     }
+//   }
 
   Future<String> _saveData() async {
     Map<String, dynamic> dataMap = {};
@@ -404,7 +648,7 @@ class _ReselectScreenState extends State<ReselectScreen> {
     // final directory = await getApplicationDocumentsDirectory();
     Directory directory = Directory('/storage/emulated/0/Documents');
     final filePath =
-        '${directory.path}/${widget.project}_Sampling#${widget.samplingPoint}_ble_data.txt';
+        '${directory.path}/${widget.project}_Sampling#${currentSamplingPoint}.txt';
     final file = File(filePath);
     print("FILEPATH: $filePath");
 
@@ -414,7 +658,7 @@ class _ReselectScreenState extends State<ReselectScreen> {
     String header = """
 TIME:\t${projectData!["dataDate"]}
 SITE:\t${projectData!["dataSite"]}
-POINT:\t${widget.samplingPoint}
+POINT:\t${currentSamplingPoint}
 LONGITUDE:\t${projectData!["dataLong"]}
 LATITUDE:\t${projectData!["dataLat"]}
 EASTING:\t${projectData!["dataEasting"]}
@@ -476,18 +720,19 @@ PARAMETER ANALYSIS
           double slope = values[2];
           int leftIndex = values[4].toInt();
           int rightIndex = values[5].toInt();
-          var dataForIndex =
-              collectedData["$param${device.replaceAll("Terratrace", "")}"];
+          // var dataForIndex =
+          //     collectedData["$param${device.replaceAll("Terratrace", "")}"];
 
           double fluxInMoles = values[6];
+          double fluxError = values[7];
           double fluxInGrams = fluxInMoles * molarMassCO2;
           String prefix = "$param-${device.replaceAll("Terratrace-", "")}";
 
-          var errorSlope =
-              calculateSlopesAndStdDev(dataForIndex, leftIndex, rightIndex);
-          double fluxError = (errorSlope["stdDeviation"]! /
-                  errorSlope["wholeIntervalSlope"]!) *
-              100;
+          // var errorSlope =
+          //     calculateSlopesAndStdDev(dataForIndex, leftIndex, rightIndex);
+          // double fluxError = (errorSlope["stdDeviation"]! /
+          //         errorSlope["wholeIntervalSlope"]!) *
+          //     100;
 
           header += "$prefix:\n";
           header += "  Left Boundary: $leftIndex\n";
@@ -517,7 +762,7 @@ PARAMETER ANALYSIS
         .collection('projects')
         .doc(widget.project)
         .collection('data')
-        .doc(widget.samplingPoint);
+        .doc(currentSamplingPoint);
     // Save the entire dataMap to the document in the 'data' subcollection.
     await dataDocRef.update(dataMap);
 
@@ -548,25 +793,69 @@ PARAMETER ANALYSIS
 
   @override
   Widget build(BuildContext context) {
-    // Show a loading indicator until the data is loaded.
     if (isLoading) {
       return Scaffold(
         appBar: AppBar(
           title: Text("Loading..."),
-          backgroundColor: const Color.fromRGBO(58, 66, 86, 1.0),
+          // backgroundColor: const Color.fromRGBO(58, 66, 86, 1.0),
         ),
         body: Center(child: CircularProgressIndicator()),
-        backgroundColor: const Color.fromRGBO(58, 66, 86, 1.0),
+        // backgroundColor: const Color.fromRGBO(58, 66, 86, 1.0),
       );
     }
+
+    // Calculate minY, maxY, and stepSize for the chart
+    double minY = dataPoints.isNotEmpty
+        ? dataPoints.map((e) => e.y).reduce((a, b) => a < b ? a : b)
+        : 0.0;
+
+    double maxY = dataPoints.isNotEmpty
+        ? dataPoints.map((e) => e.y).reduce((a, b) => a > b ? a : b)
+        : 1.0;
+
+    double stepSize = calculateStepSize(minY, maxY);
+
     return Scaffold(
-        backgroundColor: const Color.fromRGBO(58, 66, 86, 1.0),
+        // backgroundColor: const Color.fromARGB(255, 95, 98, 106),
         appBar: AppBar(
-          backgroundColor: const Color.fromRGBO(58, 66, 86, 1.0),
-          title: CustomAppBar(
-              title:
-                  'Adjust Boundaries' // Use data when available, or default title
+          toolbarHeight: 80,
+          title: Row(
+            crossAxisAlignment:
+                CrossAxisAlignment.start, // Align text to the left
+            mainAxisSize:
+                MainAxisSize.min, // Ensures the column takes minimal height
+            children: [
+              Column(
+                crossAxisAlignment:
+                    CrossAxisAlignment.start, // Align text to the left
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    "Sampling #${currentSamplingPoint}",
+                    style: TextStyle(
+                        // color: Color(0xFFAEEA00),
+                        color: kGreenFluxColor,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold),
+                  ),
+                  SizedBox(
+                      height: 2), // Small spacing between title and subtitle
+                  Text(
+                    "${projectData!["dataDate"].split('.')[0]}",
+                    style: TextStyle(color: Colors.white70, fontSize: 12),
+                    softWrap: true,
+                    maxLines: 2, // Limits to 2 lines
+                    overflow: TextOverflow.visible, // Allows text to wrap
+                  ),
+                ],
               ),
+              Expanded(child: SizedBox(width: 100)),
+              Image.asset(
+                'images/TT_Logo.png',
+                width: 80,
+              ),
+            ],
+          ),
         ),
         body: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -577,102 +866,94 @@ PARAMETER ANALYSIS
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Expanded(
-                    child: DropdownButton<String>(
-                      isExpanded: true,
-                      iconEnabledColor: Color.fromRGBO(58, 66, 86, 1.0),
-                      dropdownColor: Color.fromRGBO(58, 66, 86, 1.0),
-                      value: selectedParameter.isEmpty
-                          ? null
-                          : "$selectedParameter ($selectedParamDevice)",
-                      items: deviceParametersMap
-                          .entries // Iterate over key-value pairs (platform, parameters list)
-                          .expand((entry) => entry.value.map((param) {
-                                // For each parameter, append the platform name in parentheses
-                                String displayText =
-                                    "$param (${entry.key.replaceAll("Terratrace-", "")})";
-                                return DropdownMenuItem<String>(
-                                  value: "$param (${entry.key})",
-                                  child: Text(
-                                    displayText,
-                                    style: TextStyle(color: Colors.white),
-                                  ),
-                                );
-                              }))
-                          .toList(),
-                      onChanged: (value) {
-                        // Split the string on the '(' character.
-                        List<String> parts = value!.split('(');
-
+                  ParameterDropdown(
+                    selectedParameter: selectedParameter,
+                    selectedParamDevice: selectedParamDevice,
+                    deviceParametersMap: deviceParametersMap,
+                    onParameterSelected: (value) {
+                      List<String> parts = value.split('(');
+                      if (parts.length == 2) {
                         setState(() {
-                          if (parts.length == 2) {
-                            // Trim the parameter name (before the '(').
-                            selectedParameter = parts[0].trim();
-                            // Remove the closing parenthesis and trim to get the device name.
-                            selectedParamDevice =
-                                parts[1].replaceAll(')', '').trim();
-                            formatter = NumberFormat(
-                                formatMap[selectedParameter], "en_US");
-                          }
+                          selectedParameter = parts[0].trim();
+                          selectedParamDevice =
+                              parts[1].replaceAll(')', '').trim();
+                          formatter = NumberFormat(
+                              formatMap[selectedParameter], "en_US");
+                          // Reset visited parameters tracking
+                          visitedParameters.clear();
+                          isAllParametersVisited = false;
                           updatePlotData(
                               "$selectedParameter${selectedParamDevice.replaceAll('Terratrace', '')}");
-                          // dataPoints.clear();
                         });
+                      }
+                    },
+                    formatMap: formatMap,
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.arrow_back_ios, color: Colors.white),
+                    onPressed: int.parse(currentSamplingPoint) > 1
+                        ? () => _navigateToSamplingPoint('left')
+                        : null,
+                  ),
+                  Container(
+                    padding: EdgeInsets.symmetric(horizontal: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: DropdownButton<String>(
+                      value: currentSamplingPoint,
+                      dropdownColor: Colors.grey[900],
+                      underline: SizedBox(),
+                      icon: Icon(Icons.arrow_drop_down, color: Colors.white),
+                      isDense: true,
+                      items: List.generate(totalSamplingPoints, (index) {
+                        return DropdownMenuItem<String>(
+                          value: (index + 1).toString(),
+                          child: Text(
+                            'Point ${index + 1}',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 14,
+                            ),
+                          ),
+                        );
+                      }),
+                      onChanged: (String? newValue) async {
+                        if (newValue != null) {
+                          // Save current data if slope was calculated and parameter is a FLX parameter
+                          if (hasCalculatedSlope &&
+                              deviceFlxParamsMap[selectedParamDevice]
+                                      ?.contains(selectedParameter) ==
+                                  true) {
+                            await _saveData();
+                          }
+
+                          // Reset state before loading new data
+                          setState(() {
+                            hasCalculatedSlope = false;
+                            collectedData.clear();
+                            dataPoints.clear();
+                            slopeLinePoints.clear();
+                            isLoading = true;
+                          });
+
+                          // Update sampling point
+                          setState(() {
+                            currentSamplingPoint = newValue;
+                          });
+
+                          // Update plot with new data
+                          await _updatePlot();
+                        }
                       },
                     ),
                   ),
-                  Consumer(
-                    builder: (context, ref, child) {
-                      return IconButton(
-                          onPressed: () async {
-                            // try {
-                            // Perform the download/export action
-                            String filepath = await _saveData();
-                            // Notify the user that the file has been downloaded
-                            showDownloadMessage(context);
-                            return showDialog(
-                              context: context,
-                              builder: (context) {
-                                return AlertDialog(
-                                  title: Text('Share BLE txt file'),
-                                  content:
-                                      Text('Do you want to share the file?'),
-                                  actions: [
-                                    ElevatedButton(
-                                      onPressed: () async {
-                                        await shareCSVFile(filepath);
-                                        Navigator.of(context)
-                                            .pop(); // close the dialog after sharing
-                                      },
-                                      child: Text('Share'),
-                                    ),
-                                    TextButton(
-                                      onPressed: () {
-                                        Navigator.of(context)
-                                            .pop(); // close the dialog without sharing
-                                      },
-                                      child: Text('Cancel'),
-                                    ),
-                                  ],
-                                );
-                              },
-                            );
-                            // } catch (e) {
-                            //   print(e);
-                            //   // Handle error (if necessary)
-                            //   final errorSnackBar = SnackBar(
-                            //     content: Text(
-                            //         'Failed to download the file. Please try again!'),
-                            //     duration: Duration(seconds: 2),
-                            //   );
-                            //   ScaffoldMessenger.of(context)
-                            //       .showSnackBar(errorSnackBar);
-                            // }
-                          },
-                          icon: Icon(Icons.save_as, color: Colors.white)
-                          // child: Text('Save'),
-                          );
-                    },
+                  IconButton(
+                    icon: Icon(Icons.arrow_forward_ios, color: Colors.white),
+                    onPressed: isAllParametersVisited
+                        ? null
+                        : () => _navigateToSamplingPoint('right'),
                   ),
                 ],
               ),
@@ -683,246 +964,120 @@ PARAMETER ANALYSIS
                 rightBoundary = rightBoundary.clamp(
                     leftBoundary + minHandleSeparation,
                     chartWidth - handleWidth);
-                // }
 
-                print(
-                    "Chart width: $chartWidth, Left: $leftBoundary, Right: $rightBoundary");
                 return Padding(
                   padding: const EdgeInsets.all(16.0),
                   child: Stack(
                     key: ValueKey(selectedParameter),
                     children: [
-                      // The line chart.
                       Positioned.fill(
-                        child: LineChart(
-                          LineChartData(
-                            lineTouchData: LineTouchData(
-                              touchTooltipData: LineTouchTooltipData(
-                                // Customize tooltip appearance
-                                getTooltipItems: (touchedSpots) {
-                                  return touchedSpots.map(
-                                    (touchedSpot) {
-                                      final xValue =
-                                          touchedSpot.x; // x coordinate
-                                      final yValue =
-                                          touchedSpot.y; // y coordinate
-                                      return LineTooltipItem(
-                                        'x: $xValue, y: $yValue', // Display both x and y values
-                                        TextStyle(
-                                            color: Colors
-                                                .white), // Customize text style
-                                      );
-                                    },
-                                  ).toList();
-                                },
-                              ),
-                              touchSpotThreshold: 10, // Adjust sensitivity
-                              getTouchedSpotIndicator: (barData, spotIndexes) {
-                                // This prevents drawing the vertical line
-                                return spotIndexes
-                                    .map(
-                                      (index) => TouchedSpotIndicatorData(
-                                        FlLine(
-                                            color: Colors
-                                                .transparent), // Makes the line invisible
-                                        FlDotData(
-                                            show:
-                                                true), // Keeps the dot highlight
-                                      ),
-                                    )
-                                    .toList();
-                              },
-                            ),
-                            lineBarsData: [
-                              LineChartBarData(
-                                spots: dataPoints.isNotEmpty
-                                    ? dataPoints
-                                    : [FlSpot(0, 0)],
-                                isCurved: true,
-                                curveSmoothness: 0.3,
-                                barWidth: 2,
-                                color: Color(0xFFAEEA00),
-                              ),
-                              // Slope line
-                              if (deviceFlxParamsMap[selectedParamDevice]!
-                                  .contains(selectedParameter))
-                                LineChartBarData(
-                                  spots: slopeLinePoints.isNotEmpty
-                                      ? slopeLinePoints
-                                      : [FlSpot(0, 0)],
-                                  isCurved: false,
-                                  barWidth: 2,
-                                  color: Colors.redAccent,
-                                  dashArray: [
-                                    5,
-                                    5
-                                  ], // Dashed line for visibility
-                                ),
-                            ],
-                            titlesData: FlTitlesData(
-                              leftTitles: AxisTitles(
-                                sideTitles: SideTitles(
-                                  showTitles: true,
-                                  reservedSize: 40,
-                                  // interval:stepSize, // Dynamically set interval
-                                  getTitlesWidget: (value, meta) {
-                                    // Find min and max Y values in the dataset
-// Check if dataPoints is empty before calculating min/max
-                                    double minY = dataPoints.isNotEmpty
-                                        ? dataPoints
-                                            .map((e) => e.y)
-                                            .reduce((a, b) => a < b ? a : b)
-                                        : 0.0;
-
-                                    double maxY = dataPoints.isNotEmpty
-                                        ? dataPoints
-                                            .map((e) => e.y)
-                                            .reduce((a, b) => a > b ? a : b)
-                                        : 1.0;
-                                    double stepSize =
-                                        calculateStepSize(minY, maxY);
-                                    return Text(
-                                      selectedParameter == "CH4"
-                                          ? value.toStringAsFixed(3)
-                                          : formatYAxisLabel(value, stepSize),
-                                      // value.toStringAsFixed(2),
-                                      style: TextStyle(
-                                          fontSize: 12, color: Colors.white),
-                                    );
-                                  },
-                                ),
-                              ),
-                              topTitles: AxisTitles(
-                                  sideTitles: SideTitles(showTitles: false)),
-                              rightTitles: AxisTitles(
-                                  sideTitles: SideTitles(showTitles: false)),
-                              bottomTitles: AxisTitles(
-                                sideTitles: SideTitles(
-                                  showTitles: true,
-                                  reservedSize: 24,
-                                  interval: (dataPoints.length >= 10)
-                                      ? (dataPoints.length / 5).ceilToDouble()
-                                      : 2, // Ensure proper spacing
-                                  getTitlesWidget: (value, meta) {
-                                    int index =
-                                        value.round(); // Round to nearest int
-
-                                    return Text(index.toString(),
-                                        style: TextStyle(
-                                            fontSize: 12, color: Colors.white));
-                                  },
-                                ),
-                              ),
-                            ),
-                            gridData: FlGridData(show: true),
-                            borderData: FlBorderData(show: true),
-                          ),
+                        child: CustomLineChart(
+                          dataPoints: dataPoints,
+                          slopeLinePoints: slopeLinePoints,
+                          minY: minY,
+                          maxY: maxY,
+                          stepSize: stepSize,
+                          selectedParameter: selectedParameter,
+                          showSlopeLine:
+                              deviceFlxParamsMap[selectedParamDevice]!
+                                  .contains(selectedParameter),
+                          chartWidth: chartWidth,
                         ),
                       ),
-                      // Left draggable boundary handle.
-                      // Interactive selection overlay.
-                      // Wrap with IgnorePointer so it doesn't intercept gestures.
                       if (deviceFlxParamsMap[selectedParamDevice]!
                           .contains(selectedParameter))
                         Positioned.fill(
-                          child: IgnorePointer(
-                            child: CustomPaint(
-                              painter: SelectionPainter(
-                                  leftBoundary, rightBoundary, chartWidth),
+                          child: ChartOverlay(
+                            leftBoundary: leftBoundary,
+                            rightBoundary: rightBoundary,
+                            chartWidth: chartWidth,
+                            minHandleSeparation: minHandleSeparation,
+                            onCalculateSlope: dynamicSlopeAndRSquared,
+                            selectedParamDevice: selectedParamDevice,
+                            showSelection:
+                                deviceFlxParamsMap[selectedParamDevice]!
+                                    .contains(selectedParameter),
+                            onLeftBoundaryChanged: (newPosition) {
+                              if (!mounted) return;
+                              setState(() {
+                                leftBoundary = newPosition;
+                              });
+                            },
+                            onRightBoundaryChanged: (newPosition) {
+                              if (!mounted) return;
+                              setState(() {
+                                rightBoundary = newPosition;
+                              });
+                            },
+                          ),
+                        ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          ChartValueDisplay(
+                            selectedParameter: selectedParameter,
+                            dataPoints: dataPoints,
+                            formatter: formatter,
+                            unitMap: unitMap,
+                            avgTemp: avgTemp,
+                            avgPressure: avgPressure,
+                          ),
+                          // ),
+                          if (deviceFlxParamsMap[selectedParamDevice]!
+                              .contains(selectedParameter))
+                            ChartStatsDisplay(
+                              slope: slope,
+                              rSquared: rSquared,
+                              flux: flux,
+                              fluxError: fluxError,
+                              formatter: formatter,
                             ),
-                          ),
-                        ),
-                      // Floating Legend for Latest Value
-                      Positioned(
-                        top: 20,
-                        left: 20,
-                        child: Container(
-                          padding: EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Colors.black54,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Text(
-                            selectedParameter.contains("Temperature")
-                                ? "$selectedParameter: ${dataPoints.isNotEmpty ? formatter.format(dataPoints.last.y) : "N/A"} ${unitMap[selectedParameter]} \nAverage: ${avgTemp.toStringAsFixed(2)}°C"
-                                : selectedParameter.contains("Pressure")
-                                    ? "$selectedParameter: ${dataPoints.isNotEmpty ? formatter.format(dataPoints.last.y) : "N/A"} ${unitMap[selectedParameter]} \nAverage: ${avgPressure.toStringAsFixed(2)} hPa"
-                                    : "${selectedParameter}: ${dataPoints.isNotEmpty ? formatter.format(dataPoints.last.y) : "N/A"} ${unitMap[selectedParameter]}",
-                            style: TextStyle(color: Colors.white, fontSize: 14),
-                          ),
-                        ),
+                        ],
                       ),
-                      if (deviceFlxParamsMap[selectedParamDevice]!
-                          .contains(selectedParameter))
-                        // Display slope and R².
-                        Positioned(
-                          top: 60,
-                          left: 20,
-                          child: Container(
-                            padding: EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: Colors.black54,
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Text(
-                              "Slope: ${slope.toStringAsFixed(2)} [ppm/sec] \nR²: ${rSquared.toStringAsFixed(2)} \nFlux: ${flux.toStringAsFixed(3)} [moles/(m2*day)]",
-                              style:
-                                  TextStyle(color: Colors.white, fontSize: 14),
-                            ),
-                          ),
-                        ),
-                      // Left draggable boundary handle (placed on top).
                       if (deviceFlxParamsMap[selectedParamDevice]!
                           .contains(selectedParameter))
                         Positioned(
                           left: leftBoundary - handleWidth / 2,
                           top: 0,
                           bottom: 0,
-                          child: GestureDetector(
-                            onPanUpdate: (details) {
+                          child: ChartBoundaryHandle(
+                            position: leftBoundary,
+                            handleWidth: handleWidth,
+                            isLeft: true,
+                            minHandleSeparation: minHandleSeparation,
+                            chartWidth: chartWidth,
+                            onBoundaryChanged: (newPosition) {
+                              if (!mounted) return;
                               setState(() {
-                                leftBoundary = (leftBoundary + details.delta.dx)
-                                    .clamp(0.0,
-                                        rightBoundary - minHandleSeparation);
+                                leftBoundary = newPosition;
                               });
-                              // _calculateSlopeAndRSquared();
-                              print("Left boundary moved to: $leftBoundary");
                             },
-                            onPanEnd: (_) {
-                              _calculateSlopeAndRSquared(selectedParamDevice);
-                            },
-                            child: Container(
-                              width: handleWidth,
-                              color: Colors.white.withOpacity(0.0),
-                            ),
+                            onPanEnd: () =>
+                                dynamicSlopeAndRSquared(selectedParamDevice),
+                            showHandle: true,
                           ),
                         ),
-
-                      // Right draggable boundary handle (placed on top).
                       if (deviceFlxParamsMap[selectedParamDevice]!
                           .contains(selectedParameter))
                         Positioned(
                           left: rightBoundary - handleWidth / 2,
                           top: 0,
                           bottom: 0,
-                          child: GestureDetector(
-                            onPanUpdate: (details) {
+                          child: ChartBoundaryHandle(
+                            position: rightBoundary,
+                            handleWidth: handleWidth,
+                            isLeft: false,
+                            minHandleSeparation: minHandleSeparation,
+                            chartWidth: chartWidth,
+                            onBoundaryChanged: (newPosition) {
+                              if (!mounted) return;
                               setState(() {
-                                rightBoundary =
-                                    (rightBoundary + details.delta.dx).clamp(
-                                        leftBoundary + minHandleSeparation,
-                                        chartWidth);
+                                rightBoundary = newPosition;
                               });
-                              // _calculateSlopeAndRSquared();
-                              print("Right boundary moved to: $rightBoundary");
                             },
-                            onPanEnd: (_) {
-                              _calculateSlopeAndRSquared(selectedParamDevice);
-                            },
-                            child: Container(
-                              width: handleWidth,
-                              color: Colors.white.withOpacity(0.0),
-                            ),
+                            onPanEnd: () =>
+                                dynamicSlopeAndRSquared(selectedParamDevice),
+                            showHandle: true,
                           ),
                         ),
                     ],
@@ -935,23 +1090,23 @@ PARAMETER ANALYSIS
   }
 }
 
-/// A simple custom painter to draw the selection overlay.
-class SelectionPainter extends CustomPainter {
-  final double leftBoundary;
-  final double rightBoundary;
-  final double chartWidth;
+// /// A simple custom painter to draw the selection overlay.
+// class SelectionPainter extends CustomPainter {
+//   final double leftBoundary;
+//   final double rightBoundary;
+//   final double chartWidth;
 
-  SelectionPainter(this.leftBoundary, this.rightBoundary, this.chartWidth);
+//   SelectionPainter(this.leftBoundary, this.rightBoundary, this.chartWidth);
 
-  @override
-  void paint(Canvas canvas, Size size) {
-    final Paint paint = Paint()
-      ..color = Colors.white.withOpacity(0.2)
-      ..style = PaintingStyle.fill;
-    Rect rect = Rect.fromLTRB(leftBoundary, 0, rightBoundary, size.height);
-    canvas.drawRect(rect, paint);
-  }
+//   @override
+//   void paint(Canvas canvas, Size size) {
+//     final Paint paint = Paint()
+//       ..color = Colors.white.withOpacity(0.2)
+//       ..style = PaintingStyle.fill;
+//     Rect rect = Rect.fromLTRB(leftBoundary, 0, rightBoundary, size.height);
+//     canvas.drawRect(rect, paint);
+//   }
 
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
-}
+//   @override
+//   bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
+// }

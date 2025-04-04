@@ -10,6 +10,7 @@ import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'firebase_options.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
+import 'package:terratrace/source/constants/constants.dart';
 // import 'package:file_picker/file_picker.dart';
 // import 'package:shared_preferences/shared_preferences.dart';
 // import 'package:flutter_blue_plus/flutter_blue_plus.dart';
@@ -127,17 +128,17 @@ class MyApp extends StatelessWidget {
       colorScheme: ColorScheme.light(
         primary: Color(0xFF0F172A), // Dark navy blue
         secondary: Color(0xFFC6FF00), // Green accent
-        // background: Color(0xFFF8FAFC), // Light gray
+        surface: Color.fromARGB(255, 75, 78, 85), // Light gray
         // surface: Colors.white, // Surface background for cards, dialogs
         // onPrimary: Colors.white, // Text color on primary
-        onSecondary: Colors.black, // Text color on secondary
-        onBackground: Color(0xFF1E293B), // Dark gray for text
-        onSurface: Color(0xFF475569), // Lighter gray for text
+        onSecondary:
+            Colors.black, // Text color on secondary// Dark gray for text
+        onSurface: Color.fromARGB(255, 226, 229, 234), // Lighter gray for text
       ),
       // scaffoldBackgroundColor: Color(0xFFF8FAFC), // Light gray
       appBarTheme: AppBarTheme(
-        backgroundColor: Color(0xFF0F172A), // Dark navy blue
-        // foregroundColor: Colors.white, // White text
+        backgroundColor: Color.fromARGB(255, 28, 28, 29), // Dark navy blue
+        foregroundColor: kGreenFluxColor, // White text
         elevation: 0,
       ),
       // textTheme: TextTheme(
@@ -157,7 +158,8 @@ class MyApp extends StatelessWidget {
       // ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: Color(0xFFAEEA00), // Green accent
+          backgroundColor:
+              const Color.fromARGB(255, 176, 237, 70), // Green accent
           // foregroundColor: Colors.white, // Text color on the button
           textStyle: TextStyle(
             fontWeight: FontWeight.bold,
