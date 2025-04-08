@@ -1,0 +1,374 @@
+Site,Latitude,Longitude,Temperature,Pressure,CO2 flux [ppm],Soil Temperature [°],Comment,Instrument,Date,flux[g/m2/d],data quality
+test1,50.25467,12.42061,28.6,952.3,1.180,none,none,WS082,15-04-2024 16:58:5,14.95,true value
+Test1204,50.25469,12.42060,n.a.,51.0,1.350,none,none,WS120,15-04-2024 17:03:0,0.93,copied from value
+Test1204b,50.25466,12.42063,n.a.,51.0,1.590,none,none,WS120,15-04-2024 17:08:5,1.16,copied from value
+Test1204ignore,50.25466,12.42063,n.a.,51.0,1.820,none,none,WS120,15-04-2024 17:15:3,1.33,copied from value
+test1ws2202,50.25467,12.42065,20.76,934.44,0.503,none,none,WS220,15-04-2024 17:19:5,6.42,true value
+test2ws2202,50.23441,12.42937,22.56,945.31,0.831,none,none,WS220,15-04-2024 18:14:5,10.66,true value
+test2WS0823,50.23438,12.42936,30.6,51.2,1.430,none,none,WS082,15-04-2024 18:21:5,0.97,true value
+test2WS1204,50.23439,12.42939,n.a.,51.0,1.110,none,none,WS120,15-04-2024 18:32:2,0.81,copied from value
+Fg1,50.23417,12.42931,18.02,944.91,1.230,none,none,WS220,15-04-2024 18:52:3,16.02,true value
+WS1204FG1,50.23396,12.42927,n.a.,51.0,0.706,none,Profile Facettengruen,WS120,15-04-2024 18:56:3,0.51,copied from value
+Fg2,50.23364,12.42919,19.24,945.10,0.482,none,none,WS220,15-04-2024 18:56:3,6.25,true value
+Fg3,50.23332,12.42895,19.59,945.43,0.532,none,none,WS220,15-04-2024 18:59:0,6.90,true value
+WS1204FG2,50.23347,12.42920,n.a.,51.0,0.623,none,gruene wiese,WS120,15-04-2024 18:59:5,0.44,copied from value
+Fg4,50.23294,12.42875,19.97,945.83,1.820,none,none,WS220,15-04-2024 19:02:5,23.57,true value
+WS1204FG3,50.23316,12.42883,n.a.,51.0,1.210,none,none,WS120,15-04-2024 19:03:1,0.87,copied from value
+WS1204FG4,50.23272,12.42861,12,51.0,1.790,none,none,WS120,15-04-2024 19:06:2,1.29,true value
+Fg5,50.23251,12.42849,19.91,946.08,0.636,none,none,WS220,15-04-2024 19:06:4,8.24,true value
+Fg6,50.23207,12.42829,20.04,946.17,1.190,none,none,WS220,15-04-2024 19:09:5,15.41,true value
+WS1204FG5,50.23240,12.42841,n.a.,51.0,1.580,none,windy,WS120,15-04-2024 19:10:1,1.13,copied from value
+Fg7,50.23186,12.42819,20.29,946.03,1.000,none,none,WS220,15-04-2024 19:12:3,12.94,true value
+WS1204FG6,50.23209,12.42820,n.a.,51.0,2.110,none,little gras,WS120,15-04-2024 19:13:1,1.54,copied from value
+Fg8,50.23140,12.42817,20.49,946.05,1.390,none,none,WS220,15-04-2024 19:15:1,17.98,true value
+WS1204FG7,50.23164,12.42809,n.a.,51.0,1.480,none,none,WS120,15-04-2024 19:16:0,1.00,copied from value
+WS1204FG8,50.23120,12.42805,n.a.,51.0,2.040,none,none,WS120,15-04-2024 19:18:3,1.42,copied from value
+Fg9,50.23088,12.42793,20.43,946.17,0.917,none,none,WS220,15-04-2024 19:19:4,11.86,true value
+Fg10,50.23046,12.42784,20.35,945.91,0.112,none,none,WS220,15-04-2024 19:22:5,1.45,true value
+WS1204FG9,50.23073,12.42791,n.a.,51.0,0.382,none,acker ohne bewuchs,WS120,15-04-2024 19:23:1,0.27,copied from value
+Fg11,50.23009,12.42760,20.52,945.69,0.407,none,Acker sparse veg,WS220,15-04-2024 19:26:0,5.26,true value
+WS1204FG10,50.23031,12.42766,n.a.,51.0,0.320,none,"windy, bare ground",WS120,15-04-2024 19:27:1,0.22,copied from value
+Fg12,50.22971,12.42709,19.56,945.43,0.072,none,none,WS220,15-04-2024 19:32:5,0.93,true value
+WS1204FG11,50.22992,12.42730,n.a.,51.0,0.409,none,cracks in n soil,WS120,15-04-2024 19:34:1,0.28,copied from value
+Test2TagWS1204,50.21651,12.42562,5,51.0,0.541,none,"wiese,feucht",WS120,16-04-2024 09:47:4,0.40,true value
+testzweitertagws2209,50.21651,12.42560,13.58,948.28,1.100,none,5c,WS220,16-04-2024 09:54:1,14.60,true value
+NKW1,50.21648,12.42593,13.25,948.19,1.180,none,none,WS220,16-04-2024 10:00:4,15.68,true value
+NKW2,50.21646,12.42660,13.26,948.11,0.856,none,feuchtes Gras,WS220,16-04-2024 10:03:4,11.37,true value
+WS1204NK1,50.21647,12.42633,5,51.0,1.530,none,"cold,windy,wiese",WS120,16-04-2024 10:04:4,1.13,true value
+WS1204NK2,50.21644,12.42693,n.a.,51.0,0.562,none,none,WS120,16-04-2024 10:07:2,0.41,copied from value
+NKW3,50.21640,12.42725,14.08,948.24,0.611,none,fw,WS220,16-04-2024 10:09:4,8.10,true value
+WS1204NK3,50.21637,12.42757,n.a.,51.0,0.813,none,none,WS120,16-04-2024 10:11:3,0.57,copied from value
+NKW4,50.21634,12.42818,14.16,948.06,1.340,none,fw,WS220,16-04-2024 10:15:5,17.75,true value
+WS1204NK4,50.21638,12.42791,n.a.,51.0,0.213,none,very noisy,WS120,16-04-2024 10:16:1,0.16,copied from value
+WS1204NK5,50.21630,12.42852,n.a.,51.0,1.290,none,none,WS120,16-04-2024 10:20:1,0.90,copied from value
+WS1204NK6,50.21632,12.42919,n.a.,51.0,1.520,none,none,WS120,16-04-2024 10:26:5,1.06,copied from value
+WS1204NK7,50.21623,12.42948,n.a.,51.0,0.574,none,none,WS120,16-04-2024 10:29:2,0.41,copied from value
+WS1204NK8,50.21619,12.43006,n.a.,51.0,0.126,none,wind became stronger,WS120,16-04-2024 10:38:1,0.09,copied from value
+WS1204NK9,50.21613,12.43069,n.a.,51.0,0.558,none,correlation between strong wind and noisy flux curve,WS120,16-04-2024 10:41:5,0.40,copied from value
+WS1204NK10,50.21612,12.43127,n.a.,51.0,1.060,none,none,WS120,16-04-2024 10:44:1,0.74,copied from value
+WS1204NK11,50.21613,12.43187,n.a.,51.0,0.800,none,none,WS120,16-04-2024 10:47:5,0.58,copied from value
+WS1204NK12,50.21613,12.43244,n.a.,51.0,1.300,none,none,WS120,16-04-2024 10:52:2,0.90,copied from value
+WS1204NK13,50.21605,12.43279,n.a.,51.0,1.370,none,none,WS120,16-04-2024 10:57:1,0.96,copied from value
+WS1204NK14,50.21601,12.43341,n.a.,51.0,4.640,none,"wiese, aber messpunkt ohne gras",WS120,16-04-2024 11:01:1,3.21,copied from value
+WS1204NK15,50.21605,12.43352,n.a.,51.0,1.700,none,none,WS120,16-04-2024 11:04:4,1.24,copied from value
+WS1204NK16,50.21600,12.43373,n.a.,51.0,1.880,none,none,WS120,16-04-2024 11:10:2,1.30,copied from value
+WS1204NK17,50.21618,12.43412,n.a.,51.0,0.609,none,none,WS120,16-04-2024 11:13:5,0.43,copied from value
+NKW5,50.21617,12.43441,12.36,948.71,0.288,none,none,WS220,16-04-2024 11:17:1,3.84,true value
+WS1204NK18,50.21621,12.43443,n.a.,51.0,0.777,none,none,WS120,16-04-2024 11:20:1,0.55,copied from value
+WS1204NK19,50.21637,12.43512,6,51.0,0.292,none,bare ground,WS120,16-04-2024 11:25:1,0.21,true value
+NKW6,50.21584,12.43583,12.35,949.02,0.718,none,fw,WS220,16-04-2024 11:25:4,9.58,true value
+WS1204NK20,50.21589,12.43617,n.a.,51.0,0.790,none,none,WS120,16-04-2024 11:29:3,0.58,copied from value
+NKW7,50.21587,12.43650,13.10,949.22,0.468,none,fw,WS220,16-04-2024 11:31:1,6.23,true value
+WS1204NK21,50.21589,12.43678,n.a.,51.0,1.060,none,none,WS120,16-04-2024 11:32:1,0.74,copied from value
+WS1204NK22,50.21594,12.43709,n.a.,51.0,0.765,none,wiese,WS120,16-04-2024 11:35:0,0.56,copied from value
+WS1204NK22,50.21591,12.43744,7,980,0.432,none,none,WS120,16-04-2024 11:44:1,6.07,true value
+NKW8,50.21587,12.43784,11.70,949.12,0.453,none,fw,WS220,16-04-2024 11:54:4,6.06,true value
+NKW9,50.21567,12.43873,12.75,949.34,0.935,none,fw,WS220,16-04-2024 11:58:5,12.46,true value
+WS1204NK22,50.21577,12.43858,7,960,0.263,none,neue wiese,WS120,16-04-2024 11:59:1,3.62,true value
+NKW10,50.21546,12.43930,13.23,949.48,0.467,none,fw,WS220,16-04-2024 12:02:2,6.21,true value
+WS1204NK23,50.21559,12.43901,7,960,1.270,none,none,WS120,16-04-2024 12:03:1,17.47,true value
+WS1204NK24,50.21538,12.43970,7,960,1.310,none,SENSORS#:	6,WS120,16-04-2024 12:06:1,18.02,true value
+NKW11,50.21532,12.44007,13.82,949.62,0.762,none,fw,WS220,16-04-2024 12:06:2,10.12,true value
+WS1204NK25,50.21530,12.44040,7,960,1.460,none,none,WS120,16-04-2024 12:09:3,20.08,true value
+NKW12,50.21530,12.44073,14.58,949.88,1.190,none,fw,WS220,16-04-2024 12:09:5,15.77,true value
+WS1204NK26,50.21533,12.44103,7,960,0.710,none,none,WS120,16-04-2024 12:12:4,9.77,true value
+NKW13,50.21544,12.44134,15.31,950.10,0.819,none,fw,WS220,16-04-2024 12:13:5,10.83,true value
+WS1204NK27,50.21546,12.44161,7,960,1.090,none,direct am bach,WS120,16-04-2024 12:17:5,14.99,true value
+WS1204NK28,50.21545,12.44207,7,960,0.782,none,none,WS120,16-04-2024 12:22:4,10.76,true value
+WS1204NK28,50.21566,12.44206,n.a.,51.0,1.130,none,none,WS120,16-04-2024 12:25:4,0.79,copied from value
+WS1204NK29,50.21575,12.44305,7,960,0.905,none,none,WS120,16-04-2024 12:29:5,12.45,true value
+WS1204NK30,50.21573,12.44345,7,960,1.100,none,none,WS120,16-04-2024 12:32:2,15.13,true value
+WS1204NK31,50.21561,12.44381,7,960,1.280,none,none,WS120,16-04-2024 12:35:1,17.61,true value
+NKW14,50.21483,12.44472,14.20,948.41,1.340,none,fw,WS220,16-04-2024 12:42:3,17.75,true value
+NKW15,50.21570,12.44942,19.45,947.01,1.050,none,fw,WS220,16-04-2024 13:02:0,13.64,true value
+NKW16,50.21526,12.44982,21.52,946.56,1.280,none,fw,WS220,16-04-2024 13:05:1,16.50,true value
+NKW17,50.21519,12.45044,23.18,946.15,1.060,none,fw,WS220,16-04-2024 13:08:0,13.59,true value
+NKW18,50.21517,12.45082,23.25,946.03,0.893,none,fw,WS220,16-04-2024 13:10:4,11.44,true value
+NKW19,50.21513,12.45145,22.44,945.31,0.938,none,fw,WS220,16-04-2024 13:15:0,12.04,true value
+NKW20,50.21507,12.45216,20.71,945.24,1.010,none,fw,WS220,16-04-2024 13:20:3,13.04,true value
+NKW21,50.21498,12.45316,19.68,944.67,1.020,none,fw,WS220,16-04-2024 13:27:2,13.21,true value
+NKW22,50.21494,12.45348,20.66,944.39,0.643,none,fw,WS220,16-04-2024 13:33:4,8.30,true value
+NKW23,50.21488,12.45429,20.65,944.07,0.556,none,fw,WS220,16-04-2024 13:36:5,7.17,true value
+NKW24,50.21497,12.45410,19.76,944.03,0.924,none,fw,WS220,16-04-2024 13:41:4,11.95,true value
+NKW24,50.21483,12.45450,19.66,943.98,0.319,none,none,WS220,16-04-2024 13:44:2,4.13,true value
+WS1204NK45,50.21476,12.45408,7,960,0.972,none,none,WS120,16-04-2024 13:45:5,13.37,true value
+NKW26,50.21480,12.45481,20.76,943.67,0.616,none,fw,WS220,16-04-2024 13:49:4,7.94,true value
+WS1204NK46,50.21473,12.45523,7,960,0.734,none,none,WS120,16-04-2024 13:51:0,10.10,true value
+NKW27,50.21480,12.45595,21.19,943.23,0.503,none,fw,WS220,16-04-2024 13:55:0,6.47,true value
+WS1204NK47,50.21478,12.45560,7,960,0.932,none,none,WS120,16-04-2024 13:55:3,12.82,true value
+NKW28,50.21473,12.45695,20.76,942.93,0.545,none,fw,WS220,16-04-2024 13:58:0,7.02,true value
+WS1204NK48,50.21473,12.45665,7,960,2.260,none,none,WS120,16-04-2024 13:59:0,31.09,true value
+WS1204NK49,50.21469,12.45730,7,960,0.812,none,wind and rain are coming ,WS120,16-04-2024 14:04:2,11.17,true value
+HTtest1,50.13295,12.46378,14.91,957.84,1.430,none,fw,WS220,17-04-2024 10:43:3,19.09,true value
+Nickschieckw1,50.13422,12.46782,19.40,956.22,1.730,none,hohes feuchtes Gras,WS220,17-04-2024 11:34:3,22.70,true value
+Nickschieckw2,50.13456,12.46821,20.90,956.01,1.300,none,fw,WS220,17-04-2024 11:38:1,16.97,true value
+profilns1,50.13437,12.46807,7,967.4,1.200,none,none,WS120,17-04-2024 11:38:2,16.63,true value
+Nickschieckw3,50.13494,12.46864,22.73,955.92,0.730,none,acker braun,WS220,17-04-2024 11:41:1,9.47,true value
+profilns2,50.13469,12.46838,n.a.,967.2,1.390,none,none,WS120,17-04-2024 11:42:4,18.78,copied from value
+Nickschieckw4,50.13533,12.46892,23.87,955.83,0.318,none,acker braun,WS220,17-04-2024 11:45:3,4.11,true value
+profilns3,50.13515,12.46875,n.a.,966.9,0.538,none,soil,WS120,17-04-2024 11:46:2,7.33,copied from value
+Nickschieckw5,50.13576,12.46948,23.33,955.57,0.489,none,acker braun,WS220,17-04-2024 11:50:3,6.33,true value
+profilns4,50.13569,12.46914,7,966.8,0.738,none,none,WS120,17-04-2024 11:52:4,10.22,true value
+Nickschieckw6,50.13565,12.46978,23.00,955.46,0.358,none,acker braun,WS220,17-04-2024 11:55:0,4.64,true value
+profilns5,50.13553,12.47001,7,966.4,1.870,none,none,WS120,17-04-2024 11:56:5,25.89,true value
+Nickschieckw7,50.13526,12.47055,23.46,955.41,0.691,none,acker braun ,WS220,17-04-2024 11:58:2,8.93,true value
+profilns6,50.13514,12.47076,7,966.5,0.691,none,none,WS120,17-04-2024 12:01:1,9.57,true value
+Nickschieckw8,50.13523,12.47104,23.06,955.39,0.188,none,acker braun,WS220,17-04-2024 12:01:2,2.43,true value
+Nickschieckw9,50.13544,12.47161,22.41,955.30,0.302,none,acker braun,WS220,17-04-2024 12:04:2,3.92,true value
+Nickschieckw10,50.13555,12.47188,21.90,955.17,0.247,none,acker braun,WS220,17-04-2024 12:07:2,3.21,true value
+profilns7,50.13531,12.47130,7,966.6,0.808,none,none,WS120,17-04-2024 12:07:3,11.19,true value
+Nickschieckw11,50.13590,12.47272,21.39,955.10,0.166,none,acker braun,WS220,17-04-2024 12:10:1,2.16,true value
+profilnkanna1,50.13569,12.47220,7,960,0.726,none,clay soil,WS082,17-04-2024 12:11:3,9.99,true value
+profilns8,50.13577,12.47244,7,966.3,0.447,none,none,WS120,17-04-2024 12:11:5,6.19,true value
+Nickschieckw12,50.13611,12.47330,21.01,955.08,0.268,none,acker braun,WS220,17-04-2024 12:13:1,3.49,true value
+profilnkanna2,50.13599,12.47297,7,958,0.558,none,none,WS082,17-04-2024 12:15:2,7.66,true value
+Nickschieckw13,50.13778,12.47779,20.64,954.88,0.413,none,acker braun kp,WS220,17-04-2024 12:23:5,5.39,true value
+profilnkanna3,50.13760,12.47764,8,956,0.597,none,skipped the field because soil was to tight ,WS082,17-04-2024 12:26:0,8.15,true value
+profilns9,50.13783,12.47805,7,966.1,0.511,none,none,WS120,17-04-2024 12:27:0,7.07,true value
+Nickschieckw14,50.13792,12.47897,21.10,954.95,0.435,none,acker braun kp,WS220,17-04-2024 12:28:5,5.67,true value
+profilnkanna4,50.13786,12.47839,7,958,0.667,none,acker mit kleinen pflanzen. (kp),WS082,17-04-2024 12:29:4,9.16,true value
+profilns10,50.13790,12.47869,7,966.2,2.210,none,none,WS120,17-04-2024 12:31:2,30.59,true value
+Nickschieckw15,50.13807,12.47961,20.73,954.86,0.286,none,acker braun kp,WS220,17-04-2024 12:32:4,3.73,true value
+profilnkanna5,50.13800,12.47927,7,958,0.366,none,none,WS082,17-04-2024 12:33:0,5.02,true value
+profilns11,50.13814,12.47991,7,966.1,0.336,none,none,WS120,17-04-2024 12:35:5,4.65,true value
+Nickschieckw16,50.13820,12.48021,20.76,954.80,0.343,none,acker braun,WS220,17-04-2024 12:36:2,4.47,true value
+profilns12,50.13826,12.48053,7,966.0,0.634,none,none,WS120,17-04-2024 12:40:0,8.78,true value
+Nickschieckw17,50.13849,12.48105,20.37,954.65,0.526,none,acker braun kp,WS220,17-04-2024 12:40:2,6.87,true value
+profilnkanna6,50.13837,12.48077,7,958,0.797,none,none,WS082,17-04-2024 12:40:5,10.94,true value
+profilns13,50.13853,12.48130,7,966.0,0.294,none,none,WS120,17-04-2024 12:43:4,4.07,true value
+Nickschieckw18,50.13873,12.48194,20.34,954.60,0.443,none,acker braun kp,WS220,17-04-2024 12:44:1,5.78,true value
+profilnkanna7,50.13866,12.48159,8,960,0.826,none,none,WS082,17-04-2024 12:46:0,11.32,true value
+profilns14,50.13881,12.48221,7,965.8,1.050,none,none,WS120,17-04-2024 12:48:5,14.53,true value
+profilnkanna8,50.13888,12.48254,7,960,0.589,none,none,WS082,17-04-2024 12:49:4,8.10,true value
+Nickschieckw19,50.13900,12.48283,20.70,954.56,0.291,none,acker braun kp,WS220,17-04-2024 12:49:5,3.79,true value
+profilns15,50.13902,12.48315,7,965.7,0.936,none,none,WS120,17-04-2024 12:52:4,12.95,true value
+profilnkanna9,50.13913,12.48343,7,960,0.885,none,none,WS082,17-04-2024 12:52:5,12.17,true value
+profilnkanna10,50.13920,12.48364,7,960,0.669,none,none,WS082,17-04-2024 12:55:1,9.20,true value
+Nickschieckw20,50.13933,12.48386,21.73,954.35,0.359,none,acker bepflanzt,WS220,17-04-2024 12:55:3,4.66,true value
+profilnkanna11,50.13943,12.48412,7,960,0.410,none,none,WS082,17-04-2024 12:58:4,5.64,true value
+Nickschieckw21,50.13965,12.48461,22.70,954.39,0.218,none,acker bepflanzt ,WS220,17-04-2024 12:59:5,2.82,true value
+Nickschieckw22,50.14008,12.48563,24.05,954.22,0.827,none,acker bepflanzt ,WS220,17-04-2024 13:04:0,10.66,true value
+profilns16,50.13987,12.48510,9,965.5,0.136,none,none,WS120,17-04-2024 13:04:2,1.87,true value
+profilnkanna12,50.14035,12.48590,7,960,0.388,none,weizenfeld,WS082,17-04-2024 13:07:5,5.34,true value
+Nickschieckw23,50.14103,12.48660,25.44,954.12,1.020,none,acker bepflanzt in den Pflanzen,WS220,17-04-2024 13:08:2,13.08,true value
+profilns17,50.14070,12.48625,9,965.5,0.412,none,none,WS120,17-04-2024 13:10:3,5.66,true value
+profilnkanna13,50.14133,12.48688,7,960,0.320,none,none,WS082,17-04-2024 13:14:0,4.40,true value
+Nickschieckw24,50.14170,12.48716,24.58,954.17,0.567,none,acker braun,WS220,17-04-2024 13:14:3,7.29,true value
+profilns18,50.14117,12.48668,9,965.3,0.836,none,none,WS120,17-04-2024 13:15:1,11.48,true value
+profilns19,50.14169,12.48716,9,965.3,0.816,none,none,WS120,17-04-2024 13:22:3,11.21,true value
+profilnkanna14,50.14182,12.48735,7,960,0.568,none,bare soil,WS082,17-04-2024 13:23:5,7.81,true value
+profilns20,50.14218,12.48776,9,965.3,0.703,none,none,WS120,17-04-2024 13:27:5,9.65,true value
+profilnkanna14,50.14248,12.48810,5,958,0.262,none,none,WS082,17-04-2024 13:28:1,3.62,true value
+profilnkanna14,50.14271,12.48858,6,960,0.532,none,none,WS082,17-04-2024 13:31:3,7.34,true value
+profilns21,50.14284,12.48912,9,965.4,0.868,none,none,WS120,17-04-2024 13:33:3,11.92,true value
+profilnkanna15,50.14292,12.48974,6,960,0.638,none,none,WS082,17-04-2024 13:35:0,8.81,true value
+profilns22,50.14294,12.49035,9,965.7,0.520,none,none,WS120,17-04-2024 13:38:1,7.14,true value
+profilnkanna16,50.14294,12.49100,6,960,0.255,none,none,WS082,17-04-2024 13:38:4,3.52,true value
+profilnkanna17,50.14305,12.49154,6,960,0.955,none,"wiese, leichter regen",WS082,17-04-2024 13:42:0,13.18,true value
+profilns23,50.14309,12.49181,9,966.0,6.380,none,green,WS120,17-04-2024 13:43:1,87.68,true value
+profilns24,50.14313,12.49176,9,966.3,1.040,none,none,WS120,17-04-2024 13:49:0,14.30,true value
+profilnkanna17,50.14307,12.49181,7,960,2.010,none,sparse vegetation,WS082,17-04-2024 13:49:1,27.65,true value
+profilns25,50.14330,12.49166,9,966.0,1.290,none,none,WS120,17-04-2024 13:51:5,17.73,true value
+profilnkanna18,50.14316,12.49183,7,960,1.350,none,extra points,WS082,17-04-2024 13:52:4,18.57,true value
+profilnkanna18,50.14319,12.49191,7,960,0.629,none,none,WS082,17-04-2024 13:55:1,8.65,true value
+profilns26,50.14352,12.49149,9,966.0,1.010,none,none,WS120,17-04-2024 13:55:1,13.88,true value
+profilnkanna19,50.14326,12.49225,7,960,0.861,none,rain stops ,WS082,17-04-2024 13:58:4,11.84,true value
+profilns267,50.14342,12.49249,9,966.1,0.688,none,none,WS120,17-04-2024 14:00:2,9.46,true value
+profilnkanna20,50.14343,12.49276,7,960,1.360,none,none,WS082,17-04-2024 14:01:3,18.71,true value
+Nickschieckw25,50.15137,12.50364,16.42,956.35,1.610,none,fw,WS220,17-04-2024 14:03:4,21.34,true value
+profilns28,50.14351,12.49303,9,966.6,0.603,none,none,WS120,17-04-2024 14:04:5,8.29,true value
+profilnkanna21,50.14363,12.49323,7,960,0.734,none,none,WS082,17-04-2024 14:06:0,10.10,true value
+profilns29,50.14373,12.49353,9,966.3,1.030,none,none,WS120,17-04-2024 14:08:2,14.16,true value
+profilnkanna22,50.14381,12.49378,7,960,0.316,none,none,WS082,17-04-2024 14:09:5,4.35,true value
+Nickschieckw26,50.14947,12.50124,17.68,956.22,1.600,none,fw,WS220,17-04-2024 14:11:0,21.12,true value
+profilns30,50.14390,12.49406,9,966.2,0.761,none,none,WS120,17-04-2024 14:11:2,10.46,true value
+profilnkanna23,50.14404,12.49428,7,960,0.520,none,none,WS082,17-04-2024 14:13:1,7.15,true value
+Nickschieckw27,50.14922,12.50130,18.97,956.09,1.230,none,fw,WS220,17-04-2024 14:14:0,16.16,true value
+profilns31,50.14412,12.49457,9,966.5,1.080,none,none,WS120,17-04-2024 14:14:5,14.85,true value
+profilnkanna24,50.14421,12.49479,7,960,0.893,none,none,WS082,17-04-2024 14:15:5,12.28,true value
+profilnkanna25,50.14440,12.49531,7,960,0.823,none,none,WS082,17-04-2024 14:18:1,11.32,true value
+profilns32,50.14432,12.49511,9,966.6,1.130,none,none,WS120,17-04-2024 14:19:1,15.54,true value
+Nickschieckw28,50.14845,12.50232,21.71,956.23,1.240,none,fw,WS220,17-04-2024 14:23:5,16.14,true value
+profilns33,50.14486,12.49640,9,967.0,0.804,none,none,WS120,17-04-2024 14:24:4,11.06,true value
+profilns34,50.14536,12.49726,9,966.8,1.060,none,none,WS120,17-04-2024 14:29:2,14.58,true value
+profilns35,50.14586,12.49819,9,966.8,0.749,none,none,WS120,17-04-2024 14:35:3,10.30,true value
+Nickschieckw29,50.14819,12.50173,23.49,956.12,0.854,none,acker bepflanzt+,WS220,17-04-2024 14:36:2,11.05,true value
+Nickschieckw30,50.14790,12.50126,23.98,956.04,0.827,none,acker bepflanzt+,WS220,17-04-2024 14:39:2,10.68,true value
+profilns36,50.14674,12.49945,9,966.9,4.190,none,none,WS120,17-04-2024 14:41:4,57.64,true value
+Nickschieckw31,50.14758,12.50081,24.20,955.96,1.410,none,acker bepflanzt+,WS220,17-04-2024 14:42:0,18.20,true value
+Nickschieckw32,50.14732,12.50035,24.02,956.00,1.400,none,acker bepflanzt ,WS220,17-04-2024 14:44:3,18.08,true value
+profilns37,50.14706,12.49988,9,967.2,0.988,none,none,WS120,17-04-2024 14:46:4,13.59,true value
+Nickschieckw33,50.14993,12.50133,21.29,956.10,1.320,none,fw,WS220,17-04-2024 14:57:4,17.20,true value
+Nickschieckw34,50.15027,12.50183,22.00,956.06,1.870,none,fw,WS220,17-04-2024 15:01:2,24.31,true value
+Nickschieckw35,50.15060,12.50224,22.44,956.10,0.967,none,fw,WS220,17-04-2024 15:03:4,12.55,true value
+Nickschieckw36,50.15089,12.50273,22.85,956.10,1.540,none,fw,WS220,17-04-2024 15:06:0,19.97,true value
+Profil2W1,50.13776,12.46138,23.01,955.40,0.538,none,acker braun ,WS220,17-04-2024 16:35:3,6.97,true value
+Profil2W2,50.13792,12.46196,23.36,955.15,0.724,none,acker braun ,WS220,17-04-2024 16:38:3,9.36,true value
+Profil2W3,50.13797,12.46211,23.41,955.00,0.435,none,acker braun ,WS220,17-04-2024 16:40:5,5.62,true value
+profilmk1,50.13784,12.46163,8,966.3,0.609,none,soil,WS120,17-04-2024 16:43:0,8.40,true value
+Profil2W4,50.13809,12.46285,23.38,954.84,0.351,none,acker braun ,WS220,17-04-2024 16:43:5,4.54,true value
+Profil2W5,50.13829,12.46339,23.01,954.75,0.452,none,acker braun ,WS220,17-04-2024 16:47:1,5.85,true value
+Profil2W6,50.13849,12.46394,22.39,954.55,0.454,none,acker braun ,WS220,17-04-2024 16:49:4,5.89,true value
+Profil2W7,50.13888,12.46497,21.56,954.36,0.242,none,acker braun ,WS220,17-04-2024 16:52:5,3.15,true value
+profilmk2,50.13868,12.46448,8,965.8,0.989,none,none,WS120,17-04-2024 16:55:3,13.64,true value
+Profil2W8,50.13909,12.46555,20.87,954.42,0.588,none,acker braun ,WS220,17-04-2024 16:56:1,7.66,true value
+profilmk3,50.13937,12.46615,8,965.4,0.653,none,none,WS120,17-04-2024 17:00:0,9.00,true value
+Profil2W9,50.13954,12.46673,19.58,954.26,0.468,none,acker braun ,WS220,17-04-2024 17:03:3,6.12,true value
+profilmk4,50.13977,12.46711,8,965.4,0.653,none,none,WS120,17-04-2024 17:04:2,9.00,true value
+profilmk5,50.14019,12.46805,8,965.5,0.459,none,none,WS120,17-04-2024 17:08:1,6.33,true value
+Profil2W10,50.14071,12.46902,18.55,954.26,0.487,none,acker braun ,WS220,17-04-2024 17:09:1,6.39,true value
+Profil2W11,50.14123,12.46999,18.01,954.29,0.486,none,acker bepflanzt ,WS220,17-04-2024 17:14:0,6.39,true value
+profilmk6,50.14095,12.46950,8,965.6,0.403,none,none,WS120,17-04-2024 17:16:3,5.56,true value
+Profil2W12,50.14177,12.47094,17.45,954.35,0.663,none,fw,WS220,17-04-2024 17:20:1,8.74,true value
+Profil2W13,50.14270,12.47282,16.86,954.45,0.563,none,fw,WS220,17-04-2024 17:25:3,7.44,true value
+profilmk7,50.14220,12.47131,8,965.6,2.330,none,none,WS120,17-04-2024 17:27:2,32.12,true value
+profilmk8,50.14237,12.47162,8,965.6,0.774,none,none,WS120,17-04-2024 17:30:4,10.67,true value
+Profil2W14,50.14053,12.46798,14.78,954.70,0.319,none,acker braun ,WS220,17-04-2024 17:35:5,4.25,true value
+profilmk9,50.14044,12.46766,8,965.9,0.207,none,none,WS120,17-04-2024 17:39:1,2.85,true value
+Profil2W16,50.13981,12.46596,13.81,954.89,0.390,none,acker braun ,WS220,17-04-2024 17:41:4,5.21,true value
+profilmk10,50.13984,12.46648,8,965.9,0.170,none,none,WS120,17-04-2024 17:43:1,2.34,true value
+propaninaprofilW1,50.19938,12.46972,15.29,953.19,0.931,none,fw,WS220,18-04-2024 11:09:2,12.35,true value
+ProfilKopaninaAnna1,50.19950,12.46975,5,956,1.260,none,none,WS082,18-04-2024 11:11:4,17.38,true value
+profilkopanina1,50.19922,12.46965,6,964.5,0.984,none,none,WS120,18-04-2024 11:13:1,13.65,true value
+propaninaprofilW2,50.19868,12.46922,15.64,954.02,0.773,none,fw,WS220,18-04-2024 11:14:5,10.25,true value
+ProfilKopaninaAnna2,50.19899,12.46945,5,956,1.040,none,gruene wiese ,WS082,18-04-2024 11:15:3,14.35,true value
+profilkopanina2,50.19887,12.46936,6,965.0,1.360,none,none,WS120,18-04-2024 11:16:3,18.87,true value
+ProfilKopaninaAnna3,50.19851,12.46899,5,956,1.160,none,none,WS082,18-04-2024 11:18:2,16.00,true value
+propaninaprofilW3,50.19829,12.46849,14.50,955.07,0.839,none,fw,WS220,18-04-2024 11:22:4,11.18,true value
+profilkopanina3,50.19820,12.46853,6,966.4,1.160,none,none,WS120,18-04-2024 11:25:5,16.12,true value
+propaninaprofilW4,50.19768,12.46841,16.47,955.56,1.080,none,fw,WS220,18-04-2024 11:27:5,14.30,true value
+profilkopanina4,50.19792,12.46841,6,966.5,1.110,none,none,WS120,18-04-2024 11:28:4,15.43,true value
+propaninaprofilW5,50.19730,12.46830,16.93,955.97,1.320,none,fw,WS220,18-04-2024 11:31:1,17.46,true value
+profilkopanina5,50.19753,12.46837,6,966.8,0.865,none,none,WS120,18-04-2024 11:32:0,12.03,true value
+propaninaprofilW6,50.19668,12.46820,17.21,956.37,0.870,none,fw,WS220,18-04-2024 11:34:1,11.50,true value
+profilkopanina6,50.19687,12.46823,6,967.3,2.270,none,none,WS120,18-04-2024 11:36:0,31.57,true value
+propaninaprofilW7,50.19629,12.46812,17.36,956.67,0.740,none,none,WS220,18-04-2024 11:36:5,9.78,true value
+propaninaprofilW8,50.19571,12.46791,17.58,956.80,0.931,none,fw,WS220,18-04-2024 11:40:1,12.30,true value
+profilkopanina7,50.19613,12.46798,6,967.9,0.843,none,none,WS120,18-04-2024 11:41:0,11.73,true value
+ProfilKopaninaAnna6,50.19591,12.46795,6,956,1.480,none,none,WS082,18-04-2024 11:42:1,20.34,true value
+propaninaprofilW9,50.19512,12.46763,17.51,957.15,0.803,none,fw,WS220,18-04-2024 11:43:5,10.61,true value
+profilkopanina8,50.19550,12.46787,6,968.0,1.040,none,none,WS120,18-04-2024 11:44:0,14.48,true value
+ProfilKopaninaAnna7,50.19530,12.46778,6,988,0.937,none,none,WS082,18-04-2024 11:44:5,13.31,true value
+propaninaprofilW10,50.19474,12.46743,17.44,957.66,0.798,none,fw,WS220,18-04-2024 11:46:5,10.56,true value
+profilkopanina9,50.19493,12.46750,6,968.4,1.040,none,none,WS120,18-04-2024 11:47:3,14.48,true value
+ProfilKopaninaAnna7,50.19459,12.46732,6,960,0.772,none,super wet,WS082,18-04-2024 11:49:4,10.66,true value
+propaninaprofilW11,50.19416,12.46733,17.35,957.61,1.320,none,fw,WS220,18-04-2024 11:51:3,17.47,true value
+profilkopanina10,50.19438,12.46733,6,968.9,1.740,none,none,WS120,18-04-2024 11:53:2,24.24,true value
+ProfilKopaninaAnna8,50.19396,12.46737,7,960,1.680,none,none,WS082,18-04-2024 11:53:5,23.11,true value
+propaninaprofilW12,50.19377,12.46736,17.76,957.20,1.160,none,fw,WS220,18-04-2024 11:54:3,15.32,true value
+ProfilKopaninaAnna9,50.19358,12.46734,7,988,2.070,none,none,WS082,18-04-2024 11:56:5,29.30,true value
+propaninaprofilW14,50.19298,12.46729,18.85,957.29,1.370,none,fw,WS220,18-04-2024 11:58:0,18.03,true value
+profilkopanina11,50.19338,12.46733,6,968.3,1.420,none,none,WS120,18-04-2024 11:58:1,19.77,true value
+ProfilKopaninaAnna10,50.19319,12.46738,7,960,1.590,none,none,WS082,18-04-2024 12:00:2,21.87,true value
+propaninaprofilW15,50.19240,12.46727,18.97,957.77,0.369,none,fw,WS220,18-04-2024 12:02:4,4.86,true value
+profilkopanina12,50.19278,12.46726,6,968.9,2.370,none,none,WS120,18-04-2024 12:02:5,33.02,true value
+ProfilKopaninaAnna11,50.19264,12.46730,7,960,0.640,none,bare ground ,WS082,18-04-2024 12:04:3,8.80,true value
+propaninaprofilW16,50.19194,12.46738,18.53,957.65,0.393,none,bare soil ,WS220,18-04-2024 12:07:2,5.18,true value
+profilkopanina13,50.19220,12.46734,6,969.0,1.380,none,none,WS120,18-04-2024 12:07:5,19.23,true value
+ProfilKopaninaAnna12,50.19170,12.46751,7,960,1.860,none,none,WS082,18-04-2024 12:10:3,25.58,true value
+profilkopanina14,50.19152,12.46730,6,968.5,0.997,none,none,WS120,18-04-2024 12:12:4,13.88,true value
+propaninaprofilW17,50.19142,12.46710,17.88,957.49,0.396,none,acker bepfl,WS220,18-04-2024 12:12:4,5.23,true value
+ProfilKopaninaAnna13,50.19129,12.46681,7,960,0.826,none,new field; weizenacker,WS082,18-04-2024 12:14:4,11.36,true value
+profilkopanina15,50.19114,12.46635,6,968.8,0.808,none,none,WS120,18-04-2024 12:16:2,11.26,true value
+propaninaprofilW18,50.19048,12.46543,18.09,958.14,0.974,none,acker bepfl ,WS220,18-04-2024 12:17:2,12.86,true value
+ProfilKopaninaAnna14,50.19083,12.46581,7,960,0.931,none,none,WS082,18-04-2024 12:18:2,12.81,true value
+profilkopanina16,50.19022,12.46507,6,969.3,1.670,none,none,WS120,18-04-2024 12:21:2,23.28,true value
+propaninaprofilW19,50.18955,12.46444,17.76,958.41,1.250,none,acker bepfl ,WS220,18-04-2024 12:21:2,16.53,true value
+ProfilKopaninaAnna15,50.18984,12.46464,7,960,0.810,none,none,WS082,18-04-2024 12:23:1,11.14,true value
+propaninaprofilW20,50.18882,12.46392,17.51,958.54,0.899,none,acker bepfl ,WS220,18-04-2024 12:24:1,11.90,true value
+profilkopanina17,50.18920,12.46401,6,969.5,2.610,none,none,WS120,18-04-2024 12:25:2,36.39,true value
+ProfilKopaninaAnna16,50.18856,12.46351,7,960,0.836,none,none,WS082,18-04-2024 12:28:1,11.50,true value
+propaninaprofilW21,50.18798,12.46268,17.47,958.86,1.230,none,acker bepfl ,WS220,18-04-2024 12:28:1,16.29,true value
+profilkopanina18,50.18829,12.46308,6,969.9,0.944,none,none,WS120,18-04-2024 12:30:0,13.17,true value
+propaninaprofilW22,50.18810,12.46232,17.34,958.90,0.777,none,fw ,WS220,18-04-2024 12:31:5,10.30,true value
+ProfilKopaninaAnna17,50.18775,12.46217,7,960,0.797,none,aufgelockerter Acker ohne Bewuchs,WS082,18-04-2024 12:33:5,10.96,true value
+profilkopanina19,50.18782,12.46184,6,970.4,0.467,none,none,WS120,18-04-2024 12:34:5,6.52,true value
+propaninaprofilW22,50.18755,12.46145,17.16,959.16,0.074,none,fw,WS220,18-04-2024 12:35:1,0.98,true value
+ProfilKopaninaAnna18,50.18741,12.46171,7,960,0.706,none,none,WS082,18-04-2024 12:37:3,9.71,true value
+profilkopanina20,50.18727,12.46109,6,970.3,0.200,none,none,WS120,18-04-2024 12:38:5,2.79,true value
+ProfilKopaninaAnna19,50.18675,12.46109,7,960,0.618,none,acker aufgelockert,WS082,18-04-2024 12:42:3,8.50,true value
+propaninaprofilW23,50.18570,12.45985,15.72,959.49,0.530,none,fw,WS220,18-04-2024 12:43:3,7.07,true value
+profilkopanina21,50.18652,12.46054,6,970.5,7.980,none,none,WS120,18-04-2024 12:44:0,111.36,true value
+profilkopanina22,50.18654,12.46038,6,970.6,1.390,none,none,WS120,18-04-2024 12:47:1,19.40,true value
+propaninaprofilW25,50.18534,12.45959,16.20,959.57,0.515,none,fw,WS220,18-04-2024 12:47:1,6.86,true value
+propaninaprofilW26,50.18620,12.46024,16.06,959.40,1.200,none,fw,WS220,18-04-2024 12:50:4,15.98,true value
+propaninaprofilW27,50.18500,12.45936,17.53,959.61,0.530,none,fw,WS220,18-04-2024 12:57:2,7.02,true value
+ProfilKopaninaAnna20,50.18472,12.45907,7,960,0.818,none,wiese aber nicht so dicht,WS082,18-04-2024 13:01:0,11.25,true value
+propaninaprofilW28,50.18425,12.45851,18.15,959.84,0.515,none,fw,WS220,18-04-2024 13:01:0,6.81,true value
+profilkopanina23,50.18440,12.45895,6,970.9,0.356,none,none,WS120,18-04-2024 13:01:1,4.97,true value
+profilkopanina24,50.18415,12.45837,6,971.0,0.970,none,none,WS120,18-04-2024 13:04:2,13.54,true value
+ProfilKopaninaAnna21,50.18388,12.45800,7,960,0.608,none,none,WS082,18-04-2024 13:05:0,8.36,true value
+propaninaprofilW29,50.18360,12.45766,17.96,959.97,0.674,none,fw,WS220,18-04-2024 13:06:0,8.92,true value
+profilkopanina25,50.18370,12.45786,6,971.0,5.930,none,none,WS120,18-04-2024 13:07:5,82.80,true value
+propaninaprofilW30,50.18332,12.45741,17.52,960.11,0.685,none,fw,WS220,18-04-2024 13:08:4,9.08,true value
+propaninaprofilW31,50.18287,12.45672,17.36,960.23,0.404,none,fw,WS220,18-04-2024 13:11:5,5.36,true value
+profilkopanina26,50.18318,12.45719,6,971.2,0.836,none,none,WS120,18-04-2024 13:12:0,11.67,true value
+ProfilKopaninaAnna22,50.18301,12.45691,7,960,1.270,none,none,WS082,18-04-2024 13:12:5,17.47,true value
+profilkopanina27,50.18276,12.45651,6,971.3,0.559,none,none,WS120,18-04-2024 13:14:5,7.81,true value
+propaninaprofilW3Walt1,50.20157,12.47169,n.a.,51.0,1.830,none,fw,WS120,18-04-2024 15:15:1,1.29,copied from value
+ProfilKopaninaAnna23,50.20148,12.47147,8,960,1.610,none,gruene wiese ,WS082,18-04-2024 15:17:5,22.07,true value
+propaninaprofilW3Walt2,50.20174,12.47195,n.a.,51.0,1.250,none,wiese,WS120,18-04-2024 15:18:2,0.88,copied from value
+propaninaprofilW3Walt3,50.20182,12.47216,n.a.,51.0,2.020,none,none,WS120,18-04-2024 15:20:5,1.42,copied from value
+propaninaprofilW3Walt4,50.20133,12.47141,n.a.,51.0,0.978,none,wiese ,WS120,18-04-2024 15:25:4,0.69,copied from value
+ProfilKopaninaAnna25,50.20226,12.47247,7,955,1.200,none,none,WS082,18-04-2024 15:27:4,16.42,true value
+propaninaprofilW3Walt5,50.20132,12.47122,n.a.,51.0,1.810,none,wiese ,WS120,18-04-2024 15:28:0,1.28,copied from value
+ProfilKopaninaAnna26,50.20250,12.47263,7,955,2.050,none,none,WS082,18-04-2024 15:30:1,28.05,true value
+propaninaprofilW3Walt6,50.20113,12.47090,n.a.,51.0,1.590,none,wiese ,WS120,18-04-2024 15:30:5,1.12,copied from value
+propaninaprofilW3Walt7,50.20098,12.47063,n.a.,51.0,2.580,none,wiese ,WS120,18-04-2024 15:33:1,1.82,copied from value
+ProfilKopaninaAnna27,50.20270,12.47277,7,960,1.600,none,none,WS082,18-04-2024 15:34:4,22.01,true value
+propaninaprofilW3Walt7,50.20084,12.47048,n.a.,51.0,1.860,none,wiese ,WS120,18-04-2024 15:35:1,1.31,copied from value
+ProfilKopaninaAnna28,50.20287,12.47302,7,960,1.110,none,none,WS082,18-04-2024 15:37:0,15.27,true value
+propaninaprofilW3Walt8,50.20071,12.47025,n.a.,51.0,2.020,none,wiese ,WS120,18-04-2024 15:38:0,1.42,copied from value
+ProfilKopaninaAnna29,50.20307,12.47326,7,960,0.697,none,none,WS082,18-04-2024 15:40:0,9.59,true value
+propaninaprofilW3Walt9,50.20048,12.47018,n.a.,51.0,1.390,none,wiese,WS120,18-04-2024 15:40:3,0.98,copied from value
+ProfilKopaninaAnna30,50.20317,12.47356,7,960,1.760,none,none,WS082,18-04-2024 15:42:3,24.21,true value
+ProfilKopaninaAnna31,50.17411,12.44312,7,966,1.760,none,gruene wiese ,WS082,18-04-2024 16:29:2,24.36,true value
+ProfilKopaninaAnna32,50.17426,12.44337,8,955,1.670,none,none,WS082,18-04-2024 16:48:3,22.77,true value
+ProfilKopaninaAnna33,50.17442,12.44354,8,960,2.100,none,none,WS082,18-04-2024 16:53:1,28.78,true value
+ProfilKopaninaAnna34,50.17457,12.44370,7,960,1.880,none,none,WS082,18-04-2024 16:56:2,25.86,true value
+ProfilKopaninaAnna35,50.17472,12.44385,7,960,2.030,none,none,WS082,18-04-2024 16:59:2,27.92,true value
+propaninaprofilW3Walt10,50.17483,12.44408,15.47,963.97,1.070,none,wiese vergleichsmessung,WS220,18-04-2024 17:03:0,14.34,true value
+propaninaprofilW3Walt11,50.17518,12.44442,16.17,963.88,1.020,none,wiese ,WS220,18-04-2024 17:07:1,13.64,true value
+ProfilKopaninaAnna37,50.17504,12.44424,7,955,1.140,none,none,WS082,18-04-2024 17:09:0,15.60,true value
+propaninaprofilW3Walt12,50.17538,12.44458,16.52,963.85,0.813,none,wiese ,WS220,18-04-2024 17:09:4,10.86,true value
+ProfilKopaninaAnna38,50.17549,12.44467,7,960,1.040,none,none,WS082,18-04-2024 17:13:4,14.30,true value
+propaninaprofilW3Walt13,50.17628,12.44435,15.77,963.87,0.840,none,wiese ,WS220,18-04-2024 17:18:2,11.25,true value
+ProfilKopaninaAnna39,50.17667,12.44458,7,955,1.660,none,none,WS082,18-04-2024 17:21:2,22.71,true value
+propaninaprofilW3Walt14,50.17712,12.44480,16.07,964.07,1.120,none,wiese ,WS220,18-04-2024 17:21:4,14.99,true value
+ProfilKopaninaAnna40,50.17745,12.44491,7,960,2.270,none,none,WS082,18-04-2024 17:25:2,31.22,true value
+propaninaprofilW3Walt15,50.17754,12.44505,16.74,964.06,0.972,none,wiese ,WS220,18-04-2024 17:25:3,12.98,true value
+ProfilKopaninaAnna41,50.17762,12.44534,7,966,1.380,none,none,WS082,18-04-2024 17:28:4,19.10,true value
+ProfilKopaninaAnna42,50.17797,12.44579,7,955,0.553,none,sehr feucht,WS082,18-04-2024 17:41:3,7.57,true value
+ProfilKopaninaAnna43,50.17806,12.44612,7,960,1.040,none,none,WS082,18-04-2024 17:44:3,14.30,true value
+propaninaprofilW3Walt17,50.17814,12.44676,19.10,964.26,1.110,none,wiese ,WS220,18-04-2024 17:46:4,14.70,true value
+ProfilKopaninaAnna44,50.17807,12.44640,7,960,1.230,none,none,WS082,18-04-2024 17:48:0,16.92,true value
+propaninaprofilW3Walt18,50.17822,12.44709,19.56,964.06,0.996,none,wiese ,WS220,18-04-2024 17:50:5,13.17,true value
+ProfilKopaninaAnna45,50.17812,12.44686,7,960,1.110,none,brown gras,WS082,18-04-2024 17:51:1,15.27,true value
+ProfilKopaninaAnna46,50.17829,12.44737,7,995,1.110,none,none,WS082,18-04-2024 17:54:0,15.82,true value
+propaninaprofilW3Walt19,50.17835,12.44760,19.74,963.40,1.330,none,wiese ,WS220,18-04-2024 17:54:3,17.56,true value
+ProfilKopaninaAnna47,50.17848,12.44791,7,970,0.936,none,beginn von acker,WS082,18-04-2024 17:58:5,13.01,true value
+propaninaprofilW3Walt20,50.17865,12.44835,19.37,962.43,0.366,none,acker Frisch bepfl ,WS220,18-04-2024 17:59:4,4.83,true value
+ProfilKopaninaAnna48,50.17854,12.44814,7,960,0.694,none,acker mit jungpflanzen,WS082,18-04-2024 18:01:4,9.55,true value
+propaninaprofilW3Walt21,50.17908,12.44915,18.87,961.86,0.265,none,acker Frisch bepfl ,WS220,18-04-2024 18:04:1,3.50,true value
+ProfilKopaninaAnna49,50.17882,12.44863,7,970,0.703,none,none,WS082,18-04-2024 18:04:2,9.77,true value
+ProfilKopaninaAnna50,50.17931,12.44956,7,980,0.728,none,none,WS082,18-04-2024 18:07:5,10.22,true value
+propaninaprofilW3Walt22,50.17954,12.45009,18.73,961.64,0.474,none,acker Frisch bepfl ,WS220,18-04-2024 18:08:0,6.27,true value
+propaninaprofilW3Walt23,50.18003,12.45106,19.12,961.67,0.360,none,acker Frisch bepfl ,WS220,18-04-2024 18:11:3,4.75,true value
+ProfilKopaninaAnna51,50.17976,12.45050,7,980,0.525,none,none,WS082,18-04-2024 18:11:5,7.37,true value
+ProfilKopaninaAnna52,50.18029,12.45164,7,980,0.556,none,none,WS082,18-04-2024 18:15:5,7.81,true value
+propaninaprofilW3Walt24,50.18053,12.45207,19.50,961.66,0.343,none,acker Frisch bepfl ,WS220,18-04-2024 18:16:0,4.52,true value
+ProfilKopaninaAnna53,50.18081,12.45257,7,995,0.596,none,none,WS082,18-04-2024 18:20:1,8.50,true value
+propaninaprofilW3Walt25,50.18105,12.45311,19.74,961.67,0.349,none,acker Frisch bepfl ,WS220,18-04-2024 18:20:1,4.60,true value
+ProfilKopaninaAnna54,50.18132,12.45359,7,980,0.718,none,none,WS082,18-04-2024 18:23:4,10.08,true value
+propaninaprofilW3Walt26,50.18156,12.45412,19.64,961.63,0.247,none,acker Frisch bepfl ,WS220,18-04-2024 18:23:4,3.26,true value
+ProfilKopaninaAnna55,50.18178,12.45467,7,966,1.190,none,gruene wiese ,WS082,18-04-2024 18:27:0,16.47,true value
+propaninaprofilW3Walt27,50.18201,12.45518,19.47,961.58,0.754,none,wiese,WS220,18-04-2024 18:27:1,9.95,true value
+propaninaprofilW3Walt28,50.18234,12.45594,19.30,961.57,1.370,none,wiese,WS220,18-04-2024 18:29:5,18.08,true value
+ProfilKopaninaAnna56,50.18222,12.45569,7,966,0.721,none,none,WS082,18-04-2024 18:30:4,9.98,true value
+ProfilKopaninaAnna57,50.17391,12.44292,7,960,0.846,none,wiese,WS082,18-04-2024 19:02:4,11.64,true value
+propaninaprofilW3Walt30,50.17349,12.44272,15.03,964.32,0.697,none,acker mit Weizen,WS220,18-04-2024 19:02:4,9.36,true value
+ProfilKopaninaAnna58,50.17329,12.44253,7,960,1.250,none,acker mit weizen,WS082,18-04-2024 19:06:5,17.19,true value
+propaninaprofilW3Walt31,50.17312,12.44236,17.03,963.85,0.653,none,acker Weizen frisch,WS220,18-04-2024 19:07:1,8.71,true value
+ProfilKopaninaAnna59,50.17289,12.44194,7,960,1.000,none,none,WS082,18-04-2024 19:11:2,13.75,true value
+propaninaprofilW3Walt31,50.17250,12.44144,18.13,963.51,0.484,none,wiese neben Acker,WS220,18-04-2024 19:11:2,6.43,true value
+ProfilKopaninaAnna60,50.17230,12.44130,7,960,0.679,none,none,WS082,18-04-2024 19:14:4,9.34,true value
