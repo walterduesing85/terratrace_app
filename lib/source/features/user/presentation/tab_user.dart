@@ -1,9 +1,8 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:terratrace/source/constants/constants.dart';
-import 'package:terratrace/source/features/project_manager/data/project_managment.dart';
-import 'package:terratrace/source/features/user/presentation/user_card.dart';
+
+import 'package:terratrace/source/features/user/domain/user_managment.dart';
 
 class TabUser extends StatefulWidget {
   const TabUser({super.key});
@@ -13,15 +12,18 @@ class TabUser extends StatefulWidget {
 }
 
 class _TabUserState extends State<TabUser> {
-  String? searchValue;
   var _controller = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
     return Container(
       child: Consumer(builder: (context, WidgetRef ref, _) {
+        // Watch the user cards provider for updated data
+        final userCardsAsyncValue = ref.watch(userCardsProvider);
+
         return Column(
           children: [
+            // Search Bar
             SizedBox(
               height: 60,
               child: Padding(
@@ -33,15 +35,15 @@ class _TabUserState extends State<TabUser> {
                   ),
                   controller: _controller,
                   onChanged: (value) {
-                    setState(() {
-                      searchValue = value;
-                    });
+                    // Update search query in the provider
+                    ref.read(userSearchValueProvider.notifier).state = value;
                   },
                   decoration: kInputTextField.copyWith(
                       suffixIcon: CircleIconButton(onPressed: () {
                         setState(() {
                           _controller.clear();
-                          searchValue = null;
+                          ref.read(userSearchValueProvider.notifier).state =
+                              ''; // Clear the search query
                           FocusScopeNode currentFocus = FocusScope.of(context);
                           if (!currentFocus.hasPrimaryFocus &&
                               currentFocus.focusedChild != null) {
@@ -49,7 +51,7 @@ class _TabUserState extends State<TabUser> {
                           }
                         });
                       }),
-                      hintText: 'search user',
+                      hintText: 'Search user',
                       hintStyle: TextStyle(
                         fontSize: 20,
                         color: Colors.white70,
@@ -57,43 +59,21 @@ class _TabUserState extends State<TabUser> {
                 ),
               ),
             ),
+            // Display user cards
             Expanded(
-                child: StreamBuilder(
-              //TODO make the search functionality work
-              stream: searchValue == null || searchValue?.isEmpty == true
-                  ? FirebaseFirestore.instance.collection('users').snapshots()
-                  : FirebaseFirestore.instance
-                      .collection('users')
-                      .where('userName', isGreaterThanOrEqualTo: searchValue)
-                      .where('userName',
-                          isLessThanOrEqualTo: (searchValue ?? '') + '\uf8ff')
-                      .snapshots(),
-              builder: (ctx, streamSnapshot) {
-                if (streamSnapshot.connectionState == ConnectionState.waiting) {
-                  return Center(
-                    child: CircularProgressIndicator(),
-                  );
-                }
-
-                if (!streamSnapshot.hasData) {
-                  return Center(
-                    child: Text('No users found'),
-                  );
-                }
-
-                final documents = streamSnapshot.data?.docs ?? [];
-
-                return ListView.builder(
-                    itemCount: documents.length,
-                    itemBuilder: (ctx, index) => UserCard(
-                          projectName: ref.read(projectNameProvider),
-                          userID: documents[index]['UserID'],
-                          userName: documents[index]['UserName'],
-                          userMail: documents[index]['UserEmail'],
-                          userProjects: documents[index]['projects'],
-                        ));
-              },
-            )),
+              child: userCardsAsyncValue.when(
+                data: (userCards) {
+                  if (userCards.isEmpty) {
+                    return Center(child: Text('No collaborators found.'));
+                  }
+                  return ListView(
+                      children: userCards); // Display filtered user cards
+                },
+                loading: () => Center(child: CircularProgressIndicator()),
+                error: (e, stack) =>
+                    Center(child: Text('Error loading users: $e')),
+              ),
+            ),
           ],
         );
       }),

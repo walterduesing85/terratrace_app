@@ -29,22 +29,6 @@ final dataPointCountProvider =
   }
 }
 
-// final projectNameProvider =
-//     StateNotifierProvider<ProjectNameValueNotifier, String>(
-//         (ref) => ProjectNameValueNotifier());
-
-// class ProjectNameValueNotifier extends StateNotifier<String> {
-//   ProjectNameValueNotifier() : super('');
-
-//   setProjectName(String value) {
-//     state = value;
-//   }
-
-//   void clearProjectName() {
-//     state = '';
-//   }
-// }
-
 /// **1️⃣ Select the Flux Type (Dropdown-controlled)**
 class SelectedFluxTypeNotifier extends StateNotifier<String> {
   SelectedFluxTypeNotifier() : super("CO2"); // Default selection
@@ -186,42 +170,3 @@ class SelectedFluxDataNotifier extends StateNotifier<List<FluxData>> {
   }
 }
 
-// final markersProvider2 = Provider<Set<Marker>>((ref) {
-//   final selectedData = ref.watch(selectedFluxDataProvider);
-//   return selectedData
-//       .map((data) => Marker(
-//             point: LatLng(
-//               double.parse(data.dataLat!),
-//               double.parse(data.dataLong!),
-//             ),
-//             width: 80,
-//             height: 80,
-//             child: GestureDetector(
-//               // onTap: () => _showInfoWindow(, data),
-//               child: Icon(
-//                 Icons.location_on,
-//                 color: Colors.red,
-//                 size: 40.0,
-//               ),
-//             ),
-//           ))
-//       .toSet();
-// });
-
-// void _showInfoWindow(BuildContext context, FluxData data) {
-//   showDialog(
-//     context: context,
-//     builder: (ctx) => AlertDialog(
-//       title: Text(data.dataSite ?? 'No Title'),
-//       content: Text(data.dataCfluxGram ?? 'No Content'),
-//       actions: <Widget>[
-//         TextButton(
-//           child: Text('Close'),
-//           onPressed: () {
-//             Navigator.of(ctx).pop();
-//           },
-//         ),
-//       ],
-//     ),
-//   );
-// }

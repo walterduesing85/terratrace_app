@@ -12,50 +12,51 @@ class UserCard extends StatefulWidget {
     required this.userMail,
     required this.userID,
     this.projectName,
-    this.index,
-    this.boxKey,
     this.userProjects,
+    required this.userIcon, // New parameter for the icon
     Key? key,
   }) : super(key: key);
 
   final String userName;
   final String userMail;
   final String? projectName;
-  final int? index;
-  final String? boxKey;
   final String userID;
   final Map? userProjects;
+  final Icon? userIcon; // This will be passed from the provider
 
   @override
   _UserCardState createState() => _UserCardState();
 }
 
 class _UserCardState extends State<UserCard> {
-  Icon? isMember;
+  Icon? _currentIcon;
 
   @override
   void initState() {
-    checkIsMember();
     super.initState();
-    checkIsMember();
+    // Initialize the icon passed from the provider
+    _currentIcon = widget.userIcon;
   }
 
-  void checkIsMember() {
-    final projectRole = widget.userProjects?[widget.projectName];
+  void _updateIcon(String projectRole) {
     setState(() {
-      isMember = projectRole == 'owner'
-          ? Icon(Icons.card_membership, color: kGreenFluxColor)
-          : projectRole == 'collaborator'
-              ? Icon(Icons.how_to_reg, color: kGreenFluxColor)
-              : projectRole == 'applicant'
-                  ? Icon(Icons.contact_mail, color: kGreenFluxColor)
-                  : Icon(Icons.person_add_disabled, color: Colors.redAccent);
+      if (projectRole == 'owner') {
+        _currentIcon = Icon(Icons.card_membership, color: kGreenFluxColor);
+      } else if (projectRole == 'collaborator') {
+        _currentIcon = Icon(Icons.how_to_reg, color: kGreenFluxColor);
+      } else if (projectRole == 'applicant') {
+        _currentIcon = Icon(Icons.contact_mail, color: kGreenFluxColor);
+      } else {
+        _currentIcon = Icon(Icons.person_add_disabled,
+            color: Colors.redAccent); // Default icon for no role
+      }
     });
   }
 
   Future<void> _addUserToProject(BuildContext context) async {
     final db = FirebaseFirestore.instance;
     final String userName = widget.userName;
+
     bool? confirmedByUser = await Alert(
       title: 'Share data with $userName?',
       context: context,
@@ -85,94 +86,91 @@ class _UserCardState extends State<UserCard> {
         widget.userProjects![widget.projectName] = 'collaborator';
         await userRef.update({'projects': widget.userProjects});
 
-        setState(() => checkIsMember());
+        // Update the icon when the user is added to the project
+        _updateIcon('collaborator');
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      color: Colors.black45,
-        shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(
-            color: Colors.white, width: 0.8), // **Thin white border**
-        ),
-      margin: EdgeInsets.symmetric(vertical: 6, horizontal: 12),
-      elevation: 4, // **Slight elevation for a "floating" effect**
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
-        child: Row(
-          children: [
-            /// **👤 Membership Icon**
-            CircleAvatar(
-              backgroundColor: Colors.transparent,
-              child: isMember,
-            ),
-
-            /// **📛 User Info**
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    widget.userName,
-                    style: kUserCardHeadeTextStyle.copyWith(
-                      fontSize: 14,
-                      color: Colors
-                          .white, // **Ensures visibility on dark background**
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  Text(
-                    widget.userMail,
-                    style: kUserCardSubtitleTextStyle.copyWith(
-                      fontSize: 12,
-                      color: Colors
-                          .white70, // **Slightly dimmed for better contrast**
-                    ),
-                    overflow: TextOverflow.ellipsis,
+    return Consumer(
+      builder: (context, ref, child) {
+        return Card(
+          color: Colors.black45,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(color: Colors.white, width: 0.8),
+          ),
+          margin: EdgeInsets.symmetric(vertical: 6, horizontal: 12),
+          elevation: 4,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+            child: Row(
+              children: [
+                // **👤 Membership Icon**
+                CircleAvatar(
+                  backgroundColor: Colors.transparent,
+                  child: _currentIcon, // Use the dynamic icon
                 ),
-                ],
-              ),
-            ),
 
-            /// **➕ Add User Button**
-            Consumer(
-              builder: (context, ref, child) {
-                final currentUserAsync = ref.watch(currentUserStateProvider);
+                // **📛 User Info**
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        widget.userName,
+                        style: TextStyle(fontSize: 14, color: Colors.white),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      Text(
+                        widget.userMail,
+                        style: TextStyle(fontSize: 12, color: Colors.white70),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
 
-                return currentUserAsync.when(
-                  data: (currentUser) {
-                    if (currentUser == null) {
-                      return const SizedBox(); // Handle case where user is not logged in
-                    }
+                // **➕ Add User Button**
+                Consumer(
+                  builder: (context, ref, child) {
+                    final currentUserAsync =
+                        ref.watch(currentUserStateProvider);
 
-                    return MaterialButton(
-                      child: Icon(
-                        Icons.add,
-                        color: Colors.blueGrey,
-                        size: 30,
-                              ),
-                      onPressed: () async {
-                        await _addUserToProject(context);
-                        await ref.read(userProvider).addCollaborator(
-                              currentUser.uid, // Correct way to access userID
-                              widget.userID,
-                            );
+                    return currentUserAsync.when(
+                      data: (currentUser) {
+                        if (currentUser == null) {
+                          return const SizedBox(); // Handle case where user is not logged in
+                        }
+
+                        return MaterialButton(
+                          child: Icon(
+                            Icons.add,
+                            color: Colors.blueGrey,
+                            size: 30,
+                          ),
+                          onPressed: () async {
+                            await _addUserToProject(context);
+                            await ref.read(userProvider).addCollaborator(
+                                  currentUser
+                                      .uid, // Correct way to access userID
+                                  widget.userID,
+                                );
+                          },
+                        );
                       },
+                      loading: () => CircularProgressIndicator(),
+                      error: (error, stack) => Text("Error loading user"),
                     );
                   },
-                  loading: () =>
-                      CircularProgressIndicator(), // Show a loader while fetching user
-                  error: (error, stack) => Text("Error loading user"),
-                );
-                    },
-                  ),
-          ],
-        ),
-      ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

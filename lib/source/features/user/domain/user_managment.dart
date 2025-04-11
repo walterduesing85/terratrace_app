@@ -1,30 +1,48 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:terratrace/source/constants/constants.dart';
+import 'package:terratrace/source/features/authentication/authentication_managment.dart';
 import 'package:terratrace/source/features/project_manager/data/project_managment.dart';
+import 'package:terratrace/source/features/user/presentation/user_card.dart';
 
 class User {
   final String? userName;
   final String? userMail;
   final String? userID;
   final Map<String, String>? projects;
-  final Map<String, String>? collaborators; // New field for collaborators
+  final List<String>
+      collaborators; // Updated to List<String> for Firebase array
 
-  User(
-      {this.userName,
-      this.userMail,
-      this.userID,
-      this.projects,
-      this.collaborators});
+  User({
+    this.userName,
+    this.userMail,
+    this.userID,
+    this.projects,
+    this.collaborators = const [], // Default empty list for collaborators
+  });
 
   factory User.fromDocument(DocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>?;
+
+    if (data == null) {
+      print("⚠️ Document has no data: ${doc.id}");
+      return User();
+    }
+
+    final collaboratorsRaw = data['Collaborators'];
+
+    if (collaboratorsRaw == null) {
+      print("⚠️ Document ${doc.id} has no 'Collaborators' field.");
+    }
+
     return User(
-      userName: doc['UserName'],
-      userMail: doc['UserEmail'],
-      userID: doc['UserID'],
-      projects: Map<String, String>.from(doc['projects']),
-      collaborators: doc['collaborators'] != null
-          ? Map<String, String>.from(doc['collaborators'])
-          : {},
+      userName: data['UserName'] ?? 'Unknown User',
+      userMail: data['UserEmail'] ?? 'No email',
+      userID: data['UserID'] ?? '',
+      projects: Map<String, String>.from(data['projects'] ?? {}),
+      collaborators:
+          collaboratorsRaw != null ? List<String>.from(collaboratorsRaw) : [],
     );
   }
 
@@ -34,7 +52,7 @@ class User {
       'UserEmail': userMail,
       'UserID': userID,
       'projects': projects ?? {},
-      'collaborators': collaborators ?? {},
+      'Collaborators': collaborators,
     };
   }
 
@@ -57,17 +75,98 @@ class User {
       print("❌ Error adding collaborator: $e");
     }
   }
-}
 
-// Define the StreamProvider for fetching users as User objects
-final firebaseUsersProvider = StreamProvider<List<User>>((ref) {
-  final projectManager = ref.watch(projectManagementProvider.notifier);
-  return projectManager.usersStream;
-});
+  Future<List<String>> getCollaboratorIDs(String userId) async {
+    final doc =
+        await FirebaseFirestore.instance.collection('users').doc(userId).get();
+    final data = doc.data();
+    if (data != null && data.containsKey('Collaborators')) {
+      return List<String>.from(data['Collaborators']);
+    } else {
+      return [];
+    }
+  }
+}
 
 final userProvider = Provider<User>((ref) {
   return User();
 });
 
+final userCardsProvider = StreamProvider<List<UserCard>>((ref) async* {
+  final currentUser = await ref.watch(currentUserStateProvider.future);
+  final searchQuery = ref.watch(userSearchValueProvider);
+  final currentProjectName = ref.watch(projectNameProvider);
+
+  if (currentUser == null) {
+    print("⚠️ No current user found.");
+    yield [];
+    return;
+  }
+
+  final userId = currentUser.uid;
+  final usersStream =
+      FirebaseFirestore.instance.collection('users').snapshots();
+
+  List<String> collaboratorIDs = [];
+
+  if (searchQuery.isEmpty) {
+    collaboratorIDs = await ref.watch(userProvider).getCollaboratorIDs(userId);
+    print("👥 Collaborators of current user: $collaboratorIDs");
+  }
+
+  await for (var snapshot in usersStream) {
+    print("📦 Fetched ${snapshot.docs.length} users from Firestore");
+
+    final userCards =
+        snapshot.docs.map((doc) => User.fromDocument(doc)).where((user) {
+      if (searchQuery.isEmpty) {
+        final isCollaborator = collaboratorIDs.contains(user.userID);
+        if (!isCollaborator) {
+          print("❌ Skipping non-collaborator ${user.userID}");
+        }
+        return isCollaborator;
+      } else {
+        // if searching, include everyone
+        return true;
+      }
+    }).map((user) {
+      final projectRole = user.projects?[currentProjectName];
+      Icon? userIcon;
+
+      if (projectRole == 'owner') {
+        userIcon = Icon(Icons.card_membership, color: kGreenFluxColor);
+      } else if (projectRole == 'collaborator') {
+        userIcon = Icon(Icons.how_to_reg, color: kGreenFluxColor);
+      } else if (projectRole == 'applicant') {
+        userIcon = Icon(Icons.contact_mail, color: kGreenFluxColor);
+      } else {
+        userIcon = Icon(Icons.person_add_disabled, color: Colors.redAccent);
+      }
+
+      return UserCard(
+        userName: user.userName ?? 'Unknown User',
+        userMail: user.userMail ?? 'No email',
+        userID: user.userID ?? '',
+        projectName: currentProjectName,
+        userProjects: user.projects ?? {},
+        userIcon: userIcon,
+      );
+    }).toList();
+
+    if (searchQuery.isNotEmpty) {
+      final queryLower = searchQuery.toLowerCase();
+      final filtered = userCards.where((userCard) {
+        return userCard.userName.toLowerCase().contains(queryLower) ||
+            userCard.userMail.toLowerCase().contains(queryLower);
+      }).toList();
+
+      print(
+          "🔍 Search query '${searchQuery}': matched ${filtered.length} users.");
+      yield filtered;
+    } else {
+      yield userCards;
+    }
+  }
+});
+
 final userSearchValueProvider = StateProvider<String>((ref) => '');
-//TODO assign to user also the chamber volume and area
