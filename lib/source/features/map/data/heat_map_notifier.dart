@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' as mp;
 import 'package:terratrace/source/features/data/data/data_management.dart';
 import 'package:terratrace/source/features/data/domain/flux_data.dart';
+import 'package:terratrace/source/features/map/data/marker_popup_provider.dart';
 import 'map_data.dart';
 
 final isStyleLoadedProvider = StateProvider<bool>((ref) => false);
@@ -26,6 +27,7 @@ class HeatmapNotifier extends StateNotifier<void> {
             data: (fluxDataList) async {
               await updateHeatmapSource(fluxDataList);
               await updateMarkerLayer();
+              await updateTransparentMarkerLayer();
             },
             loading: () => print("⏳ Flux data is loading..."),
             error: (err, stack) => print("❌ Error loading flux data: $err"),
@@ -47,6 +49,7 @@ class HeatmapNotifier extends StateNotifier<void> {
             data: (datat) async {
               await updateHeatmapSource(fluxDataList);
               await updateMarkerLayer();
+              await updateTransparentMarkerLayer();
             },
             loading: () => print("⏳ Flux data is loading..."),
             error: (err, stack) => print("❌ Error loading flux data: $err"),
@@ -180,7 +183,7 @@ class HeatmapNotifier extends StateNotifier<void> {
 
     // ✅ Ensure the custom image is only added once
     if (!layers.any((l) => l?.id == 'marker-icon')) {
-      await addCustomImage(_mapboxMapController!);
+      await addCustomImage(_mapboxMapController!, 'marker-icon');
     }
 
     // ✅ Define the marker layer
@@ -188,7 +191,9 @@ class HeatmapNotifier extends StateNotifier<void> {
       id: 'marker-layer',
       sourceId: 'heatmap-source', // Ensure this matches your existing source ID
       iconImage: 'marker-icon', // The ID of the image added to the style
-      iconSize: 0.01, // Adjust the size as needed
+      iconSize: 0.01,
+      iconOpacity: 1,
+      iconAllowOverlap: true, // Adjust the size as needed
     );
 
     // ✅ Ensure the marker layer exists
@@ -209,6 +214,59 @@ class HeatmapNotifier extends StateNotifier<void> {
       print("📍 Moving marker layer below heatmap layer...");
       await style.moveStyleLayer(
           'marker-layer', mp.LayerPosition(below: 'heatmap-layer'));
+    }
+  }
+
+// This method is used to update the transparent marker layer used to increase the area of the marker (the small marker size of the marker-layer are not usefull for tapping)
+  Future<void> updateTransparentMarkerLayer() async {
+    if (_mapboxMapController == null) {
+      print(
+          "🚨 ERROR: MapboxMapController is NULL! Cannot update transparent marker layer.");
+      return;
+    }
+    final style = _mapboxMapController!.style;
+    final layers = await style.getStyleLayers();
+
+    // Check if the transparent marker layer already exists
+    final hasTransparentLayer =
+        layers.any((l) => l?.id == 'transparent-marker-layer');
+
+    // ✅ Ensure the custom image is only added once
+    if (!layers.any((l) => l?.id == 'transparent-marker-icon')) {
+      await addCustomImage(_mapboxMapController!, 'transparent-marker-icon');
+    }
+
+    // Define the transparent marker layer with increased size
+    final transparentMarkerLayer = mp.SymbolLayer(
+      id: 'transparent-marker-layer',
+      sourceId: 'heatmap-source', // Ensure this matches your existing source ID
+      iconImage: 'transparent-marker-icon', // Same icon as the visible markers
+      iconSize: 0.1, // Increase the size for interaction
+      iconOpacity: 0.0,
+      iconAllowOverlap: true, // Allow overlap with other markers
+
+      // Make the markers fully transparent
+    );
+
+    if (!hasTransparentLayer) {
+      // Add the transparent marker layer if it doesn't exist
+      await style.addLayer(transparentMarkerLayer);
+      print("📍 Added transparent marker layer.");
+    } else {
+      // Update the transparent marker layer if it already exists
+      await style.updateLayer(transparentMarkerLayer);
+      print("📍 Updated transparent marker layer.");
+    }
+
+    // Ensure the transparent marker layer is above the heatmap but below the visible marker layer
+    final transparentLayerIndex =
+        layers.indexWhere((l) => l?.id == 'transparent-marker-layer');
+    final markerLayerIndex = layers.indexWhere((l) => l?.id == 'marker-layer');
+
+    if (transparentLayerIndex > markerLayerIndex) {
+      print("📍 Moving transparent marker layer below visible marker layer...");
+      await style.moveStyleLayer(
+          'transparent-marker-layer', mp.LayerPosition(below: 'marker-layer'));
     }
   }
 
@@ -245,7 +303,73 @@ class HeatmapNotifier extends StateNotifier<void> {
     }
   }
 
-  Future<void> addCustomImage(mp.MapboxMap mapboxMap) async {
+// These methods are used to handle map taps and feature selection
+  Future<void> onMapTap(
+      mp.MapContentGestureContext mapContentGestureContext) async {
+    print('map has been tapped');
+    final mapboxController =
+        ref.read(heatmapProvider.notifier).getMapboxController();
+    if (mapboxController == null) return;
+
+    final touchPosition = mapContentGestureContext.touchPosition;
+
+    // Query features at the tapped position
+    final features = await mapboxController.queryRenderedFeatures(
+      mp.RenderedQueryGeometry.fromScreenCoordinate(touchPosition),
+      mp.RenderedQueryOptions(
+        layerIds: [
+          'transparent-marker-layer'
+        ], // Layer ID you want to check for markers
+      ),
+    );
+    final queriedRenderedFeature = features.firstOrNull;
+    if (queriedRenderedFeature == null || !mounted) return;
+    print('map has been tapped 2');
+    _onFeatureTapped(queriedRenderedFeature, mapboxController);
+  }
+
+// This method is used to handle feature taps
+  void _onFeatureTapped(
+      mp.QueriedRenderedFeature queriedRenderedFeature, mapboxController) {
+    print('Feature tapped: ${queriedRenderedFeature.queriedFeature.feature}');
+
+    // Get the properties of the feature
+    final properties =
+        queriedRenderedFeature.queriedFeature.feature["properties"] as Map?;
+    final key = properties?['key'] as String?;
+    if (key == null) return; // If no key, return early
+
+    // Fetch FluxData based on the feature's key (or any other identifier)
+    final fluxDataState = ref.watch(fluxDataListProvider);
+
+    fluxDataState.when(
+      data: (fluxDataList) {
+        // Filter FluxData based on the key
+        final filteredFluxData =
+            fluxDataList.where((fluxData) => fluxData.dataKey == key).toList();
+
+        if (filteredFluxData.isNotEmpty) {
+          // Add the filtered FluxData as a popup
+          ref
+              .read(markerPopupProvider.notifier)
+              .addPopup(filteredFluxData.first);
+        } else {
+          print("🖱️ No matching FluxData found for key: $key");
+        }
+      },
+      loading: () {
+        print("🖱️ Loading FluxData...");
+      },
+      error: (error, stackTrace) {
+        print('🛑 Error fetching FluxData: $error');
+      },
+    );
+
+    print('Tapped feature key: $key');
+  }
+
+// This method is used to add a custom image to the map style basically the marker icon and the transparent marker icon
+  Future<void> addCustomImage(mp.MapboxMap mapboxMap, String iconName) async {
     try {
       // Load the image from assets
       final ByteData byteData = await rootBundle.load('assets/black-dot.png');
@@ -259,7 +383,7 @@ class HeatmapNotifier extends StateNotifier<void> {
 
       // Add the image to the style
       await mapboxMap.style.addStyleImage(
-        'marker-icon', // Unique ID for the image
+        iconName, // Unique ID for the image
         1, // Scale factor
         mp.MbxImage(
           width: imageWidth,
@@ -279,6 +403,7 @@ class HeatmapNotifier extends StateNotifier<void> {
   }
 }
 
+// This provider is used to manage the state of the heatmap notifier
 final heatmapProvider = StateNotifierProvider<HeatmapNotifier, void>((ref) {
   final notifier = HeatmapNotifier(ref);
 
@@ -353,36 +478,6 @@ List<Object> generateDynamicHeatmapWeightExpression(
   return expression;
 }
 
-// MinMaxValues normalizeMinMax(
-//     MinMaxValues input, double globalMin, double globalMax) {
-//   if (globalMax == globalMin) {
-//     return MinMaxValues(minV: 1, maxV: 10); // Prevents division by zero
-//   }
-
-//   // ✅ Scale up normalization to ensure values don't collapse near zero
-//   double scalingFactor = 50.0;
-
-//   double adjustedMin = input.minV.clamp(globalMin, globalMax);
-//   double adjustedMax = input.maxV.clamp(globalMin, globalMax);
-
-//   double normalizedMin =
-//       ((adjustedMin - globalMin) / (globalMax - globalMin)) * scalingFactor;
-//   double normalizedMax =
-//       ((adjustedMax - globalMin) / (globalMax - globalMin)) * scalingFactor;
-
-//   // Ensure a valid range
-//   if ((normalizedMax - normalizedMin).abs() < 1.0) {
-//     normalizedMax = (normalizedMin + 1.0).clamp(1.0, scalingFactor);
-//   }
-
-//   print("🔍 Normalized Min/Max: $normalizedMin - $normalizedMax");
-
-//   return MinMaxValues(
-//     minV: normalizedMin,
-//     maxV: normalizedMax,
-//   );
-// }
-
 /// ✅ Converts `FluxDataList` to GeoJSON format, using a `List<String>` for selected flux data
 String _convertFluxDataToGeoJSON(
     List<FluxData> fluxDataList, List<String> selectedFluxData) {
@@ -409,7 +504,7 @@ String _convertFluxDataToGeoJSON(
         // Constructing the GeoJSON feature
         final feature = {
           "type": "Feature",
-          "properties": {"weight": weight},
+          "properties": {"weight": weight, "key": fluxData.dataKey},
           "geometry": {
             "type": "Point",
             "coordinates": [lng, lat]

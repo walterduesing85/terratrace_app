@@ -56,11 +56,11 @@ class TabData extends ConsumerWidget {
                 itemBuilder: (context) => [
                   const PopupMenuItem(
                     value: 'latest',
-                    child: Text('Sort by Latest'),
+                    child: Text('Sort by latest'),
                   ),
                   const PopupMenuItem(
                     value: 'highest',
-                    child: Text('Sort by Highest Value'),
+                    child: Text('Sort by highest value'),
                   ),
                 ],
                 icon: const Icon(Icons.sort, color: Colors.blueGrey, size: 30),

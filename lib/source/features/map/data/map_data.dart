@@ -41,32 +41,32 @@ class MapData {
   }
 }
 
-/// ✅ Custom class to handle marker taps
-class CustomPointAnnotationClickListener
-    extends mp.OnPointAnnotationClickListener {
-  final List<FluxData> fluxDataList;
-  final Ref ref; // ✅ Use `Ref` instead of `WidgetRef`
+// /// ✅ Custom class to handle marker taps
+// class CustomPointAnnotationClickListener
+//     extends mp.OnPointAnnotationClickListener {
+//   final List<FluxData> fluxDataList;
+//   final Ref ref; // ✅ Use `Ref` instead of `WidgetRef`
 
-  CustomPointAnnotationClickListener(this.fluxDataList, this.ref);
+//   CustomPointAnnotationClickListener(this.fluxDataList, this.ref);
 
-  @override
-  void onPointAnnotationClick(mp.PointAnnotation annotation) {
-    print("📍 Marker tapped: ${annotation.geometry}");
+//   @override
+//   void onPointAnnotationClick(mp.PointAnnotation annotation) {
+//     print("📍 Marker tapped: ${annotation.geometry}");
 
-    final tappedFluxData = fluxDataList.firstWhere(
-      (data) {
-        final lat = double.tryParse(data.dataLat ?? '') ?? 0.0;
-        final lng = double.tryParse(data.dataLong ?? '') ?? 0.0;
-        return annotation.geometry ==
-            mp.Point(coordinates: mp.Position(lng, lat));
-      },
-      orElse: () => FluxData(dataLat: "0.0", dataLong: "0.0"),
-    );
+//     final tappedFluxData = fluxDataList.firstWhere(
+//       (data) {
+//         final lat = double.tryParse(data.dataLat ?? '') ?? 0.0;
+//         final lng = double.tryParse(data.dataLong ?? '') ?? 0.0;
+//         return annotation.geometry ==
+//             mp.Point(coordinates: mp.Position(lng, lat));
+//       },
+//       orElse: () => FluxData(dataLat: "0.0", dataLong: "0.0"),
+//     );
 
-    // ✅ Pass `Ref` instead of `WidgetRef`
-    ref.read(markerPopupProvider.notifier).addPopup(tappedFluxData);
-  }
-}
+//     // ✅ Pass `Ref` instead of `WidgetRef`
+//     ref.read(markerPopupProvider.notifier).addPopup(tappedFluxData);
+//   }
+// }
 
 // /// 🎯 Function to handle marker taps
 // void _onMarkerTapped(FluxData data) {
@@ -206,7 +206,7 @@ class MapStateNotifier extends StateNotifier<MapState> {
     state = state.copyWith(opacity: value);
   }
 
-  void toggleLogNormalization(WidgetRef ref) async {
+  Future<void> toggleLogNormalization(WidgetRef ref) async {
     state = state.copyWith(useLogNormalization: !state.useLogNormalization);
     await updateGeoJson(ref);
   }

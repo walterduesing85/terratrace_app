@@ -14,12 +14,15 @@ import 'package:terratrace/source/features/map/data/active_button_notifier.dart'
 import 'package:terratrace/source/features/map/data/camera_position_notifier.dart';
 import 'package:terratrace/source/features/map/data/heat_map_notifier.dart';
 import 'package:terratrace/source/features/map/data/map_data.dart';
+import 'package:terratrace/source/features/map/data/marker_popup_provider.dart';
 import 'package:terratrace/source/features/map/presentation/floating_icon_button.dart';
 import 'package:terratrace/source/features/map/presentation/flux_type_dropdown.dart';
 import 'package:terratrace/source/features/map/presentation/map_style_dropdown.dart';
 import 'package:terratrace/source/features/map/presentation/marker_popup_panel.dart';
 import 'package:terratrace/source/features/map/presentation/tab_data.dart';
 import 'package:terratrace/source/features/project_manager/data/project_managment.dart';
+
+import '../../data/data/data_management.dart';
 
 final panelDraggableProvider = StateProvider<bool>((ref) => true);
 
@@ -402,6 +405,12 @@ class _HeatMapScreenState extends ConsumerState<HeatMapScreen>
 
     return mp.MapWidget(
       styleUri: mapStyle,
+      onTapListener: (mapContentGestureContext) {
+        ref
+            .read(heatmapProvider.notifier)
+            .onMapTap(mapContentGestureContext); // Call the notifier method
+        // _onMapTap(mapContentGestureContext);
+      },
       onMapCreated: (mapboxMap) {
         mapboxMap.location.updateSettings(
           mp.LocationComponentSettings(enabled: true, pulsingEnabled: true),
@@ -423,6 +432,7 @@ class _HeatMapScreenState extends ConsumerState<HeatMapScreen>
             .read(heatmapProvider.notifier)
             .updateHeatmapSource(fluxDataList);
         await ref.read(heatmapProvider.notifier).updateMarkerLayer();
+        await ref.read(heatmapProvider.notifier).updateTransparentMarkerLayer();
 
         // Set the style-loaded state to true
         Future.delayed(Duration(seconds: 5), () {
@@ -432,4 +442,65 @@ class _HeatMapScreenState extends ConsumerState<HeatMapScreen>
       },
     );
   }
+
+  // Future<void> _onMapTap(
+  //     mp.MapContentGestureContext mapContentGestureContext) async {
+  //   print('map has been tapped');
+  //   final mapboxController =
+  //       ref.read(heatmapProvider.notifier).getMapboxController();
+  //   if (mapboxController == null) return;
+
+  //   final touchPosition = mapContentGestureContext.touchPosition;
+
+  //   // Query features at the tapped position
+  //   final features = await mapboxController.queryRenderedFeatures(
+  //     mp.RenderedQueryGeometry.fromScreenCoordinate(touchPosition),
+  //     mp.RenderedQueryOptions(
+  //       layerIds: ['marker-layer'], // Layer ID you want to check for markers
+  //     ),
+  //   );
+  //   final queriedRenderedFeature = features.firstOrNull;
+  //   if (queriedRenderedFeature == null || !mounted) return;
+  //   print('map has been tapped 2');
+  //   _onFeatureTapped(queriedRenderedFeature, mapboxController);
+  // }
+
+  // void _onFeatureTapped(
+  //     mp.QueriedRenderedFeature queriedRenderedFeature, mapboxController) {
+  //   print('Feature tapped: ${queriedRenderedFeature.queriedFeature.feature}');
+
+  //   // Get the properties of the feature
+  //   final properties =
+  //       queriedRenderedFeature.queriedFeature.feature["properties"] as Map?;
+  //   final key = properties?['key'] as String?;
+  //   if (key == null) return; // If no key, return early
+
+  //   // Fetch FluxData based on the feature's key (or any other identifier)
+  //   final fluxDataState = ref.watch(fluxDataListProvider);
+
+  //   fluxDataState.when(
+  //     data: (fluxDataList) {
+  //       // Filter FluxData based on the key
+  //       final filteredFluxData =
+  //           fluxDataList.where((fluxData) => fluxData.dataKey == key).toList();
+
+  //       if (filteredFluxData.isNotEmpty) {
+  //         // Add the filtered FluxData as a popup
+  //         ref
+  //             .read(markerPopupProvider.notifier)
+  //             .addPopup(filteredFluxData.first);
+  //       } else {
+  //         print("🖱️ No matching FluxData found for key: $key");
+  //       }
+  //     },
+  //     loading: () {
+  //       print("🖱️ Loading FluxData...");
+  //     },
+  //     error: (error, stackTrace) {
+  //       print('🛑 Error fetching FluxData: $error');
+  //     },
+  //   );
+
+  //   print('Tapped feature key: $key');
+  // }
 }
