@@ -1,6 +1,6 @@
 import 'package:go_router/go_router.dart';
 import 'package:terratrace/source/features/data/domain/flux_data.dart';
-import 'package:terratrace/source/features/data/presentation/data_list_screen.dart';
+
 import 'package:terratrace/source/features/data/presentation/edit_data_screen.dart';
 import 'package:terratrace/source/features/home/home_screen.dart';
 import 'package:terratrace/source/features/map/presentation/heat_map_screen.dart';
@@ -14,7 +14,7 @@ import 'package:terratrace/source/features/mbu_control/reselect_bound.dart';
 enum AppRoute {
   home,
   projectmanager,
-  dataListScreen,
+
   createNewProjectScreen,
   mapScreen,
   editDataScreen,
@@ -43,11 +43,6 @@ final goRouter = GoRouter(
           name: AppRoute.projectmanager.name,
           builder: (context, state) => const ProjectManagementScreen(),
           routes: [
-            GoRoute(
-              path: 'dataListScreen',
-              name: AppRoute.dataListScreen.name,
-              builder: (context, state) => const DataListScreen(),
-            ),
             GoRoute(
                 path: 'dataTableScreen/:project',
                 name: AppRoute.dataTableScreen.name,

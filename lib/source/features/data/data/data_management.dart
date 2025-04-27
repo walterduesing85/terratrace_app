@@ -10,7 +10,7 @@ final dataPointCountProvider =
     StateNotifierProvider<DataPointCountValueNotifier, int>(
         (ref) => DataPointCountValueNotifier());
 
-        class DataPointCountValueNotifier extends StateNotifier<int> {
+class DataPointCountValueNotifier extends StateNotifier<int> {
   DataPointCountValueNotifier() : super(1);
 
   // Sets the data point count to a specific value.
@@ -58,7 +58,7 @@ final selectedDataSetProvider =
     print("❌ ERROR in selectedDataSetProvider: ${fluxDataList.error}");
     yield [];
     return;
-}
+  }
 
   final dataList = fluxDataList.value ?? [];
   print('🔥 selectedDataSetProvider - Found ${dataList.length} items');
@@ -169,4 +169,3 @@ class SelectedFluxDataNotifier extends StateNotifier<List<FluxData>> {
     state = [];
   }
 }
-

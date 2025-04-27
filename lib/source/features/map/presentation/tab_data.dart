@@ -91,6 +91,7 @@ class TabData extends ConsumerWidget {
                   ref.watch(searchValueTabProvider).toLowerCase();
               final sortPreference = ref.watch(sortPreferenceProvider);
 
+              // Step 1: Filtering based on search value
               List<FluxData> filteredList = List<FluxData>.from(fluxDataList);
 
               filteredList = filteredList.where((fluxData) {
@@ -99,22 +100,50 @@ class TabData extends ConsumerWidget {
                 return siteLower!.contains(searchLower) || searchLower.isEmpty;
               }).toList();
 
+              // Debugging: Log the filtered list after applying search
+              print(
+                  'Filtered List (after search): ${filteredList.map((e) => e.dataSite).toList()}');
+
+              // Step 2: Fetching selected flux data and log it
+              final selectedFluxData = ref.watch(selectedFluxDataProvider);
+              print(
+                  'Selected Flux Data: ${selectedFluxData.map((e) => e.dataSite).toList()}');
+
+              // Step 3: Separate selected and non-selected items
+              List<FluxData> selectedItems = filteredList.where((fluxData) {
+                return selectedFluxData.contains(fluxData);
+              }).toList();
+
+              List<FluxData> nonSelectedItems = filteredList.where((fluxData) {
+                return !selectedFluxData.contains(fluxData);
+              }).toList();
+
+              // Step 4: Sorting non-selected items by the selected sort preference
               if (sortPreference == 'latest') {
-                filteredList.sort((a, b) => b.dataDate!.compareTo(a.dataDate!));
+                nonSelectedItems.sort((a, b) => b.dataDate!
+                    .compareTo(a.dataDate!)); // Sort by date (latest)
               } else if (sortPreference == 'highest') {
-                filteredList.sort((a, b) {
+                nonSelectedItems.sort((a, b) {
                   double aValue = double.tryParse(a.dataCfluxGram!) ?? 0;
                   double bValue = double.tryParse(b.dataCfluxGram!) ?? 0;
-                  return bValue.compareTo(aValue);
+                  return bValue
+                      .compareTo(aValue); // Sort by highest value (CO2)
                 });
               }
+
+              // Step 5: Combine the selected items (always at the top) and the sorted non-selected items
+              final sortedList = selectedItems + nonSelectedItems;
+
+              // Debugging: Log the final sorted list
+              print(
+                  'Sorted List (after applying selection and sorting): ${sortedList.map((e) => e.dataSite).toList()}');
 
               return ListView.builder(
                 scrollDirection: Axis.vertical,
                 shrinkWrap: true,
-                itemCount: filteredList.length,
+                itemCount: sortedList.length,
                 itemBuilder: (context, index) {
-                  FluxData fluxData = filteredList[index];
+                  FluxData fluxData = sortedList[index];
                   return DataCardTab(
                     fluxData: fluxData,
                   );

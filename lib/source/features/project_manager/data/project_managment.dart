@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:csv/csv.dart';
 import 'package:flutter/material.dart';
@@ -178,8 +179,7 @@ class ProjectManagementNotifier extends StateNotifier<ProjectState> {
           dataCh4fluxGram: row[17].toString(),
           dataVocfluxGram: row[18].toString(),
           dataH2ofluxGram: row[19].toString(),
-          dataKey:
-              DateTime.now().millisecondsSinceEpoch.toString(), // Unique key
+          dataKey: generateUniqueKey(), // Unique key
         );
       }).toList();
 
@@ -198,6 +198,13 @@ class ProjectManagementNotifier extends StateNotifier<ProjectState> {
     } catch (e) {
       print("🚨 ERROR loading CSV: $e");
     }
+  }
+
+  String generateUniqueKey() {
+    final random = Random();
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    final randomValue = random.nextInt(100000); // Adds additional randomness
+    return '$timestamp-$randomValue';
   }
 
   /// **⏹ Stop Flux Data Simulation**

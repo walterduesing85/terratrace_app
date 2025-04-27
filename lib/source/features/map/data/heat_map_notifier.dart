@@ -104,18 +104,17 @@ class HeatmapNotifier extends StateNotifier<void> {
   Future<void> updateHeatmapSource(fluxDataList) async {
     if (_mapboxMapController == null) return;
 
-    final selcetedFluxDataList = await ref.read(selectedDataSetProvider.future);
+    final selectedFluxType = ref.read(selectedFluxTypeProvider);
     final style = _mapboxMapController!.style;
 
-    print(
-        '🔥 Updating heatmap source with ${fluxDataList.length} points and ${selcetedFluxDataList.length} ');
+    print('🔥 Updating heatmap source with ${fluxDataList.length} points');
 
     // ✅ Check if the heatmap source already exists
     final hasHeatmapSource =
         (await style.getStyleSources()).any((s) => s?.id == "heatmap-source");
 
     final geoJsonString =
-        _convertFluxDataToGeoJSON(fluxDataList, selcetedFluxDataList);
+        _convertFluxDataToGeoJSON(fluxDataList, selectedFluxType);
 
     if (hasHeatmapSource) {
       // ✅ Update existing source instead of adding a new one
@@ -333,39 +332,33 @@ class HeatmapNotifier extends StateNotifier<void> {
       mp.QueriedRenderedFeature queriedRenderedFeature, mapboxController) {
     print('Feature tapped: ${queriedRenderedFeature.queriedFeature.feature}');
 
-    // Get the properties of the feature
     final properties =
         queriedRenderedFeature.queriedFeature.feature["properties"] as Map?;
     final key = properties?['key'] as String?;
-    if (key == null) return; // If no key, return early
 
-    // Fetch FluxData based on the feature's key (or any other identifier)
+    if (key == null) return;
+
+    print("Tapped feature key: $key");
+
     final fluxDataState = ref.watch(fluxDataListProvider);
 
     fluxDataState.when(
       data: (fluxDataList) {
-        // Filter FluxData based on the key
-        final filteredFluxData =
-            fluxDataList.where((fluxData) => fluxData.dataKey == key).toList();
+        print("FluxData list size: ${fluxDataList.length}");
 
-        if (filteredFluxData.isNotEmpty) {
-          // Add the filtered FluxData as a popup
-          ref
-              .read(markerPopupProvider.notifier)
-              .addPopup(filteredFluxData.first);
-        } else {
-          print("🖱️ No matching FluxData found for key: $key");
-        }
+        // Check if the key from the feature matches any FluxData's dataKey
+        final matchingFluxData = fluxDataList.firstWhere(
+          (fluxData) {
+            return fluxData.dataKey == key;
+          },
+          // Return null if no match
+        );
+
+        ref.read(markerPopupProvider.notifier).addPopup(matchingFluxData);
       },
-      loading: () {
-        print("🖱️ Loading FluxData...");
-      },
-      error: (error, stackTrace) {
-        print('🛑 Error fetching FluxData: $error');
-      },
+      loading: () => print("🖱️ Loading FluxData..."),
+      error: (error, stackTrace) => print('🛑 Error fetching FluxData: $error'),
     );
-
-    print('Tapped feature key: $key');
   }
 
 // This method is used to add a custom image to the map style basically the marker icon and the transparent marker icon
@@ -478,44 +471,65 @@ List<Object> generateDynamicHeatmapWeightExpression(
   return expression;
 }
 
-/// ✅ Converts `FluxDataList` to GeoJSON format, using a `List<String>` for selected flux data
+/// ✅ Converts FluxDataList to GeoJSON format based on selected flux type and filters out null values
 String _convertFluxDataToGeoJSON(
-    List<FluxData> fluxDataList, List<String> selectedFluxData) {
-  if (fluxDataList.length != selectedFluxData.length) {
-    throw ArgumentError(
-        'FluxData list and selectedFluxData list must have the same length.');
-  }
+    List<FluxData> fluxDataList, String selectedFluxType) {
+  final features = fluxDataList.where((fluxData) {
+    // Check if the selected flux type has a valid value, if not, skip the data
+    switch (selectedFluxType) {
+      case "Methane":
+        return fluxData.dataCh4fluxGram != null &&
+            fluxData.dataLat != null &&
+            fluxData.dataLong != null; // Ensure valid lat/lng
+      case "VOC":
+        return fluxData.dataVocfluxGram != null &&
+            fluxData.dataLat != null &&
+            fluxData.dataLong != null; // Ensure valid lat/lng
+      case "H2O":
+        return fluxData.dataH2ofluxGram != null &&
+            fluxData.dataLat != null &&
+            fluxData.dataLong != null; // Ensure valid lat/ln
+      default: // CO₂ by default
+        return fluxData.dataCfluxGram != null &&
+            fluxData.dataLat != null &&
+            fluxData.dataLong != null; // Ensure valid lat/lng
+    }
+  }).map((fluxData) {
+    // Ensure proper parsing of lat and long values, default to 0.0 if invalid
+    final lat = double.tryParse(fluxData.dataLat ?? '0.0') ?? 0.0;
+    final lng = double.tryParse(fluxData.dataLong ?? '0.0') ?? 0.0;
 
-  final features = fluxDataList
-      .asMap()
-      .map((index, fluxData) {
-        // Ensure proper parsing of lat and long values
-        final lat = double.tryParse(fluxData.dataLat ?? '0.0') ?? 0.0;
-        final lng = double.tryParse(fluxData.dataLong ?? '0.0') ?? 0.0;
+    // Determine the flux value based on the selected flux type
+    double fluxValue = 0.0;
+    switch (selectedFluxType) {
+      case "Methane":
+        fluxValue = double.tryParse(fluxData.dataCh4fluxGram ?? '0.0') ?? 0.0;
+        break;
+      case "VOC":
+        fluxValue = double.tryParse(fluxData.dataVocfluxGram ?? '0.0') ?? 0.0;
+        break;
+      case "H2O":
+        fluxValue = double.tryParse(fluxData.dataH2ofluxGram ?? '0.0') ?? 0.0;
+        break;
+      default: // CO₂ by default
+        fluxValue = double.tryParse(fluxData.dataCfluxGram ?? '0.0') ?? 0.0;
+        break;
+    }
 
-        // If the corresponding selectedFluxData value is 'none', ignore this entry
-        if (selectedFluxData[index] == 'none') {
-          return MapEntry(index, null); // Return null if the weight is 'none'
-        }
+    // Constructing the GeoJSON feature
+    return {
+      "type": "Feature",
+      "properties": {
+        "weight": fluxValue,
+        "key": fluxData.dataKey, // Pass the key for identification
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [lng, lat]
+      }
+    };
+  }).toList(); // Collect the valid GeoJSON features
 
-        // Get corresponding weight from selectedFluxData, default to 0.0 if not parsable
-        final weight = double.tryParse(selectedFluxData[index]) ?? 0.0;
-
-        // Constructing the GeoJSON feature
-        final feature = {
-          "type": "Feature",
-          "properties": {"weight": weight, "key": fluxData.dataKey},
-          "geometry": {
-            "type": "Point",
-            "coordinates": [lng, lat]
-          }
-        };
-
-        return MapEntry(index, feature);
-      })
-      .values
-      .whereType<Map>()
-      .toList(); // Remove the null entries
-
+  // Return the full GeoJSON structure
   return json.encode({"type": "FeatureCollection", "features": features});
 }

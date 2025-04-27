@@ -256,6 +256,8 @@ final rangeValuesProvider = StateProvider<MinMaxValues>((ref) {
 
 final mapDataProvider = Provider<MapData>((ref) => MapData());
 
+//Provider for the min max values
+
 final minMaxGramProvider = StateProvider<MinMaxValues>((ref) {
   final fluxDataListAsync = ref.watch(selectedDataSetProvider);
 

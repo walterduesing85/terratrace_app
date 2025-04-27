@@ -6,7 +6,13 @@ class MarkerPopupNotifier extends StateNotifier<List<FluxData>> {
 
   /// ✅ Add a new marker popup to the list
   void addPopup(FluxData data) {
-    state = [...state, data]; // Append new popup
+    // Check if the data is already in the list (avoid duplicates)
+    if (!state.contains(data)) {
+      state = [...state, data]; // Append new popup
+      print("Added popup for: ${data.dataSite}");
+    } else {
+      print("Popup already exists for: ${data.dataSite}");
+    }
   }
 
   /// ✅ Remove a popup from the list
@@ -16,6 +22,7 @@ class MarkerPopupNotifier extends StateNotifier<List<FluxData>> {
 }
 
 // ✅ Provider to manage the marker popups
-final markerPopupProvider = StateNotifierProvider<MarkerPopupNotifier, List<FluxData>>(
+final markerPopupProvider =
+    StateNotifierProvider<MarkerPopupNotifier, List<FluxData>>(
   (ref) => MarkerPopupNotifier(),
 );

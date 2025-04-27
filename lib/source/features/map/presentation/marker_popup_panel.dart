@@ -10,15 +10,14 @@ class MarkerPopupPanel extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final popups = ref.watch(markerPopupProvider);
-    final selectedFluxType =
-        ref.watch(selectedFluxTypeProvider); // Get the selected flux type
+    final popups = ref.watch(markerPopupProvider); // Watch the popup state
+    final selectedFluxType = ref.watch(selectedFluxTypeProvider);
 
     return Stack(
       children: popups.map((data) {
         return Positioned(
           right: 0,
-          top: 80.0 + popups.indexOf(data) * 80.0, // Stack popups downward
+          top: 80.0 + popups.indexOf(data) * 80.0,
           child: Dismissible(
             key: Key(data.dataDate ?? "unknown"),
             direction: DismissDirection.endToStart,
@@ -32,8 +31,7 @@ class MarkerPopupPanel extends ConsumerWidget {
               padding: EdgeInsets.all(10),
               margin: EdgeInsets.symmetric(vertical: 5),
               decoration: BoxDecoration(
-                color: Colors.white.withValues(
-                    alpha: 0.6), // Adjust opacity for better readability
+                color: Colors.white.withValues(alpha: 0.6),
                 borderRadius:
                     BorderRadius.horizontal(left: Radius.circular(10)),
                 boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 3)],
@@ -46,11 +44,10 @@ class MarkerPopupPanel extends ConsumerWidget {
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
                           color: Colors.black)),
-                  SizedBox(height: 5), // Add spacing between text lines
+                  SizedBox(height: 5),
                   Text("📅 ${data.dataDate}",
                       style: TextStyle(fontSize: 14, color: Colors.black87)),
-                  SizedBox(height: 5), // Add spacing between text lines
-                  // Dynamically display the flux value based on the selected flux type
+                  SizedBox(height: 5),
                   Text(
                       "💨 ${_getFluxType(data, selectedFluxType)} flux: ${_getFluxValue(data, selectedFluxType)} g/m2/d",
                       style: TextStyle(fontSize: 14, color: Colors.black)),
@@ -79,7 +76,6 @@ class MarkerPopupPanel extends ConsumerWidget {
     );
   }
 
-  // Helper method to get the flux value based on the selected flux type
   String _getFluxValue(FluxData data, String selectedFluxType) {
     switch (selectedFluxType) {
       case "Methane":
