@@ -9,6 +9,7 @@ import 'package:terratrace/source/features/data/data/data_management.dart';
 import 'package:terratrace/source/features/map/data/heat_map_notifier.dart';
 
 import 'package:terratrace/source/features/map/data/marker_popup_provider.dart';
+import 'package:terratrace/source/features/project_manager/data/project_managment.dart';
 import '../../data/domain/flux_data.dart';
 
 // Class to hold min/max CO2 values for normalization
@@ -124,38 +125,53 @@ class MapState {
 
 class MapStateNotifier extends StateNotifier<MapState> {
   final Ref ref;
-
   mp.PointAnnotationManager? _selectedAnnotationManager;
+  final List<mp.PointAnnotation> selectedAnnotations = [];
 
   MapStateNotifier(this.ref)
       : super(MapState(rangeValues: MinMaxValues(minV: 0.0, maxV: 1.0))) {
-    // ✅ Listen for changes to the selected data
-
+    // Listen for changes to the selected data
     ref.listen<List<FluxData>>(selectedFluxDataProvider, (prev, next) async {
       print("📍 Selected FluxData updated: ${next.length} points");
+      // Add a small delay to ensure the map is ready
+      await Future.delayed(Duration(milliseconds: 500));
       await updateSelectedAnnotations();
     });
-  }
 
-  final List<mp.PointAnnotation> selectedAnnotations = [];
+    // Listen for project changes
+    ref.listen<String>(projectNameProvider, (prev, next) async {
+      if (prev != next) {
+        print("🔄 Project changed from $prev to $next");
+        // Clear existing annotations
+        await clearAnnotations();
+        // Wait for the map to be ready
+        await Future.delayed(Duration(milliseconds: 500));
+        // Update annotations for the new project
+        await updateSelectedAnnotations();
+      }
+    });
+  }
 
   Future<void> updateSelectedAnnotations() async {
     print("📍 Updating Selected Annotations...");
 
     final selectedData = ref.read(selectedFluxDataProvider);
+    if (selectedData.isEmpty) {
+      print("ℹ️ No selected data to display");
+      return;
+    }
 
-    // ✅ Get Mapbox controller
+    // Get Mapbox controller
     final mapboxMap = ref.read(heatmapProvider.notifier).getMapboxController();
     if (mapboxMap == null) {
       print("⚠️ Mapbox controller is NULL. Cannot update annotations.");
       return;
     }
 
-    // ✅ Create (or reuse) the annotation manager for selected annotations
+    // Create (or reuse) the annotation manager for selected annotations
     if (_selectedAnnotationManager == null) {
-      _selectedAnnotationManager =
-          await mapboxMap.annotations.createPointAnnotationManager();
-      print("✅ Created new SelectedAnnotationManager.");
+      _selectedAnnotationManager = await mapboxMap.annotations.createPointAnnotationManager();
+      print("✅ Created new SelectedAnnotationManager");
     }
 
     if (_selectedAnnotationManager == null) {
@@ -163,38 +179,33 @@ class MapStateNotifier extends StateNotifier<MapState> {
       return;
     }
 
-    // ✅ Clear previous selected annotations using deleteAll()
+    // Clear previous selected annotations
     print("🗑 Removing previous selected annotations...");
     await _selectedAnnotationManager!.deleteAll();
     selectedAnnotations.clear();
 
-    if (selectedData.isNotEmpty) {
-      print("🖼 Loading marker icon for selected data...");
-      final ByteData bytes = await rootBundle.load('assets/marker_tt.png');
-      final Uint8List imageData = bytes.buffer.asUint8List();
+    print("🖼 Loading marker icon for selected data...");
+    final ByteData bytes = await rootBundle.load('assets/marker_tt.png');
+    final Uint8List imageData = bytes.buffer.asUint8List();
 
-      print("📍 Creating annotations for ${selectedData.length} points...");
-      List<mp.PointAnnotationOptions> annotationOptions =
-          selectedData.map((data) {
-        final lat = double.tryParse(data.dataLat ?? '') ?? 0.0;
-        final lng = double.tryParse(data.dataLong ?? '') ?? 0.0;
+    print("📍 Creating annotations for ${selectedData.length} points...");
+    List<mp.PointAnnotationOptions> annotationOptions = selectedData.map((data) {
+      final lat = double.tryParse(data.dataLat ?? '') ?? 0.0;
+      final lng = double.tryParse(data.dataLong ?? '') ?? 0.0;
 
-        return mp.PointAnnotationOptions(
-            geometry: mp.Point(coordinates: mp.Position(lng, lat)),
-            image: imageData,
-            iconSize: 1.0,
-            iconAnchor: mp.IconAnchor.BOTTOM);
-      }).toList();
+      return mp.PointAnnotationOptions(
+        geometry: mp.Point(coordinates: mp.Position(lng, lat)),
+        image: imageData,
+        iconSize: 1.0,
+        iconAnchor: mp.IconAnchor.BOTTOM
+      );
+    }).toList();
 
-      // ✅ Remove null values before adding new annotations
-      final newAnnotations =
-          await _selectedAnnotationManager!.createMulti(annotationOptions);
-      selectedAnnotations
-          .addAll(newAnnotations.whereType<mp.PointAnnotation>());
-    }
-
-    print(
-        "✅ Selected Annotations updated: ${selectedAnnotations.length} points");
+    // Create new annotations
+    final newAnnotations = await _selectedAnnotationManager!.createMulti(annotationOptions);
+    selectedAnnotations.addAll(newAnnotations.whereType<mp.PointAnnotation>());
+    
+    print("✅ Selected Annotations updated: ${selectedAnnotations.length} points");
   }
 
   /// ✅ UI Functions to modify `MapState`
@@ -227,6 +238,32 @@ class MapStateNotifier extends StateNotifier<MapState> {
 
   void setMapStyle(String style) {
     state = state.copyWith(mapStyle: style);
+  }
+
+  Future<void> clearAnnotations() async {
+    print("🗑 Clearing all annotations...");
+    
+    // Clear selected annotations
+    if (_selectedAnnotationManager != null) {
+      try {
+        await _selectedAnnotationManager!.deleteAll();
+        selectedAnnotations.clear();
+        print("✅ Cleared all selected annotations");
+      } catch (e) {
+        print("⚠️ Error clearing selected annotations: $e");
+      }
+    }
+    
+    // Clear base annotations through the heatmap provider
+    final heatmapNotifier = ref.read(heatmapProvider.notifier);
+    if (heatmapNotifier != null) {
+      try {
+        await heatmapNotifier.clearPointAnnotations();
+        print("✅ Cleared all base annotations");
+      } catch (e) {
+        print("⚠️ Error clearing base annotations: $e");
+      }
+    }
   }
 }
 

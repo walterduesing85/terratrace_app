@@ -64,8 +64,94 @@ class HeatmapNotifier extends StateNotifier<void> {
   mp.PointAnnotationManager? _pointAnnotationManager;
   mp.PointAnnotationManager? _selectedAnnotationManager;
 
-  void setMapboxController(mp.MapboxMap controller) {
+  Future<void> setMapboxController(mp.MapboxMap controller) async {
+    print("🗺️ Setting up Mapbox controller...");
+    
+    // Dispose existing managers if they exist
+    if (_pointAnnotationManager != null) {
+      try {
+        await _pointAnnotationManager!.deleteAll();
+        print("🗑 Cleared existing point annotations");
+      } catch (e) {
+        print("⚠️ Error clearing point annotations: $e");
+      }
+    }
+    
+    if (_selectedAnnotationManager != null) {
+      try {
+        await _selectedAnnotationManager!.deleteAll();
+        print("🗑 Cleared existing selected annotations");
+      } catch (e) {
+        print("⚠️ Error clearing selected annotations: $e");
+      }
+    }
+    
+    // Set new controller
     _mapboxMapController = controller;
+    
+    // Initialize new point annotation managers
+    try {
+      _pointAnnotationManager = await controller.annotations.createPointAnnotationManager();
+      _selectedAnnotationManager = await controller.annotations.createPointAnnotationManager();
+      print("✅ Created new point annotation managers");
+    } catch (e) {
+      print("⚠️ Error creating point annotation managers: $e");
+    }
+  }
+
+  Future<void> setupLayerOrder() async {
+    if (_mapboxMapController == null) return;
+    
+    print("🎨 Setting up layer order...");
+    try {
+      // Get all layers to check their order
+      final layers = await _mapboxMapController!.style.getStyleLayers();
+      print("📋 Initial layer order:");
+      for (var layer in layers) {
+        print("Layer: ${layer?.id}");
+      }
+      
+      // First, move heatmap layer above all default layers
+      await _mapboxMapController!.style.moveStyleLayer(
+        'heatmap-layer',
+        mp.LayerPosition(below: 'mapbox-location-indicator-layer'),
+      );
+      print("✅ Moved heatmap layer above default layers");
+      
+      // Then move marker layers above heatmap
+      await _mapboxMapController!.style.moveStyleLayer(
+        'marker-layer',
+        mp.LayerPosition(below: 'heatmap-layer'),
+      );
+      print("✅ Moved marker layer above heatmap");
+      
+      await _mapboxMapController!.style.moveStyleLayer(
+        'transparent-marker-layer',
+        mp.LayerPosition(below: 'marker-layer'),
+      );
+      print("✅ Moved transparent marker layer above marker layer");
+      
+      // Finally, move point annotation layers above everything
+      for (int i = 1; i <= 3; i++) {
+        final layerId = 'mapbox-android-pointAnnotation-draglayer-$i';
+        if (layers.any((l) => l?.id == layerId)) {
+          await _mapboxMapController!.style.moveStyleLayer(
+            layerId,
+            mp.LayerPosition(below: 'transparent-marker-layer'),
+          );
+          print("✅ Moved $layerId above all custom layers");
+        }
+      }
+      
+      // Log the final layer order
+      final finalLayers = await _mapboxMapController!.style.getStyleLayers();
+      print("📋 Final layer order:");
+      for (var layer in finalLayers) {
+        print("Layer: ${layer?.id}");
+      }
+    } catch (e) {
+      print("⚠️ Error setting layer order: $e");
+    }
   }
 
   void disposeNotifier() {
@@ -392,6 +478,19 @@ class HeatmapNotifier extends StateNotifier<void> {
       print("✅ Custom image 'marker-icon' added to Mapbox style.");
     } catch (e) {
       print("🚨 ERROR adding custom image: $e");
+    }
+  }
+
+  Future<void> clearPointAnnotations() async {
+    print("🗑 Clearing base point annotations...");
+    
+    if (_pointAnnotationManager != null) {
+      try {
+        await _pointAnnotationManager!.deleteAll();
+        print("✅ Cleared all base point annotations");
+      } catch (e) {
+        print("⚠️ Error clearing base point annotations: $e");
+      }
     }
   }
 }

@@ -54,7 +54,8 @@ class _HeatMapScreenState extends ConsumerState<HeatMapScreen>
     _tabController.dispose();
     // ✅ Manually dispose heatmapProvider when leaving
     ref.read(heatmapProvider.notifier).disposeNotifier();
-
+    // Clear any remaining annotations
+    ref.read(mapStateProvider.notifier).clearAnnotations();
     super.dispose();
   }
 
@@ -433,6 +434,9 @@ class _HeatMapScreenState extends ConsumerState<HeatMapScreen>
             .updateHeatmapSource(fluxDataList);
         await ref.read(heatmapProvider.notifier).updateMarkerLayer();
         await ref.read(heatmapProvider.notifier).updateTransparentMarkerLayer();
+        
+        // Set up layer ordering
+        await ref.read(heatmapProvider.notifier).setupLayerOrder();
 
         // Set the style-loaded state to true
         Future.delayed(Duration(seconds: 5), () {
